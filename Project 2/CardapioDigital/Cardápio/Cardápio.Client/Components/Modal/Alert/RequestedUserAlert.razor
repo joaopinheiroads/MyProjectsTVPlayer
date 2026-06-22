@@ -1,0 +1,23 @@
+﻿@typeparam T
+
+@code {
+    [Parameter] public EventCallback OnCancel { get; set; }
+    [Parameter] public bool IsLoading { get; set; }
+
+    private async Task CancelAsync()
+    {
+        await OnCancel.InvokeAsync();
+    }
+}
+
+<div class="header">
+    <div class="close" @onclick="CancelAsync"><i class="fa-solid fa-x"></i></div>
+</div>
+<div class="success-message">
+    <div class="icon">
+        <i class="fa-solid fa-check"></i>
+    </div>
+    <h4 class="title">Requisição feita <br /> com sucesso</h4>
+    <p class="message">Verifique o e-mail cadastrado para realizar a ativação da conta.</p>
+    <span class="redirect" @onclick="CancelAsync">Para voltar à página de login, <a href="/login" class="link">clique aqui</a></span>
+</div>

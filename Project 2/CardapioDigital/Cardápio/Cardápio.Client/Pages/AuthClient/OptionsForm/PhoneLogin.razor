@@ -1,0 +1,185 @@
+﻿@using Microsoft.AspNetCore.Components
+
+@inject IJSRuntime JSRuntime;
+@inject NavigationManager NavigationManager;
+@inject Cardápio.Client.Infra.Provider.CustomAuthenticationStateProvider Provider;
+
+<div class="phone-login">
+    <button type="button" @onclick="HandleBack" class="back"><i class="fa-solid fa-angle-left"></i></button>
+
+    @if (!codeSent)
+    {
+        <div class="content">
+            <p class="title">Informe o seu número de celular para continuar</p>
+            <div class="input-container">
+                <div class="field">
+                    <i class="fa-solid fa-phone icon"></i>
+                    <input type="phone" id="phone" @bind="phone" @bind:event="oninput" required aria-required="true" aria-label="5543998293565" />
+                    <label for="phone" class="label">Celular</label>
+                    <div class="underline"></div>
+                </div>
+                <span class="error">@validationErrors.GetValueOrDefault("Phone")</span>
+                <p class="description">O EscolhaAI poderá enviar comunicações neste número.</p>
+            </div>
+            <button class="button-send" type="button" @onclick="SendCode">Continuar</button>
+        </div>
+    }
+    else
+    {
+        <div class="content code">
+            <p class="title code">Digite o código de 6 dígitos que enviamos para</p>
+            <span class="to">@phone</span>
+            <RadzenSecurityCode @bind-Value="code" Type="SecurityCodeType.Numeric" Count="6" Disabled="false" Gap="1rem" />
+            <span class="error">@validationErrors.GetValueOrDefault("Code")</span>
+            <button class="button-send" type="button" @onclick="VerifyCode">Verificar código</button>
+            <button class="button-alert" type="button">Não recebi o código</button>
+        </div>
+    }
+</div>
+
+@code {
+    [Inject]
+    private CodeServiceFactory CodeServiceFactory { get; set; }
+
+    [Parameter]
+    public EventCallback OnBack { get; set; }
+
+    [Parameter]
+    public EventCallback OnSuccess { get; set; }
+
+    private LoginStep loginStep = LoginStep.Phone;
+    private Dictionary<string, string> validationErrors = new();
+    private string phone = string.Empty;
+    private string code = string.Empty;
+    private string errorResponse = string.Empty;
+    private string token;
+    private bool codeSent = false;
+
+    private ElementReference phoneInput;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await InitializeInpustMask();
+        }
+    }
+
+    private async Task InitializeInpustMask()
+    {
+        await JSRuntime.InvokeVoidAsync("applyVMaskerMask", "phone", "99 (99) 99999-9999");
+    }
+
+    private void HandleBack()
+    {
+        if (codeSent)
+        {
+            codeSent = false;
+            return;
+        }
+
+        OnBack.InvokeAsync();
+    }
+
+    private async Task SendCode()
+    {
+        if (string.IsNullOrEmpty(phone))
+        {
+            validationErrors["Phone"] = "Insira um número";
+            return;
+        }
+
+        validationErrors = new();
+
+        string cleanedPhone = phone
+            .Replace("(", "")
+            .Replace(")", "")
+            .Replace(" ", "")
+            .Replace("-", "");
+
+        if (cleanedPhone.Length >= 13 && cleanedPhone[4] == '9')
+        {
+            cleanedPhone = cleanedPhone.Remove(4, 1);
+        }
+
+        var service = CodeServiceFactory.GetService(loginStep);
+        await service.SendCodeAsync(cleanedPhone);
+        codeSent = true;
+    }
+
+    private async Task VerifyCode()
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(code))
+            {
+                validationErrors["Code"] = "Insira um código";
+                return;
+            }
+
+            string cleanedPhone = phone
+                .Replace("(", "")
+                .Replace(")", "")
+                .Replace(" ", "")
+                .Replace("-", "");
+
+            if (cleanedPhone.Length >= 13 && cleanedPhone[4] == '9')
+            {
+                cleanedPhone = cleanedPhone.Remove(4, 1);
+            }
+
+            var service = CodeServiceFactory.GetService(loginStep);
+            HttpResponseMessage response = await service.VerifyCodeAsync(cleanedPhone, code);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorResponseContent = await response.Content.ReadAsStringAsync();
+                try
+                {
+                    var errorObject = JsonSerializer.Deserialize<ErrorResponse>(errorResponseContent);
+                    errorResponse = errorObject?.MessageError ?? "Ocorreu um erro desconhecido.";
+                }
+                catch
+                {
+                    errorResponse = errorResponseContent;
+                }
+
+                throw new Exception(errorResponse);
+            }
+
+            validationErrors = new();
+
+            string responseContent = await response.Content.ReadAsStringAsync();
+            AuthenticationDto tokenResponse = JsonSerializer.Deserialize<AuthenticationDto>(responseContent);
+
+            token = tokenResponse?._Token;
+
+            if (!string.IsNullOrEmpty(token))
+            {
+                await Provider.SetTokenAsync(token, true);
+
+                var returnUrl = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "returnUrl");
+
+                await JSRuntime.InvokeVoidAsync("localStorage.removeItem", "returnUrl");
+
+                NavigationManager.NavigateTo(string.IsNullOrEmpty(returnUrl) ? "/loja/Rei-do-Hamburguer-Região-Leste" : returnUrl, false);
+            }
+        } catch (Exception err)
+        {
+            validationErrors["Code"] = err.Message;
+        }
+    }
+}
+
+<style>
+    .rz-form-field.rz-state-focused .rz-form-field-content, .rz-numeric:focus-within:not(.rz-state-disabled), .rz-autocomplete:focus-within:not(.rz-state-disabled), .rz-colorpicker:not(:disabled):not(.rz-state-disabled):focus, .rz-lookup-search input:not(:disabled):not(.rz-state-disabled):focus, .rz-numeric:not(:disabled):not(.rz-state-disabled):focus, .rz-datepicker > .rz-inputtext:not(:disabled):not(.rz-state-disabled):focus, .rz-multiselect:not(:disabled):not(.rz-state-disabled):focus, .rz-dropdown:not(:disabled):not(.rz-state-disabled):focus, .mask:not(:disabled):not(.rz-state-disabled):focus, .rz-textarea:not(:disabled):not(.rz-state-disabled):focus, .rz-textbox:not(:disabled):not(.rz-state-disabled):focus {
+        box-shadow: 4px 4px 3px rgba(0, 0, 0, 0.02) !important;
+        border: 2px solid #118AB2;
+        outline: none !important;
+    }
+
+    .rz-security-code-input {
+        min-height: 56.41px !important;
+        padding: 1rem !important
+    }
+</style>

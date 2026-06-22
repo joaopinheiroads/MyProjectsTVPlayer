@@ -1,0 +1,100 @@
+﻿@page "/"
+@rendermode InteractiveServer
+@using EscolhaAI.Client.Services
+@inject NavigationService NavService
+
+
+<PageTitle>Escolha.ai</PageTitle>
+
+
+
+<div class="divCenter">
+
+	<div class="image-center divCenterLeft">
+		<h1>Uma única ferramenta</h1>
+		<h1>moderna, estratégica,</h1>
+		<h1>ágil e completa</h1>
+		<div class="divDemonstracao" id="demonstracao-bottom" b-efz7fcc83l="">
+			<div class="experimenteDez" @onclick="AbrirLogin">
+				<a href="https://app.tvplayer.com.br:44303/login" title="Link for system" b-efz7fcc83l=""><img src="Images/icon-demonstração.png" alt="Descrição da imagem" class="image-access-system" href="https://app.tvplayer.com.br:44303/login" b-efz7fcc83l=""></a>
+				<div class="textAndImage">
+					<a href="https://app.tvplayer.com.br:44303/login" target="_parent" b-efz7fcc83l="">Experimente</a>
+					<h3>10 dias grátis</h3>
+				</div>
+			
+		</div>
+		</div>
+	</div>
+
+
+	<div class="divCenterRight" @onclick="AbrirLogin">
+			<a>
+				<img src="/Images/celular2.png" alt="Descrição da imagem" class="imagem-conteudo">
+			</a>
+	</div>
+
+
+	
+
+
+</div>
+<div class="divBottom" @onclick="AbrirCardapioTwoo">
+	<div id="rowMain">
+
+
+	
+	<div class="textBottom">
+			<img src="Images/icon-conheça-agora-mesmo.png" alt="Descrição da imagem" class="imagem-conteudo">
+		<h1>Conheça agora mesmo!</h1>
+		<div id="textAndImage">
+			<img src="Images/cardapio.png" alt="Descrição da imagem" class="imagem-conteudo">
+			<h1>Veja aqui um cardápio</h1>
+		</div>
+		
+		</div>
+	</div>
+
+</div>
+
+
+
+<a href="https://api.whatsapp.com/send?phone=+551142101933&text=Venho%20atrav%C3%A9s%20do%20escolha.ai%21"
+   target="_blank"
+   id="whatsapp-button"
+   style="position: fixed;
+          bottom: 20px;
+          right: 20px;
+          width: 60px;
+          height: 60px;
+          z-index: 9999;
+          background-color: #25D366;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+          ">
+	<img src="https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg"
+		 alt="WhatsApp"
+		 style="width: 70%; height: 70%;">
+</a>
+
+
+
+@code {
+	async Task AbrirLogin()
+	{
+		await NavService.RedirectForLogin();
+	}
+
+	async Task AbrirCardapio()
+	{
+		await NavService.RedirectForCardapio();
+	}
+
+
+	async Task AbrirCardapioTwoo()
+	{
+		await NavService.RedirectForCardapioTwoo();
+	}
+}

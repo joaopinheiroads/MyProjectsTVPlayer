@@ -1,0 +1,304 @@
+﻿@page "/pedidos"
+@layout Cardápio.Client.Components.Layout.SystemLayout;
+
+@inject SelectCompanyService EmpresaService;
+
+@using Cardápio.Client.Components.SelectCompany;
+
+@code {
+    private bool isLoading = true;
+    private bool isDestaque { get; set; } = false;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    protected async override void OnInitialized()
+    {
+        EmpresaService.EmpresaChanged += UpdateEmpresa;
+        await Task.Yield();
+    }
+
+    private async void UpdateEmpresa()
+    {
+        isLoading = true;
+        await InvokeAsync(StateHasChanged);
+        await Task.Yield();
+    }
+
+    public async void Dispose()
+    {
+        EmpresaService.EmpresaChanged -= UpdateEmpresa;
+        await Task.Yield();
+    }
+}
+
+<head>
+    <HeadOutlet />
+    <PageTitle>Gerenciar pedidos | Escolha AI</PageTitle>
+</head>
+
+<div class="header">
+    <div class="container-title">
+        <i class="fa-solid fa-bell-concierge"></i>
+        <h3 class="title-page-section">Pedidos</h3>
+    </div>
+    <Select />
+</div>
+
+<div class="container-section">
+    @if (isLoading || EmpresaService.IsLoading)
+    {
+        <div class="loader-container">
+            <SpinnerLoader PrimaryColor="#272A2D" SecondaryColor="#ffffff" Size="90" />
+        </div>
+    }
+    else
+    {
+        <div class="container-group">
+            <div class="temp">
+                <i class="fa-regular fa-clock"></i>
+                <label class="temp-info">Tempo estimado de pedido: 30 min.</label>
+                <label class="change">Alterar</label>
+            </div>
+            <div class="button-container">
+                <button class="rz-ripple button-green">
+                    <i class="fa-solid fa-plus"></i> Registrar Pedido
+                </button>
+            </div>
+        </div>
+
+        <div class="orders-container">
+            <div class="order-column waiting">
+                <div class="column-header">
+                    <h4>Em espera</h4>
+                    <div class="input-wrapper">
+                        <i class="fas fa-tag"></i>
+                        <input type="text" placeholder="Número/Nome do pedido" />
+                    </div>
+                    <span class="badge">2</span>
+                </div>
+                <div class="cards">
+                    <div class="order-card">
+                        <div class="card-header">
+                            <span class="order-name">Pedido #04 - Em espera</span>
+                            <div class="wrap-card-header">
+                                <span class="view-order">Ver pedido</span>
+                                <div class="time"><i class="fa-regular fa-clock"></i> <span>10:00</span></div>
+                                <button class="close"><i class="fa-solid fa-times"></i></button>
+                            </div>
+                        </div>
+                        <div class="divider">
+                        </div>
+                        <div class="card-body">
+                            <span class="tag-container"><span class="tag">Cliente:</span> Mauricio pedido</span>
+                            <span class="tag-container"><span class="tag">Contato:</span> (43)998293965</span>
+                        </div>
+                        <div class="divider">
+                        </div>
+                        <div class="card-body-footer">
+                            <span><span>Mesa:</span> 3</span>
+                            <span><span>Total:</span> R$0,00</span>
+                        </div>
+                        <div class="card-footer">
+                            <button class="action-btn accept">Aceitar pedido <i class="fa-solid fa-arrow-right"></i></button>
+                        </div>
+                    </div>
+                    <div class="order-card">
+                        <div class="card-header">
+                            <span class="order-name">Pedido #05 - Em espera</span>
+                            <div class="wrap-card-header">
+                                <span class="view-order">Ver pedido</span>
+                                <div class="time"><i class="fa-regular fa-clock"></i> <span>10:00</span></div>
+                                <button class="close"><i class="fa-solid fa-times"></i></button>
+                            </div>
+                        </div>
+                        <div class="divider">
+                        </div>
+                        <div class="card-body">
+                            <span class="tag-container"><span class="tag">Cliente:</span> Mauricio pedido</span>
+                            <span class="tag-container"><span class="tag">Contato:</span> (43)998293965</span>
+                        </div>
+                        <div class="divider">
+                        </div>
+                        <div class="card-body-footer">
+                            <span><span>Mesa:</span> 3</span>
+                            <span><span>Total:</span> R$0,00</span>
+                        </div>
+                        <div class="card-footer">
+                            <button class="action-btn accept">Aceitar pedido <i class="fa-solid fa-arrow-right"></i></button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="order-column in-progress">
+                <div class="column-header">
+                    <h4>Em produção</h4>
+                    <div class="input-wrapper">
+                        <i class="fas fa-tag"></i>
+                        <input type="text" placeholder="Número/Nome do pedido" />
+                    </div>
+                    <span class="badge">2</span>
+                </div>
+                <div class="cards">
+                    <div class="order-card">
+                        <div class="card-header">
+                            <span class="order-name">Pedido #02 - Em produção</span>
+                            <div class="wrap-card-header">
+                                <span class="view-order">Ver pedido</span>
+                                <div class="time"><i class="fa-regular fa-clock"></i> <span>10:00</span></div>
+                            </div>
+                        </div>
+                        <div class="divider">
+                        </div>
+                        <div class="card-body">
+                            <span class ="tag-container"><span class="tag">Cliente:</span> Mauricio pedido</span>
+                            <span class="tag-container"><span class="tag">Contato:</span> (43)998293965</span>
+                            <span class="tag-container"><span class="tag">Aceito em:</span> 13/03/2025 - 10:32AM</span>
+                        </div>
+                        <div class="divider">
+                        </div>
+                        <div class="card-body-footer">
+                            <span><span>Mesa:</span> 3</span>
+                            <span><span>Total:</span> R$0,00</span>
+                        </div>
+                        <div class="card-footer">
+                            <button class="action-btn dispatch">Despachar pedido <i class="fa-solid fa-arrow-right"></i></button>
+                        </div>
+                    </div>
+                    <div class="order-card">
+                        <div class="card-header">
+                            <span class="order-name">Pedido #03 - Em produção</span>
+                            <div class="wrap-card-header">
+                                <span class="view-order">Ver pedido</span>
+                                <div class="time"><i class="fa-regular fa-clock"></i> <span>10:00</span></div>
+                            </div>
+                        </div>
+                        <div class="divider">
+                        </div>
+                        <div class="card-body">
+                            <span class="tag-container"><span class="tag">Cliente:</span> Mauricio pedido</span>
+                            <span class="tag-container"><span class="tag">Contato:</span> (43)998293965</span>
+                            <span class="tag-container"><span class="tag">Aceito em:</span> 13/03/2025 - 10:01AM</span>
+                        </div>
+                        <div class="divider">
+                        </div>
+                        <div class="card-body-footer">
+                            <span><span>Mesa:</span> 3</span>
+                            <span><span>Total:</span> R$0,00</span>
+                        </div>
+                        <div class="card-footer">
+                            <button class="action-btn dispatch">Despachar pedido</button>
+                        </div>
+                    </div>
+                    <div class="order-card">
+                        <div class="card-header">
+                            <span class="order-name">Pedido #03 - Em produção</span>
+                            <div class="wrap-card-header">
+                                <span class="view-order">Ver pedido</span>
+                                <div class="time"><i class="fa-regular fa-clock"></i> <span>10:00</span></div>
+                            </div>
+                        </div>
+                        <div class="divider">
+                        </div>
+                        <div class="card-body">
+                            <span class="tag-container"><span class="tag">Cliente:</span> Mauricio pedido</span>
+                            <span class="tag-container"><span class="tag">Contato:</span> (43)998293965</span>
+                            <span class="tag-container"><span class="tag">Aceito em:</span> 13/03/2025 - 10:01AM</span>
+                        </div>
+                        <div class="divider">
+                        </div>
+                        <div class="card-body-footer">
+                            <span><span>Mesa:</span> 3</span>
+                            <span><span>Total:</span> R$0,00</span>
+                        </div>
+                        <div class="card-footer">
+                            <button class="action-btn dispatch">Despachar pedido</button>
+                        </div>
+                    </div>
+
+                    <div class="order-card">
+                        <div class="card-header">
+                            <span class="order-name">Pedido #03 - Em produção</span>
+                            <div class="wrap-card-header">
+                                <span class="view-order">Ver pedido</span>
+                                <div class="time"><i class="fa-regular fa-clock"></i> <span>10:00</span></div>
+                            </div>
+                        </div>
+                        <div class="divider">
+                        </div>
+                        <div class="card-body">
+                            <span class="tag-container"><span class="tag">Cliente:</span> Mauricio pedido</span>
+                            <span class="tag-container"><span class="tag">Contato:</span> (43)998293965</span>
+                            <span class="tag-container"><span class="tag">Aceito em:</span> 13/03/2025 - 10:01AM</span>
+                        </div>
+                        <div class="divider">
+                        </div>
+                        <div class="card-body-footer">
+                            <span><span>Mesa:</span> 3</span>
+                            <span><span>Total:</span> R$0,00</span>
+                        </div>
+                        <div class="card-footer">
+                            <button class="action-btn dispatch">Despachar pedido</button>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <div class="order-column ready">
+                <div class="column-header" style="border-top-right-radius: 4px;">
+                    <h4>Pronto</h4>
+                    <div class="input-wrapper">
+                        <i class="fas fa-tag"></i>
+                        <input type="text" placeholder="Número/Nome do pedido" />
+                    </div>
+                    <span class="badge">1</span>
+                </div>
+                <div class="cards">
+                    <div class="order-card">
+                        <div class="card-header">
+                            <span class="order-name">Pedido #01 - Pronto</span>
+                            <div class="wrap-card-header">
+                                <span class="view-order">Ver pedido</span>
+                                <div class="time"><i class="fa-regular fa-clock"></i> <span>10:00</span></div>
+                            </div>
+                        </div>
+                        <div class="divider">
+                        </div>
+                        <div class="card-body">
+                            <span class="tag-container"><span class="tag">Cliente:</span> Mauricio pedido</span>
+                            <span class="tag-container"><span class="tag">Contato:</span> (43)998293965</span>
+                            <span class="tag-container"><span class="tag">Finalizado em:</span> 13/03/2025 - 10:40AM</span>
+                        </div>
+                        <div class="divider">
+                        </div>
+                        <div class="card-body-footer">
+                            <span><span>Mesa:</span> 3</span>
+                            <span><span>Total:</span> R$0,00</span>
+                        </div>
+                        <div class="divider">
+                        </div>
+                        <div class="card-footer">
+                            <button class="action-btn complete">Encerrar pedido <i class="fa-solid fa-check"></i></button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="order-auto">
+            <label class="checkbox-container checkbox">
+                <input class="custom-checkbox" @bind="isDestaque" type="checkbox">
+                <span class="checkmark"></span>
+                <label class="check">Aceitar pedidos automaticamente</label>
+            </label>
+            <Cardápio.Client.Components.Tooltip.Tooltip TooltipText="Define se um novo pedido será aceito automaticamente ou se deve ser confirmado manualmente" />
+        </div>
+    }
+</div>

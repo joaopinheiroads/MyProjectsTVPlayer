@@ -1,0 +1,267 @@
+﻿@inherits LayoutComponentBase
+@inject HttpClient HttpClient;
+@inject IJSRuntime jsRuntime;
+@inject NavigationManager NavigationManager;
+@inject Cardápio.Client.Infra.Provider.CustomAuthenticationStateProvider Provider;
+
+@code {
+    private UsuarioGetDTO usuarioOwner;
+    private UsuarioClienteGetDTO usuarioClient;
+
+    private string token = null;
+    private int screenWidth;
+    private bool isLoading = true;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            if (!NavigationManager.Uri.StartsWith("https://localhost:7243/loja/", StringComparison.OrdinalIgnoreCase))
+            {
+                await Provider.GetOwnerUser();
+                usuarioOwner = Provider.UsuarioOwner;
+            }
+
+            if (Provider.UsuarioOwner == null)
+            {
+                await Provider.GetClientUser();
+                usuarioClient = Provider.UsuarioClienteGetDTO;
+            }
+
+            screenWidth = await jsRuntime.InvokeAsync<int>("eval", "window.innerWidth");
+            await Task.Yield();
+
+            if (screenWidth <= 800)
+            {
+                IsCollapsed = true;
+            }
+
+            if (Provider.UsuarioOwner == null && Provider.UsuarioClienteGetDTO == null)
+            {
+                Provider.IsLoading = false;
+            }
+
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    async void Logout()
+    {
+        isLoading = true;
+        ToggleSidebar(); // Fecha o sidebar antes de fazer logout
+        usuarioOwner = null;
+        usuarioClient = null;
+
+        await Provider.LogoutAsync();
+        StateHasChanged();
+        NavigationManager.NavigateTo("/login", true);
+    }
+}
+
+@if (usuarioOwner != null && isLoading == false && Provider.IsLoading == false)
+{
+    <header class="navbar-header">
+        <div class="navbar">
+            <h4>Escolha AI</h4>
+            <i class="fa-solid fa-bars" @onclick="ToggleSidebar"></i>
+        </div>
+    </header>
+}
+
+@if (usuarioOwner != null && isLoading == false && Provider.IsLoading == false)
+{
+    <div class="@SidebarCssClass">
+        <div class="container">
+            <div class="links-content">
+                <div class="title">
+                    <i class="fa-regular fa-building"></i>
+                    <h4 class="title-aside">EscolhaAI</h4>
+                </div>
+                <div class="separator"></div>
+                <div class="links">
+                    @if (usuarioOwner.UsuarioTipoID != 4)
+                    {
+                        <NavLink href="/categorias" ActiveClass="active" Match="NavLinkMatch.All" style="text-decoration: none;" @onclick="ToggleSidebar">
+                            <div class="title-page">
+                                <div class="title-link">
+                                    <div class="icon-div">
+                                        <i class="fa-solid fa-tags"></i>
+                                    </div>
+                                    <p>Categorias</p>
+                                </div>
+                            </div>
+                        </NavLink>
+                        <NavLink href="/produtos" ActiveClass="active" Match="NavLinkMatch.All" style="text-decoration: none;" @onclick="ToggleSidebar">
+                            <div class="title-page">
+                                <div class="title-link">
+                                    <div class="icon-div">
+                                        <i class="fa-solid fa-boxes-stacked"></i>
+                                    </div>
+                                    <p>Produtos</p>
+                                </div>
+                            </div>
+                        </NavLink>
+                        <NavLink href="/adicionais" ActiveClass="active" Match="NavLinkMatch.All" style="text-decoration: none;" @onclick="ToggleSidebar">
+                            <div class="title-page">
+                                <div class="title-link">
+                                    <div class="icon-div">
+                                        <i class="fa-solid fa-plus"></i>
+                                    </div>
+                                    <p>Adicionais</p>
+                                </div>
+                            </div>
+                        </NavLink>
+                        <NavLink href="/mesas" ActiveClass="active" Match="NavLinkMatch.All" style="text-decoration: none;" @onclick="ToggleSidebar">
+                            <div class="title-page">
+                                <div class="title-link">
+                                    <div class="icon-div">
+                                        <i class="fa-solid fa-table-cells-large"></i>
+                                    </div>
+                                    <p>Mesas</p>
+                                </div>
+                            </div>
+                        </NavLink>
+                        @* <NavLink href="/pedidos" ActiveClass="active" Match="NavLinkMatch.All" style="text-decoration: none;">
+                            <div class="title-page">
+                                <div class="title-link">
+                                    <div class="icon-div">
+                                        <i class="fa-solid fa-bell-concierge"></i>
+                                    </div>
+                                    <p>Pedidos</p>
+                                </div>
+                            </div>
+                        </NavLink> *@
+                    }
+                    @if (usuarioOwner.UsuarioTipoID == 1)
+                    {
+                        <NavLink href="/empresas" ActiveClass="active" Match="NavLinkMatch.All" style="text-decoration: none;" @onclick="ToggleSidebar">
+                            <div class="title-page">
+                                <div class="title-link">
+                                    <div class="icon-div">
+                                        <i class="fa-solid fa-building"></i>
+                                    </div>
+                                    <p>Empresas</p>
+                                </div>
+                            </div>
+                        </NavLink>
+                    }
+                    @if (usuarioOwner.UsuarioTipoID == 1 || usuarioOwner.UsuarioTipoID == 3)
+                    {
+                        <NavLink href="/usuarios" ActiveClass="active" Match="NavLinkMatch.All" style="text-decoration: none;" @onclick="ToggleSidebar">
+                            <div class="title-page">
+                                <div class="title-link">
+                                    <div class="icon-div">
+                                        <i class="fa-solid fa-user-group"></i>
+                                    </div>
+                                    <p>Usuários</p>
+                                </div>
+                            </div>
+                        </NavLink>
+                    }
+                    @if (usuarioOwner.UsuarioTipoID == 4)
+                    {
+                        <NavLink href="/grupos" ActiveClass="active" Match="NavLinkMatch.All" style="text-decoration: none;" @onclick="ToggleSidebar">
+                            <div class="title-page">
+                                <div class="title-link">
+                                    <div class="icon-div">
+                                        <i class="fa-solid fa-user-group"></i>
+                                    </div>
+                                    <p>Grupos</p>
+                                </div>
+                            </div>
+                        </NavLink>
+                    }
+                </div>
+                @if (usuarioOwner.UsuarioTipoID != 4)
+                {
+                    <div class="separator"></div>
+                    <div class="links">
+                        <NavLink href="/qrcode" ActiveClass="active" Match="NavLinkMatch.All" style="text-decoration: none;" @onclick="ToggleSidebar">
+                            <div class="title-page">
+                                <div class="title-link">
+                                    <div class="icon-div">
+                                        <i class="fa-solid fa-qrcode"></i>
+                                    </div>
+                                    <p>QR Code</p>
+                                </div>
+                            </div>
+                        </NavLink>
+                        <NavLink href="/cardapios" ActiveClass="active" Match="NavLinkMatch.All" style="text-decoration: none;" @onclick="ToggleSidebar">
+                            <div class="title-page">
+                                <div class="title-link">
+                                    <div class="icon-div">
+                                        <i class="fa-solid fa-list"></i>
+                                    </div>
+                                    <p>Cardápio</p>
+                                </div>
+                            </div>
+                        </NavLink>
+                    </div>
+                }
+            </div>
+            <div class="exit-container">
+                <NavLink href="/login" ActiveClass="active" Match="NavLinkMatch.All" @onclick="Logout" style="text-decoration: none;">
+                    <div class="title-page">
+                        <div class="title-link">
+                            <div class="icon-div">
+                                <i class="fa-solid fa-arrow-right-from-bracket exit-icon"></i>
+                            </div>
+                            <p>Sair</p>
+                        </div>
+                    </div>
+                </NavLink>
+            </div>
+        </div>
+
+        <div>
+            <button class="toggle-button rz-ripple" @onclick="ToggleSidebar"><i class="fa-solid fa-chevron-right"></i></button>
+        </div>
+    </div>
+    if (NavigationManager.Uri.StartsWith("https://191.6.5.106:44303/loja/", StringComparison.OrdinalIgnoreCase)) //alterado
+    {
+        <main style="margin-left: 0 !important; padding-left: 0 !important;">
+            <CascadingValue Value="IsCollapsed">
+                @Body
+            </CascadingValue>
+        </main>
+    } else
+    {
+        <main style="margin-left: 12rem;">
+            @Body
+        </main>
+    }
+} 
+
+@if (usuarioOwner == null && isLoading == false && Provider.IsLoading == false)
+{
+    if (NavigationManager.Uri.StartsWith("https://localhost:7243/loja/", StringComparison.OrdinalIgnoreCase)) //alterado
+    {
+        <main style="padding-left: 0 !important; padding-right: 0 !important;">
+            @Body
+        </main>
+    }
+    else
+    {
+        NavigationManager.NavigateTo("/erro");
+    }
+}
+
+@if (isLoading || Provider.IsLoading)
+{
+    <div class="loader-initial">
+        <SpinnerLoader PrimaryColor="#272A2D" SecondaryColor="#ffffff" Size="90" />
+    </div>
+}
+
+@code {
+    private bool IsCollapsed = true;
+
+    private string SidebarCssClass => IsCollapsed ? "sidebar collapsed" : "sidebar";
+
+    private void ToggleSidebar()
+    {
+        IsCollapsed = !IsCollapsed;
+        StateHasChanged();
+    }
+}

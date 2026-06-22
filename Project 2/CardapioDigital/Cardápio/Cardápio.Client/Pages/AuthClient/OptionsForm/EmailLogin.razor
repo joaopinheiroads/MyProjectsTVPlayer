@@ -1,0 +1,166 @@
+﻿@using Microsoft.AspNetCore.Components
+@using System.Text.RegularExpressions
+@inject NavigationManager NavigationManager;
+@inject Cardápio.Client.Infra.Provider.CustomAuthenticationStateProvider Provider;
+@inject IJSRuntime JSRuntime;
+
+<div class="email-login">
+    <button type="button" @onclick="HandleBack" class="back"><i class="fa-solid fa-angle-left"></i></button>
+
+    @if (!codeSent)
+    {
+        <div class="content">
+            <p class="title">Informe o seu e-mail para continuar</p>
+            <div class="input-container">
+                <div class="field">
+                    <i class="fas fa-envelope icon"></i>
+                    <input type="email" id="email" @bind="email" @bind:event="oninput" required aria-required="true" aria-label="Digite seu e-mail" />
+                    <label for="email" class="label">Email</label>
+                    <div class="underline"></div>
+                </div>
+                <span class="error">@validationErrors.GetValueOrDefault("Email")</span>
+                <p class="description">O EscolhaAI poderá enviar comunicações neste e-mail. Caso não queira receber comunicações nesse canal, é só acessar a opção “Configurações” no aplicativo ou se desinscrever na sua caixa de e-mail.</p>
+            </div>
+            <button class="button-send" type="button" @onclick="SendCode">Continuar</button>
+        </div>
+    }
+    else
+    {
+        <div class="content code">
+            <p class="title code">Digite o código de 6 dígitos que enviamos para</p>
+            <span class="to">@email</span>
+            <RadzenSecurityCode @bind-Value="code" Type="SecurityCodeType.Numeric" Count="6" Disabled="false" Gap="1rem" />
+            <span class="error">@validationErrors.GetValueOrDefault("Code")</span>
+            <button class="button-send" type="button" @onclick="VerifyCode">Verificar código</button>
+            <button class="button-alert" type="button">Não recebi o código</button>
+        </div>
+    }
+</div>
+
+@code {
+    [Inject] 
+    private CodeServiceFactory CodeServiceFactory { get; set; }
+
+    [Parameter]
+    public EventCallback OnBack { get; set; }
+
+    [Parameter]
+    public EventCallback OnSuccess { get; set; }
+
+    private LoginStep loginStep = LoginStep.Email;
+    private Dictionary<string, string> validationErrors = new();
+    private string token;
+    private string email = string.Empty;
+    private string code = string.Empty;
+    private bool codeSent = false;
+    private string errorResponse = string.Empty;
+
+    private void HandleBack()
+    {
+        if (codeSent)
+        {
+            codeSent = false;
+            code = string.Empty;
+            return;
+        }
+
+        email = string.Empty;
+        OnBack.InvokeAsync();
+    }
+
+    private async Task SendCode()
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(email))
+            {
+                validationErrors["Email"] = "Insira um email";
+                return;
+            }
+
+            if (!IsValidEmail(email))
+            {
+                validationErrors["Email"] = "Insira um email válido";
+                return;
+            }
+
+            var service = CodeServiceFactory.GetService(loginStep);
+            await service.SendCodeAsync(email);
+            codeSent = true;
+
+        } catch (Exception err)
+        {
+            Console.WriteLine(err);
+        }
+    }
+
+    private async Task VerifyCode()
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(code))
+            {
+                validationErrors["Code"] = "Insira um código";
+                return;
+            }
+
+            var service = CodeServiceFactory.GetService(loginStep);
+            var response = await service.VerifyCodeAsync(email, code);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorResponseContent = await response.Content.ReadAsStringAsync();
+                try
+                {
+                    var errorObject = JsonSerializer.Deserialize<ErrorResponse>(errorResponseContent);
+                    errorResponse = errorObject?.MessageError ?? "Ocorreu um erro desconhecido.";
+                }
+                catch
+                {
+                    errorResponse = errorResponseContent;
+                }
+
+                throw new Exception(errorResponse);
+            }
+
+            string responseContent = await response.Content.ReadAsStringAsync();
+            AuthenticationDto tokenResponse = JsonSerializer.Deserialize<AuthenticationDto>(responseContent);
+
+            token = tokenResponse?._Token;
+
+            if (!string.IsNullOrEmpty(token))
+            {
+                await Provider.SetTokenAsync(token, true);
+
+                var returnUrl = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "returnUrl");
+
+                await JSRuntime.InvokeVoidAsync("localStorage.removeItem", "returnUrl");
+
+                NavigationManager.NavigateTo(string.IsNullOrEmpty(returnUrl) ? "/loja/Rei-do-Hamburguer-Região-Leste" : returnUrl, false);
+            }
+        } catch (Exception err)
+        {
+            validationErrors["Code"] = err.Message;
+            Console.WriteLine(err);
+        }
+    }
+
+    private bool IsValidEmail(string email)
+    {
+        var emailRegex = @"^[^@\s]+@[^@\s]+\.[^@\s]+$";
+        return Regex.IsMatch(email, emailRegex);
+    }
+}
+
+<style>
+    .rz-form-field.rz-state-focused .rz-form-field-content, .rz-numeric:focus-within:not(.rz-state-disabled), .rz-autocomplete:focus-within:not(.rz-state-disabled), .rz-colorpicker:not(:disabled):not(.rz-state-disabled):focus, .rz-lookup-search input:not(:disabled):not(.rz-state-disabled):focus, .rz-numeric:not(:disabled):not(.rz-state-disabled):focus, .rz-datepicker > .rz-inputtext:not(:disabled):not(.rz-state-disabled):focus, .rz-multiselect:not(:disabled):not(.rz-state-disabled):focus, .rz-dropdown:not(:disabled):not(.rz-state-disabled):focus, .mask:not(:disabled):not(.rz-state-disabled):focus, .rz-textarea:not(:disabled):not(.rz-state-disabled):focus, .rz-textbox:not(:disabled):not(.rz-state-disabled):focus {
+        box-shadow: 4px 4px 3px rgba(0, 0, 0, 0.02) !important;
+        border: 2px solid #118AB2;
+        outline: none !important;
+    }
+
+    .rz-security-code-input {
+        min-height: 56.41px !important;
+        padding: 1rem !important
+    }
+</style>

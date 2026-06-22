@@ -1,0 +1,433 @@
+﻿@page "/categorias";
+@layout Cardápio.Client.Components.Layout.SystemLayout;
+
+@inject HttpClient HttpClient;
+@inject IJSRuntime jsRuntime;
+@inject SelectCompanyService EmpresaService;
+@inject Cardápio.Client.Infra.Provider.CustomAuthenticationStateProvider Provider;
+@inject CategoriaService CategoryService;
+
+@using System.Collections.ObjectModel;
+@using System.Net.Http.Json;
+@using Cardápio.Client.Components.Modal;
+@using Cardápio.Client.Components.SelectCompany;
+@using Cardápio.Client.Pages.Cardapio;
+
+<head>
+    <HeadOutlet />
+    <PageTitle>Gerenciar Categoria | Escolha AI</PageTitle>
+</head>
+
+<Modal T="CategoriaAddDTO"
+       IsOpen="isCreateCategoryModalOpen"
+       OnConfirm="@OnCreateCategoryConfirm"
+       OnCancel="@OnCreateCategoryCancel"
+       ActionType="creating/categoria"
+       SelectedDTO="object">
+</Modal>
+
+@if (isEditCategoryModalOpen)
+{
+    <Modal T="CategoriaUpdateDTO"
+           IsOpen="isEditCategoryModalOpen"
+           OnConfirm="@OnEditCategoryConfirm"
+           OnCancel="@OnEditCategoryCancel"
+           ActionType="editing/categoria"
+           SelectedDTO="CategoriaGetDTO"
+           Selected="selectedCategory">
+    </Modal>
+}
+
+@if (isDeletingCategoryModalOpen)
+{
+    <Modal T="object"
+           IsOpen="isDeletingCategoryModalOpen"
+           OnConfirm="@OnDeleteCategoryConfirm"
+           OnCancel="@OnDeleteCategoryCancel"
+           ActionType="deleting/categoria"
+           SelectedDTO="object">
+    </Modal>
+}
+
+<div class="header">
+    <div class="container-title">
+        <i class="fa-solid fa-tags"></i>
+        <h3 class="title-page-section">Categorias</h3>
+    </div>
+    <Select />
+</div>
+<div class="container-section">
+    @if (isLoading || EmpresaService.IsLoading)
+    {
+        <div class="container">
+            <SpinnerLoader PrimaryColor="#272A2D" SecondaryColor="#ffffff" Size="90" />
+        </div>
+    }
+
+    @if (!isLoading && !EmpresaService.IsLoading)
+    {
+        <div class="container-group">
+            <div>
+                <input @oninput="FilterChanged" placeholder="Filtrar categorias..." class="input" style="width: 300px;" />
+            </div>
+            <div class="button-container">
+                <button class="rz-ripple button-green" @onclick="OpenCreateCategoryModal"><i class="fa-solid fa-plus"></i> Registrar categoria</button>
+            </div>
+        </div>
+        <RadzenDataGrid @ref="dataGrid" AllowFiltering="true" AllowColumnResize="true" AllowAlternatingRows="true" AllowSorting="true" PageSize="12" AllowPaging="true"
+                        PagerHorizontalAlign="HorizontalAlign.Left" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive" ShowPagingSummary="true" Data="@filteredCategorias"
+                        SelectionMode="DataGridSelectionMode.Single" RowRender="@RowRender" class="rz-border-radius-1 rz-shadow-1" Page="@(() => {})"
+                        style="min-height: 600px; max-height: 600px; height: 100%;" HeaderStyle="font-weight: bold;" Responsive="true">
+            <EmptyTemplate>
+                <p style="color: lightgrey; font-size: 24px; text-align: center; margin: 2rem;">Nenhuma categoria foi encontrada.</p>
+            </EmptyTemplate>
+            <Columns>
+                <RadzenDataGridColumn TItem="CategoriaGetDTO" Property="Ordem" Title="Ordem" MinWidth="100px" Width="100px" Resizable="true" Filterable="false" CssClass="number">
+                    <Template>
+                        @((context as CategoriaGetDTO).Ordem)
+                    </Template>
+                </RadzenDataGridColumn>
+                <RadzenDataGridColumn TItem="CategoriaGetDTO" Property="Nome" Title="Nome" Resizable="true" Filterable="false" Sortable="false" MinWidth="100px">
+                    <Template>
+                        <div style="overflow-x: auto; max-height: 100px; white-space: nowrap; box-sizing: border-box; padding-right: 16px; width: 100%;">
+                            <Cardápio.Client.Components.CopyButton.CopyButton Content="@((context as CategoriaGetDTO).Nome)" Title="Copiar Nome" />
+                        </div>
+                    </Template>
+                </RadzenDataGridColumn>
+                <RadzenDataGridColumn TItem="CategoriaGetDTO" Property="DataCadastro" Title="Data de Criação" Resizable="true" Filterable="false" Sortable="true" CssClass="number" MinWidth="100px">
+                    <Template>
+                        <div style="overflow-x: auto; max-height: 100px; white-space: nowrap; box-sizing: border-box; padding-right: 16px; width: 100%;" class="number">
+                            @((context as CategoriaGetDTO).DataCadastro.ToString("dd/MM/yyyy"))
+                        </div>
+                    </Template>
+                </RadzenDataGridColumn>
+                <RadzenDataGridColumn TItem="CategoriaGetDTO" Property="Buttons:" Filterable="false" Sortable="false" Width="140px" Resizable="false" Frozen="true" FrozenPosition="FrozenColumnPosition.Right">
+                    <Template>
+                        <div class="wrap">
+                            <button class="edit-button rz-ripple button-blue" @onclick="() => OpenEditCategoryModal((CategoriaGetDTO)context)"><i class="fa-regular fa-pen-to-square"></i></button>
+                            <button class="trash-button rz-ripple button-pink" @onclick="() => OpenDeleteCategoryModal((CategoriaGetDTO)context)"><i class="fa-regular fa-trash-can"></i></button>
+                        </div>
+                    </Template>
+                </RadzenDataGridColumn>
+                <RadzenDataGridColumn TItem="CategoriaGetDTO" Property="Points:" Filterable="false" Sortable="false" Width="50px" Resizable="false" CssClass="hidden">
+                    <Template>
+                        <span class="draggable-icon" draggable="true">
+                            &#x22EE;&#x22EE;
+                        </span>
+                    </Template>
+                </RadzenDataGridColumn>
+            </Columns>
+        </RadzenDataGrid>
+    }
+</div>
+
+@code {
+    CategoriaGetDTO draggedItem;
+
+    private bool isLoading = true;
+    private string searchTerm = string.Empty;
+    private ObservableCollection<CategoriaGetDTO> filteredCategorias = new ObservableCollection<CategoriaGetDTO>();
+    private ObservableCollection<CategoriaGetDTO> categorias = new ObservableCollection<CategoriaGetDTO>();
+    private ObservableCollection<CategoriaGetDTO> sendCategorias = new ObservableCollection<CategoriaGetDTO>();
+    private RadzenDataGrid<CategoriaGetDTO> dataGrid;
+    private UsuarioGetDTO usuario;
+    string token;
+
+    protected async override void OnInitialized()
+    {
+        EmpresaService.EmpresaChanged += UpdateEmpresa;
+        await Task.Yield();
+    }
+
+    private async void UpdateEmpresa()
+    {
+        isLoading = true;
+        await InvokeAsync(StateHasChanged);
+        await GetData();
+        await Task.Yield();
+    }
+
+    public async void Dispose()
+    {
+        EmpresaService.EmpresaChanged -= UpdateEmpresa;
+        await Task.Yield();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            token = await Provider.GetTokenAsync();
+            //await GetUser();
+            usuario = Provider.UsuarioOwner;
+            await GetData();
+            await Task.Yield();
+        }
+    }
+
+    void RowRender(RowRenderEventArgs<CategoriaGetDTO> args)
+    {
+        args.Attributes.Add("title", "Arraste para reordenar");
+        args.Attributes.Add("style", "cursor:grab");
+        args.Attributes.Add("draggable", "true");
+        args.Attributes.Add("ondragover", "event.preventDefault();event.target.closest('.rz-data-row').classList.add('my-class')");
+        args.Attributes.Add("ondragleave", "event.target.closest('.rz-data-row').classList.remove('my-class')");
+        args.Attributes.Add("ondragstart", EventCallback.Factory.Create<DragEventArgs>(this, () => draggedItem = args.Data));
+        args.Attributes.Add("ondrop", EventCallback.Factory.Create<DragEventArgs>(this, async () =>
+        {
+            var draggedIndex = categorias.IndexOf(draggedItem);
+            var droppedIndex = categorias.IndexOf(args.Data);
+
+            categorias.Remove(draggedItem);
+            categorias.Insert(draggedIndex <= droppedIndex ? droppedIndex++ : droppedIndex, draggedItem);
+            sendCategorias = new ObservableCollection<CategoriaGetDTO>(categorias);
+
+            for (int i = 0; i < categorias.Count; i++)
+            {
+                categorias[i].Ordem = i + 1;
+            }
+
+            await jsRuntime.InvokeVoidAsync("eval", "document.querySelector('.my-class').classList.remove('my-class')");
+
+            await UpdateOrderAsync();
+        }));
+    }
+
+    async Task GetData()
+    {
+        try
+        {
+            List<CategoriaGetDTO> result = await CategoryService.GetData(ValidateSelectedCompanyID());
+            categorias = new ObservableCollection<CategoriaGetDTO>(result);
+
+            ApplyFilter();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.Message);
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    async Task GetUser()
+    {
+        HttpClient.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+        var result = await HttpClient.GetFromJsonAsync<UsuarioGetDTO>("/api/authentication/getCompanyID");
+        usuario = result;
+    }
+
+    async Task UpdateOrderAsync()
+    {
+        try
+        {
+            var updatedOrders = sendCategorias.Select((item, index) => new
+            {
+                ID = item.ID,
+                Nome = item.Nome,
+                Ordem = index + 1,
+                BackgroundColor = item.BackgroundColor,
+            }).ToList();
+
+            HttpClient.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+            await HttpClient.PutAsJsonAsync("/api/category/UpdateCategoriaOrdem", updatedOrders);
+            await GetData();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Erro ao atualizar a ordem: {ex.Message}");
+        }
+    }
+
+    private void FilterChanged(ChangeEventArgs e)
+    {
+        searchTerm = e.Value.ToString();
+        ApplyFilter();
+    }
+
+    private void ApplyFilter()
+    {
+        filteredCategorias = new ObservableCollection<CategoriaGetDTO>(categorias
+            .Where(c => string.IsNullOrEmpty(searchTerm) || c.Nome.Contains(searchTerm, StringComparison.OrdinalIgnoreCase))
+            .ToList());
+
+        StateHasChanged();
+    }
+
+    private int ValidateSelectedCompanyID()
+    {
+        if (usuario != null && EmpresaService.EmpresaSelecionada == 0)
+        {
+            return usuario.EmpresaID ?? 0;
+        }
+
+        return EmpresaService.EmpresaSelecionada;
+    }
+}
+
+@code {
+    private CreateCategoryModel createCategoryModel = new CreateCategoryModel();
+    private CategoriaGetDTO selectedCategory;
+
+    private bool isCreateCategoryModalOpen;
+    private bool isEditCategoryModalOpen;
+    private bool isDeletingCategoryModalOpen;
+
+    private void OpenCreateCategoryModal()
+    {
+        isCreateCategoryModalOpen = true;
+    }
+
+    private void OpenEditCategoryModal(CategoriaGetDTO category)
+    {
+        selectedCategory = category;
+        isEditCategoryModalOpen = true;
+    }
+
+    private void OpenDeleteCategoryModal(CategoriaGetDTO category)
+    {
+        selectedCategory = category;
+        isDeletingCategoryModalOpen = true;
+    }
+
+    private async Task OnCreateCategoryConfirm(CategoriaAddDTO category)
+    {
+        try
+        {
+            await CategoryService.OnCreateCategoryConfirm(category, ValidateSelectedCompanyID());
+            await GetData();
+            isCreateCategoryModalOpen = false;
+        }
+        catch (Exception err)
+        {
+            throw err;
+        }
+    }
+
+    private Task OnCreateCategoryCancel()
+    {
+        isCreateCategoryModalOpen = false;
+        return Task.CompletedTask;
+    }
+
+    private async Task OnEditCategoryConfirm(CategoriaUpdateDTO category)
+    {
+        try
+        {
+            category.ID = selectedCategory.ID;
+            category.Ordem = selectedCategory.Ordem;
+
+            await CategoryService.OnEditCategoryConfirm(category, selectedCategory.ID);
+            await GetData();
+            isEditCategoryModalOpen = false;
+        }
+        catch (Exception err)
+        {
+            throw err;
+        }
+    }
+
+    private Task OnEditCategoryCancel()
+    {
+        selectedCategory = null;
+        isEditCategoryModalOpen = false;
+        return Task.CompletedTask;
+    }
+
+    private async Task OnDeleteCategoryConfirm()
+    {
+        try
+        {
+            await CategoryService.OnDeleteCategoryConfirm(selectedCategory.ID, ValidateSelectedCompanyID());
+            await GetData();
+        }
+        catch (Exception err)
+        {
+            Console.WriteLine(err.Message);
+        }
+
+        isDeletingCategoryModalOpen = false;
+    }
+
+    private Task OnDeleteCategoryCancel()
+    {
+        isDeletingCategoryModalOpen = false;
+        return Task.CompletedTask;
+    }
+
+    private VerifyCategoryDTO GenerateVerifyModel(string nome, int? id)
+    {
+        return new VerifyCategoryDTO()
+            {
+                Nome = nome,
+                ID = id
+            };
+    }
+}
+
+<style type="text/css">
+    .rz-colorpicker-popup {
+        z-index: 100000 !important;
+    }
+
+    .rz-popup {
+        z-index: 100000 !important;
+    }
+
+    .rz-column-title-content {
+        font-weight: bold !important;
+    }
+
+    .rz-column-title {
+        font-weight: bold !important;
+    }
+
+    .rz-dropdown {
+        font-size: 14px !important;
+        display: flex;
+        justify-content: center;
+    }
+
+    @@media screen and (max-width:768px) {
+        .hidden {
+            display: none !important;
+        }
+
+        tbody {
+            display: grid !important;
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+
+    @@media screen and (max-width:600px) {
+        .hidden {
+            display: none !important;
+        }
+
+        tbody {
+            display: grid !important;
+            grid-template-columns: repeat(1, 1fr);
+        }
+    }
+
+    .global-select {
+        align-items: end !important;
+    }
+
+    @@media screen and (max-width: 600px) {
+        .global-select {
+            width: 100%;
+        }
+    }
+
+    .wrap {
+        gap: .5rem !important;
+    }
+</style>

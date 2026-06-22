@@ -1,0 +1,49 @@
+﻿@inject IJSRuntime jsRuntime
+
+<div class="copyable-container" style="position: relative; display: inline-block; cursor: pointer;"
+     @onclick="@CopyToClipboard"
+     title="@Title">
+    <i class="@IconClass" style="position: relative; right: 0; top: 50%; font-size: 14px;"></i>
+    <span>@Content</span>
+</div>
+
+@code {
+    [Parameter] public string Content { get; set; }
+    [Parameter] public string Title { get; set; } = "Clique para copiar";
+    [Parameter] public string IconCopiedClass { get; set; } = "fa-solid fa-check";
+    [Parameter] public string IconDefaultClass { get; set; } = "fa-regular fa-copy";
+
+    private bool IsCopied { get; set; }
+    private string IconClass => IsCopied ? IconCopiedClass : IconDefaultClass;
+
+    private async Task CopyToClipboard()
+    {
+        await jsRuntime.InvokeVoidAsync("navigator.clipboard.writeText", Content);
+
+        IsCopied = true;
+        StateHasChanged();
+
+        await Task.Delay(1000);
+        IsCopied = false;
+        StateHasChanged();
+    }
+}
+
+<style>
+    .copyable-container {
+        display: inline-block;
+        padding-right: 24px;
+        white-space: nowrap;
+    }
+
+    .copyable-container i {
+        display: inline-block;
+        color: gray;
+        transition: color 0.2s;
+    }
+
+    .copyable-container:hover i {
+        color: black;
+    }
+
+</style>

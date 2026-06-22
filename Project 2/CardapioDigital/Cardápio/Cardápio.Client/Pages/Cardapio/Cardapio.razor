@@ -1,0 +1,715 @@
+﻿@using Cardápio.Client.Components.Modal
+@using Cardápio.Client.Pages.Cardapio.ShoppingCartContext
+@page "/loja/{nomeId}"
+@implements IDisposable
+
+@using Microsoft.JSInterop
+
+@inject HttpClient HttpClient;
+@inject NavigationManager _navigationManager;
+@inject IJSRuntime jsRuntime;
+@inject ShoppingCartContextService CartService
+@inject NavigationManager NavigationManager
+
+@using System.Collections.ObjectModel;
+@using System.Net.Http.Json;
+
+
+<head>
+    @* <HeadOutlet /> *@
+    @* <PageTitle>@nomeId?.Replace("-", " ") | Disponível no Escolha AI</PageTitle> *@
+    <title>@nomeId?.Replace("-", " ") | Disponível no Escolha AI</title>
+</head>
+
+
+
+@code {
+    private string BaseUrl => NavigationManager.BaseUri;
+
+    [CascadingParameter]
+    public bool isCollapsed { get; set; }
+    [Parameter]
+    public string nomeId { get; set; } = "";
+
+    private int decryptedID = 0;
+    private EmpresaGetDTO empresa = new();
+    private ObservableCollection<ProdutoGetDTO> produtos = new();
+    private ObservableCollection<CategoriaGetDTO> categorias = new();
+    private string token = "";
+    private string searchTerm = string.Empty;
+    private List<CartModel> cartItems = new();
+    private bool isCartOpen = false;
+    private object? cartComponent;
+    private int totalCartItems = 0;
+    private decimal totalCartValue = 0;
+
+    // Evento para receber mudanças de estado do carrinho
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // Inscrever-se no evento de atualização do carrinho
+            CartService.OnCartUpdated += OnCartUpdatedHandler;
+            
+            // token = await Provider.GetTokenAsyncIsNotRequired();
+            await GetDataCompany();
+            await GetDataProduct();
+            await GetDataCategory();
+
+            StateHasChanged();
+
+            // Inicializar Splide para produtos em destaque se houver
+            if (produtos != null && produtos.Any(p => p.Destaque))
+            {
+                await jsRuntime.InvokeVoidAsync("initializeSplideHighlight");
+            }
+            
+            // await jsRuntime.InvokeVoidAsync("initializeSplide");
+            await jsRuntime.InvokeVoidAsync("setupScrollListener");
+            await Task.Yield();
+        }
+
+        await base.OnAfterRenderAsync(firstRender);
+    }
+
+    private async void OnCartUpdatedHandler()
+    {
+        cartItems = await CartService.GetCartItemsAsync();
+        totalCartItems = CartService.TotalItems;
+        totalCartValue = await CartService.GetTotalValueAsync();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        CartService.OnCartUpdated -= OnCartUpdatedHandler;
+    }
+
+    private string FormatarPreco(decimal? preco) => preco.HasValue ? $"R$ {preco.Value:F2}" : "Preço indisponível";
+
+    private IEnumerable<ProdutoGetDTO> FiltrarProdutos()
+    {
+        if (produtos == null || !produtos.Any())
+        {
+            return Enumerable.Empty<ProdutoGetDTO>();
+        }
+
+        if (string.IsNullOrWhiteSpace(searchTerm))
+        {
+            return produtos;
+        }
+
+        var filtered = produtos.Where(p => p.Nome != null && p.Nome.Contains(searchTerm, StringComparison.OrdinalIgnoreCase));
+        return filtered;
+    }
+
+    private async void OnSearchTermChanged(ChangeEventArgs e)
+    {
+        searchTerm = e.Value?.ToString() ?? string.Empty;
+        await Task.Delay(50);
+        if (produtos != null && produtos.Count() > 0 && produtos.Any(p => p.Destaque))
+        {
+            await jsRuntime.InvokeVoidAsync("initializeSplideHighlight");
+            await Task.Yield();
+        }
+        StateHasChanged();
+    }
+
+    async Task GetDataCompany()
+    {
+        try
+        {
+            var result = await HttpClient.GetFromJsonAsync<EmpresaGetDTO>("/api/enterprise/GetEnterpriseByName/" + nomeId.Replace("-", " "));
+            empresa = result ?? new EmpresaGetDTO();
+            
+            // Garantir que as propriedades não sejam null
+            if (empresa != null)
+            {
+                empresa.Nome = empresa.Nome ?? "";
+                empresa.ImageLogo = empresa.ImageLogo ?? "";
+                empresa.ImageBanner = empresa.ImageBanner ?? "";
+            }
+        }
+        catch (Exception ex)
+        {
+            empresa = new EmpresaGetDTO();
+        }
+        finally
+        {
+            StateHasChanged();
+        }
+    }
+
+    async Task GetDataProduct()
+    {
+        try
+        {
+            var result = await HttpClient.GetFromJsonAsync<ObservableCollection<ProdutoGetDTO>>("/api/product/GetProductsByCompanyNamePublic/" + nomeId.Replace("-", " "));
+            produtos = result ?? new ObservableCollection<ProdutoGetDTO>();
+            foreach (var prod in produtos.Take(3))
+            {
+                Console.WriteLine($"[DEBUG] Produto: {prod.Nome} (CategoriaID: {prod.CategoriaID})");
+            }
+        }
+        catch (Exception ex)
+        {
+            produtos = new ObservableCollection<ProdutoGetDTO>();
+        }
+        finally
+        {
+            StateHasChanged();
+        }
+    }
+
+    async Task GetDataCategory()
+    {
+        try
+        {
+            var result = await HttpClient.GetFromJsonAsync<ObservableCollection<CategoriaGetDTO>>("/api/category/GetCategoriesByCompanyName/" + nomeId.Replace("-", " "));
+            categorias = result ?? new ObservableCollection<CategoriaGetDTO>();
+            foreach (var cat in categorias)
+            {
+                Console.WriteLine($"[DEBUG] Categoria: {cat.Nome} (ID: {cat.ID})");
+            }
+        }
+        catch (Exception ex)
+        {
+            categorias = new ObservableCollection<CategoriaGetDTO>();
+        }
+        finally
+        {
+            StateHasChanged();
+        }
+    }
+
+    private async Task ScrollToCategory(int categoriaId)
+    {
+        await jsRuntime.InvokeVoidAsync("scrollToElement", $"categoria-{categoriaId}");
+        await Task.Yield();
+    }
+
+    private string HexToRgbA(string hex, double alpha)
+    {
+        hex = hex.TrimStart('#');
+
+        int r = Convert.ToInt32(hex.Substring(0, 2), 16);
+        int g = Convert.ToInt32(hex.Substring(2, 2), 16);
+        int b = Convert.ToInt32(hex.Substring(4, 2), 16);
+
+        return $"rgba({r}, {g}, {b}, {alpha.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)});";
+    }
+
+    private ProdutoGetDTO? selectedProduct;
+
+    private bool isViewMenuProductModalOpen;
+    private bool isViewCartProductModalOpen;
+
+    private void OpenViewProductModal(ProdutoGetDTO product)
+    {
+        selectedProduct = product;
+        isViewMenuProductModalOpen = true;
+        StateHasChanged(); // Força atualização para esconder menu
+    }
+
+    private Task OnViewProductClose()
+    {
+        Task.Yield();
+
+        selectedProduct = null;
+        isViewMenuProductModalOpen = false;
+        isViewCartProductModalOpen = false;
+
+        StateHasChanged(); // Força atualização para mostrar menu novamente
+
+        return Task.CompletedTask;
+    }
+
+    // Restaurado cartComponent 
+    private async Task OpenCart()
+    {
+        if (cartComponent != null)
+        {
+            await ((dynamic)cartComponent).OpenCart();
+        }
+    }
+
+    private async Task AddItemToCart(CartModel cartItem)
+    {
+        try 
+        {
+            
+            await CartService.AddToCartAsync(cartItem);
+            
+            cartItems = await CartService.GetCartItemsAsync();
+            
+            // Fechar o modal do produto
+            selectedProduct = null;
+            isViewMenuProductModalOpen = false;
+            
+            // Abrir o modal do carrinho
+            if (cartComponent != null)
+            {
+                await ((dynamic)cartComponent).OpenCart();
+            }
+            else
+            {
+                Console.WriteLine($"[Cardapio] ERROR: cartComponent é null!");
+            }
+            
+            StateHasChanged(); // Força atualização do estado dos modais
+       }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[Cardapio] Stack trace: {ex.StackTrace}");
+        }
+    }
+
+    private void EditItemCart(CartModel item)
+    {
+        var produtoParaEditar = produtos.FirstOrDefault(p => p.ID == item.Id);
+        if (produtoParaEditar != null)
+        {
+            selectedProduct = produtoParaEditar;
+            selectedProduct.CartItem = item;
+            isViewCartProductModalOpen = true;
+            StateHasChanged(); // Força atualização para esconder menu
+        }
+    }
+
+
+    // private ShoppingCartContext.ShoppingCartContext cartComponent;
+
+    private CartModel ConvertToCartModel(ProdutoGetDTO produto)
+    {
+        // Determina o preço a ser usado (promocional se disponível, senão o preço normal)
+        decimal precoFinal = produto.Promocao && produto.PrecoPromocional.HasValue 
+            ? produto.PrecoPromocional.Value 
+            : produto.Preco ?? 0;
+
+        return new CartModel
+        {
+            Id = produto.ID,
+            Name = produto.Nome ?? string.Empty,
+            ImageUrl = produto.ImagemThumbnail ?? string.Empty,
+            Price = precoFinal,
+            Observation = string.Empty,
+            // Adicione outros campos necessários
+        };
+    }
+
+    private async Task FinalizarPedidoWhatsapp()
+    {
+        cartItems = await CartService.GetCartItemsAsync();
+        if (empresa == null || string.IsNullOrWhiteSpace(empresa.Telefone))
+        {
+            await jsRuntime.InvokeVoidAsync("alert", "Telefone da empresa não configurado!");
+            return;
+        }
+        var telefone = empresa.Telefone.Replace("(", "").Replace(")", "").Replace("-", "").Replace(" ", "");
+        if (!telefone.StartsWith("55")) telefone = "55" + telefone;
+        var texto = $"Pedido EscolhaAI%0A%0A";
+        
+        decimal totalOriginal = 0;
+        decimal totalFinal = 0;
+        bool temPromocao = false;
+        
+        foreach (var item in cartItems)
+        {
+            // Busca o produto original para verificar se é promocional
+            var produto = produtos.FirstOrDefault(p => p.ID == item.Id);
+            
+            if (produto?.Promocao == true && produto.PrecoPromocional.HasValue)
+            {
+                temPromocao = true;
+                var precoOriginalProduto = produto.Preco ?? 0;
+                var precoPromocionalProduto = produto.PrecoPromocional.Value;
+                
+                texto += $"- {item.Name}%0A";
+                texto += $"  🔥 PROMOÇÃO: R$ {precoPromocionalProduto:F2} (era R$ {precoOriginalProduto:F2})%0A";
+                
+                totalOriginal += precoOriginalProduto * item.Quantity;
+                totalFinal += precoPromocionalProduto * item.Quantity;
+            }
+            else
+            {
+                texto += $"- {item.Name} (R$ {item.Price:F2})%0A";
+                totalOriginal += item.Price * item.Quantity;
+                totalFinal += item.Price * item.Quantity;
+            }
+        }
+        
+        texto += "%0A";
+        
+        if (temPromocao)
+        {
+            var economia = totalOriginal - totalFinal;
+            texto += $"💰 Total original: R$ {totalOriginal:F2}%0A";
+            texto += $"🎉 Total com promoção: R$ {totalFinal:F2}%0A";
+            texto += $"💵 Você economizou: R$ {economia:F2}%0A";
+        }
+        else
+        {
+            texto += $"Total: R$ {totalFinal:F2}%0A";
+        }
+        
+        var url = $"https://wa.me/{telefone}?text={texto}";
+        await jsRuntime.InvokeVoidAsync("open", url, "_blank");
+    }
+}
+
+<Modal T="CartModel" SelectedDTO="ProdutoGetDTO"
+       Selected="selectedProduct"
+       IsOpen="isViewMenuProductModalOpen"
+       OnConfirm="@((CartModel cartItem) => AddItemToCart(cartItem))"
+       OnCancel="@(() => OnViewProductClose())"
+       ActionType="view-menu/produto" />
+
+<header class="header @(token != null ? "header-nav-responsive" : "")">
+    <nav class="header-nav @(token != null && isCollapsed ? "collapse" : "")" style="@(token == null ? "padding-left: 2.3rem; padding-right: 2.3rem;" : "")">
+        <div class="container-header">
+            <div class="logo-header">
+                @if (empresa == null || empresa.Nome == null || empresa.ImageLogo == null)
+                {
+                    <div class="skeleton skeleton-logo-header"></div>
+                    <div class="skeleton skeleton-text-header" style="width: 150px;"></div>
+                }
+                else
+                {
+                    <div class="img" style="background-image: url('@(BaseUrl + "imagens/logo/" + empresa.ImageLogo)');"></div>
+                    <h1>@empresa.Nome</h1>
+                }
+            </div>
+            <div class="cart-shopping" @onclick="OpenCart">
+                <div class="notification number">@totalCartItems</div>
+                <i class="fa-solid fa-cart-shopping cart" style="color: #ffffff;"></i>
+            </div>
+        </div>
+    </nav>
+</header>
+
+<div class="navigation @(token != null ? "navigation-responsive" : "") @(token != null && isCollapsed ? "collapse" : "")" 
+     id="categoryMenu" 
+     style="@(token == null ? "margin-left: 0 !important;" : "margin-left: 4rem;") display: none; opacity: 0; transition: opacity 0.3s ease-in-out;">
+    <!-- Versão simples sem Splide para testar -->
+    <div style="display: flex; justify-content: center; align-items: center; gap: 10px; flex-wrap: wrap; padding: 10px;">
+        @if (categorias != null && categorias.Any())
+        {
+            foreach (var categoria in categorias)
+            {
+                var produtosFiltrados = FiltrarProdutos().Where(p => p.CategoriaID == categoria.ID).ToList();
+
+                <button class="option button-blue" style="background-color: transparent !important; cursor: pointer; border: 1px solid #ccc; padding: 8px 12px; border-radius: 4px;" @onclick="() => ScrollToCategory(categoria.ID)" data-category-id="@categoria.ID">
+                    @categoria.Nome (@produtosFiltrados.Count)
+                </button>
+            }
+        }
+        else
+        {
+            <p style="text-align: center; color: #666;">Carregando categorias...</p>
+        }
+    </div>
+    
+    <!-- Versão original com Splide (comentada) -->
+    @* <div class="splide" id="categorySplide" style="display: none;">
+        <div class="splide__track">
+            <ul class="splide__list">
+                @if (categorias != null && categorias.Any())
+                {
+                    foreach (var categoria in categorias)
+                    {
+                        var produtosFiltrados = FiltrarProdutos().Where(p => p.CategoriaID == categoria.ID).ToList();
+
+                        <li class="splide__slide">
+                            <button class="option button-blue" style="background-color: transparent !important; cursor: pointer;" @onclick="() => ScrollToCategory(categoria.ID)" data-category-id="@categoria.ID">
+                                @categoria.Nome (@produtosFiltrados.Count)
+                            </button>
+                        </li>
+                    }
+                }
+            </ul>
+        </div>
+    </div> *@
+</div>
+
+<div class="container @(isCollapsed ? "collapse" : "") @(token == null ? "out-system" : "system")" style="@(token == null ? "padding-left: 2.3rem; padding-right: 2.3rem;" : "")">
+    <div class="banner">
+        @if (empresa == null || empresa.Nome == null || empresa.ImageBanner == null)
+        {
+            <div class="skeleton skeleton-banner"></div>
+        }
+        else
+        {
+            <div class="img" style="background-image: url('@(BaseUrl + "imagens/banner/" + empresa.ImageBanner)');"></div>
+        }
+    </div>
+
+    <div class="logo">
+        @if (empresa == null || empresa.Nome == null || empresa.ImageLogo == null)
+        {
+            <div class="skeleton skeleton-logo"></div>
+            <div class="skeleton skeleton-text" style="width: 150px;"></div>
+        }
+        else
+        {
+            <div class="img" style="background-image: url('@(BaseUrl + "imagens/logo/" + empresa.ImageLogo)');"></div>
+            <h1>@empresa.Nome</h1>
+        }
+    </div>
+
+    @if (produtos == null)
+    {
+        <div class="container-destaque">
+            <div class="skeleton-container">
+                @for (int i = 0; i < 3; i++)
+                {
+                    <div class="skeleton skeleton-card"></div>
+                }
+            </div>
+        </div>
+    }
+
+    <div class="search-container">
+        <i class="fa-solid fa-magnifying-glass search-icon"></i>
+        <input type="text" class="search-input" id="searchInput" placeholder="Pesquisar no cardápio" @oninput="OnSearchTermChanged">
+    </div>
+
+    @if (produtos != null && produtos.Count() > 0)
+    {
+        var produtosDestaque = FiltrarProdutos().Where(p => p.Destaque).ToList();
+
+        if (produtosDestaque.Any())
+        {
+            <div class="container-destaque">
+                <h3>Destaques</h3>
+                <div class="carrosel splide" id="highlightSplide">
+                    <div class="splide__track">
+                        <div class="splide__list">
+                            @foreach (var produto in produtosDestaque)
+                            {
+                                <div class="splide__slide card" @onclick="() => OpenViewProductModal(produto)">
+                                    <div class="container-image">
+                                        <div class="image" style="background-image: url('/imagens/ThumbnailProducts/@produto.ImagemThumbnail');"></div>
+                                    </div>
+                                    <div class="container-details">
+                                        <div class="details">
+                                            <div class="container-badge">
+                                                <h5 class="category">@produto.Categoria</h5>
+                                                <h5 class="favorite">Produto destaque</h5>
+                                            </div>
+                                            <div class="container-title">
+                                                <h4 class="title">@produto.Nome</h4>
+                                            </div>
+                                            <div class="container-descript">
+                                                <p class="Descript">@produto.Descricao</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    }
+
+    @if (categorias == null)
+    {
+        <div class="skeleton-categories">
+            @for (int i = 0; i < 2; i++)
+            {
+                <div class="skeleton-category">
+                    <div class="skeleton-category-title">
+                        <div class="skeleton-line-one"></div>
+                        <div class="skeleton-title"></div>
+                        <div class="skeleton-line-two"></div>
+                    </div>
+                    <div class="skeleton-cards">
+                        @for (int j = 0; j < 2; j++)
+                        {
+                            <div class="skeleton-card-product"></div>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+    }
+    else
+    {
+        @foreach (var categoria in categorias)
+        {
+            var produtosFiltrados = FiltrarProdutos().Where(p => p.CategoriaID == categoria.ID).ToList();
+
+            if (produtosFiltrados.Any())
+            {
+                <div class="container-categoria" id="categoria-@categoria.ID">
+                    <div class="category-title">
+                        <span class="line-one" style="background-color: @HexToRgbA(categoria.BackgroundColor, 0.6);"></span>
+                        <h3>@categoria.Nome</h3>
+                        <span class="line-two" style="background-color: @HexToRgbA(categoria.BackgroundColor, 0.6);"></span>
+                    </div>
+                    <div class="container-cards">
+                        @foreach (var produto in produtosFiltrados)
+                        {
+                            <div class="card-product" @onclick="() => OpenViewProductModal(produto)">
+                                <div class="product-image">
+                                    <div class="image" style="background-image: url('/imagens/ThumbnailProducts/@produto.ImagemThumbnail');"></div>
+                                </div>
+                                <div class="product-details">
+                                    <div class="details">
+                                        <div class="container-badge">
+                                            @if (produto.Destaque)
+                                            {
+                                                <h5 class="favorite">Produto destaque</h5>
+                                            }
+                                        </div>
+                                        <div class="container-title-product">
+                                            <h4 class="title">@produto.Nome</h4>
+                                        </div>
+                                        <div class="container-descript">
+                                            <p class="Descript">@produto.Descricao</p>
+                                        </div>
+                                    </div>
+                                    <div class="price">
+                                        @if (produto.Promocao && produto.PrecoPromocional.HasValue)
+                                        {
+                                            <span class="number" style="color: #1db954; font-weight: bold;">@FormatarPreco(produto.PrecoPromocional)</span>
+                                            <span class="number" style="text-decoration: line-through; color: #888; margin-left: 8px;">@FormatarPreco(produto.Preco)</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="number">@FormatarPreco(produto.Preco)</span>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+        }
+    }
+</div>
+
+<div class="footer-cart-shopping" @onclick="OpenCart">
+    <div class="container-footer">
+        <div class="cart-shopping-footer" >
+            <div class="notification number">@totalCartItems</div>
+            <i class="fa-solid fa-cart-shopping cart" style="color: #ffffff;"></i>
+        </div>
+        <div>
+            <span class="number">@FormatarPreco(totalCartValue)</span>
+        </div>
+    </div>
+</div>
+
+@* Adiciona o componente do carrinho *@
+<ShoppingCartContextComponent @ref="cartComponent" 
+                              empresa="empresa" 
+                              EditItem="EditItemCart" />
+
+<footer>
+    <h5>
+        Gerencie seu cardápio de forma prática com <a class="link" href="/login">EscolhaAI</a>.
+    </h5>
+</footer>
+
+<script type="text/javascript">
+    let scrollTimeout;
+    let isScrolling = false;
+    let hasScrolled = false;
+
+    function setupScrollListener() {
+        const categoryMenu = document.getElementById('categoryMenu');
+        
+        console.log('setupScrollListener chamado');
+        console.log('categoryMenu:', categoryMenu);
+
+        if (categoryMenu) {
+            // Inicialmente oculto
+            categoryMenu.style.display = 'none';
+            categoryMenu.style.opacity = '0';
+
+            // Listener para detectar scroll
+            window.addEventListener('scroll', function () {
+                const scrollPosition = window.scrollY;
+                
+                // Só mostra o menu se o usuário fez scroll para baixo
+                if (scrollPosition > 100 && !hasScrolled) {
+                    hasScrolled = true;
+                    showCategoryMenu();
+                } else if (scrollPosition > 100) {
+                    // Se já scrollou antes, apenas redefine o timeout
+                    resetHideTimeout();
+                }
+                
+                // Se voltar ao topo, oculta o menu
+                if (scrollPosition <= 100) {
+                    hasScrolled = false;
+                    hideCategoryMenu();
+                }
+            });
+        }
+    }
+
+    function showCategoryMenu() {
+        const categoryMenu = document.getElementById('categoryMenu');
+        if (categoryMenu) {
+            categoryMenu.style.display = 'flex';
+            // Pequeno delay para permitir que o display seja aplicado antes da transição
+            setTimeout(() => {
+                categoryMenu.style.opacity = '1';
+            }, 10);
+            
+            resetHideTimeout();
+        }
+    }
+
+    function hideCategoryMenu() {
+        const categoryMenu = document.getElementById('categoryMenu');
+        if (categoryMenu) {
+            categoryMenu.style.opacity = '0';
+            // Aguarda a transição terminar antes de ocultar completamente
+            setTimeout(() => {
+                if (categoryMenu.style.opacity === '0') {
+                    categoryMenu.style.display = 'none';
+                }
+            }, 300);
+        }
+        
+        // Limpa o timeout se existir
+        if (scrollTimeout) {
+            clearTimeout(scrollTimeout);
+            scrollTimeout = null;
+        }
+    }
+
+    function resetHideTimeout() {
+        // Limpa o timeout anterior se existir
+        if (scrollTimeout) {
+            clearTimeout(scrollTimeout);
+        }
+        
+        // Define um novo timeout de 3 segundos
+        scrollTimeout = setTimeout(() => {
+            hideCategoryMenu();
+        }, 3000);
+    }
+
+    function scrollToElement(elementId) {
+        const element = document.getElementById(elementId);
+        if (element) {
+            element.scrollIntoView({
+                behavior: 'smooth',
+                block: 'start'
+            });
+            
+            // Resetar o timeout de ocultação ao navegar
+            resetHideTimeout();
+        } else {
+            console.log('Elemento não encontrado:', elementId);
+        }
+    }
+</script>
+

@@ -1,0 +1,225 @@
+﻿@page "/"
+@page "/login"
+
+@inject HttpClient HttpClient;
+@inject IJSRuntime JSRuntime;
+@inject NavigationManager NavigationManager;
+@inject Cardápio.Client.Infra.Provider.CustomAuthenticationStateProvider Provider;
+@inject NavigationManager _navigationManager;
+
+@using System.Text.Json.Serialization
+@using System.Text.RegularExpressions
+
+<head>
+    <HeadOutlet />
+    <PageTitle>Faça login com sua conta | Escolha AI</PageTitle>
+    <meta name="description" content="Faça login com sua conta para acessar todas as funcionalidades da plataforma Escolha AI. Entre com seu e-mail e senha para continuar.">
+</head>
+
+<div class="container">
+    @if (isLoading)
+    {
+        <div class="container">
+            <SpinnerLoader PrimaryColor="#272A2D" SecondaryColor="#ffffff" Size="90" />
+        </div>
+    }
+    else
+    {
+        <form>
+            <div class="descript">
+                <img src="imagens/Logo/logoescolhaai.png" alt="Logo Escolha AI" class="login-logo" />
+                <h3>Login</h3>
+                <p>Faça login para começar a usar</p>
+            </div>
+            <div class="separator"></div>
+
+            <div class="input-container">
+                <div class="container-field">
+                    <div class="field">
+                        <i class="fas fa-envelope icon"></i>
+                        <input type="email" id="email" @bind="login" @bind:event="oninput" required aria-required="true" aria-label="Digite seu e-mail" />
+                        <label for="email" class="label">Email</label>
+                        <div class="underline"></div>
+                    </div>
+                    <span class="error-message">@emailError</span>
+                </div>
+
+                <div class="container-field">
+                    <div class="field">
+                        <i class="fas fa-lock icon"></i>
+                        <input type="password" id="password" @bind="password" @bind:event="oninput" required aria-required="true" aria-label="Digite sua senha" />
+                        <label for="password" class="label">Senha</label>
+                        <div class="underline"></div>
+                    </div>
+                    <span class="error-message">@passwordError</span>
+                </div>
+
+                <div class="field-checkbox">
+                    <label class="cl-checkbox">
+                        <input type="checkbox" @bind="keepLoggedIn" />
+                        <span></span>
+                    </label>
+                    <label class="checkbox-text">Mantenha-me conectado</label>
+                </div>
+            </div>
+            <span class="error-response">@errorResponse</span>
+
+            <button type="button" @onclick="HandleLogin" disabled="@isLoggingIn">
+                @if (isLoggingIn)
+                {
+                    <SpinnerLoader PrimaryColor="#272A2D" SecondaryColor="#FFFFFF" Size="20" />
+                }
+                else
+                {
+                    <span>Fazer login</span>
+                }
+            </button>
+            <p class="second">Não possui uma conta? <a class="link" href="./signup" title="Criar uma nova conta">Criar conta</a></p>
+            <p class="second">Recuperar senha <a class="link" href="./recuperarSenha" title="Recuperar senha">Recuperar senha</a></p>
+            
+        </form>
+    }
+</div>
+
+@code {
+    private string login = "";
+    private string password = "";
+    private string errorResponse = "";
+    private string emailError = "";
+    private string passwordError = "";
+    private bool keepLoggedIn;
+    private bool isLoggingIn;
+    private bool isLoading = true;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JSRuntime.InvokeVoidAsync("handleEnterKey", DotNetObjectReference.Create(this));
+            StateHasChanged();
+        }
+    }
+
+    protected override void OnInitialized()
+    {
+        //await Provider.VerifyTokenIsPresent();
+        isLoading = false;
+    }
+
+    private async Task HandleLogin()
+    {
+        ClearErrors();
+
+        if (string.IsNullOrWhiteSpace(login))
+        {
+            emailError = "O Email é obrigatório.";
+        }
+        else if (!IsValidEmail(login))
+        {
+            emailError = "Formato de email inválido.";
+        }
+
+        if (string.IsNullOrWhiteSpace(password))
+        {
+            passwordError = "A Senha é obrigatória.";
+        }
+
+        if (!string.IsNullOrEmpty(emailError) || !string.IsNullOrEmpty(passwordError))
+        {
+            return;
+        }
+
+        isLoggingIn = true;
+        StateHasChanged();
+
+        try
+        {
+            string token = "";
+            errorResponse = "";
+
+            var loginRequest = new
+            {
+                login,
+                password
+            };
+
+            HttpResponseMessage response = await HttpClient.PostAsJsonAsync("/api/authentication/login", loginRequest);
+
+            Console.WriteLine(response);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorResponseContent = await response.Content.ReadAsStringAsync();
+                try
+                {
+                    var errorObject = JsonSerializer.Deserialize<ErrorResponse>(errorResponseContent);
+                    errorResponse = errorObject?.MessageError ?? "Ocorreu um erro desconhecido.";
+                }
+                catch
+                {
+                    errorResponse = errorResponseContent;
+                }
+
+                throw new Exception(errorResponse);
+            }
+
+            string responseContent = await response.Content.ReadAsStringAsync();
+            AuthenticationDto? tokenResponse = JsonSerializer.Deserialize<AuthenticationDto>(responseContent);
+
+            token = tokenResponse != null ? tokenResponse._Token : string.Empty;
+
+            if (!string.IsNullOrEmpty(token))
+            {
+                await Provider.SetTokenAsync(token, keepLoggedIn);
+                NavigationManager.NavigateTo("/categorias", true);
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex);
+            Console.WriteLine(ex.Message);
+
+            errorResponse = ex.Message;
+        }
+        finally
+        {
+            isLoggingIn = false;
+            StateHasChanged();
+        }
+    }
+
+    private bool IsValidEmail(string email)
+    {
+        var emailRegex = @"^[^@\s]+@[^@\s]+\.[^@\s]+$";
+        return Regex.IsMatch(email, emailRegex);
+    }
+
+    private void ClearErrors()
+    {
+        emailError = "";
+        passwordError = "";
+        errorResponse = "";
+    }
+
+    [JSInvokable("HandleEnterKey")]
+    public async Task HandleEnterKey()
+    {
+        await HandleLogin();
+    }
+}
+
+<script type="text/javascript">
+    document.querySelector('form').addEventListener('submit', function (event) {
+        event.preventDefault();
+    });
+</script>
+
+<script type="application/ld+json">
+    {
+        "@@context": "https://schema.org",
+        "@@type": "WebPage",
+        "name": "Login - Escolha AI",
+        "description": "Página de login da plataforma Escolha AI.",
+        "url": "https://191.6.5.106:44303/login"
+    }
+</script>

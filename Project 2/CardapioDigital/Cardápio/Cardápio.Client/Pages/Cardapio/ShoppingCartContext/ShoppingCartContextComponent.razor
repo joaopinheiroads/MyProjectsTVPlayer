@@ -1,0 +1,424 @@
+@namespace Cardápio.Client.Pages.Cardapio.ShoppingCartContext
+@inject ShoppingCartContextService CartService;
+@inject NavigationManager navigationManager;
+@inject IJSRuntime JSRuntime;
+@inject Cardápio.Client.Infra.Provider.CustomAuthenticationStateProvider Provider;
+@inject NavigationManager NavigationManager;
+@inject HttpClient HttpClient;
+@inject Cardápio.Client.Pages.ConfirmarPedido.PedidoStorage PedidoStorage;
+@implements IDisposable
+
+@code {
+    [Parameter]
+    public CartModel? SelectedProducts { get; set; } = null;
+    [Parameter]
+    public EventCallback OnCartChanged { get; set; }
+    [Parameter]
+    public EventCallback<CartModel> EditItem { get; set; }
+    [Parameter]
+    public EmpresaGetDTO? empresa { get; set; } = null;
+    [Parameter]
+    public EventCallback<bool> OnCartStateChanged { get; set; }
+
+    public CartModel? SelectedItem { get; set; } = null;
+    private List<CartModel> CartItems = new List<CartModel>();
+    private int TotalItems;
+    private List<int> _lastProcessedProductIds = new List<int>();
+    private string FormatarPreco(decimal? preco) => preco.HasValue ? $"R$ {preco.Value:F2}" : "Preço indisponível";
+    public bool _isCartOpen = false; // Carrinho fechado por padrão
+
+
+    [Parameter]
+    [SupplyParameterFromQuery]
+    public string? Mesa { get; set; }
+
+
+
+
+
+
+
+
+
+
+
+    private async Task NotifyCartStateChanged()
+    {
+        if (OnCartStateChanged.HasDelegate)
+        {
+            await OnCartStateChanged.InvokeAsync(_isCartOpen);
+        }
+    }
+    private async Task NotifyParentAsync()
+    {
+        if (OnCartChanged.HasDelegate)
+        {
+            await OnCartChanged.InvokeAsync();
+        }
+    }
+    protected override async void OnInitialized()
+    {
+        // Inscrever no evento de atualização do carrinho
+        CartService.OnCartUpdated += OnCartUpdatedHandler;
+        await LoadCartAsync();
+    }
+
+    private async void OnCartUpdatedHandler()
+    {
+        Console.WriteLine($"[ShoppingCartContextComponent] OnCartUpdatedHandler chamado");
+        await InvokeAsync(async () =>
+        {
+            await LoadCartAsync();
+            StateHasChanged();
+        });
+    }
+
+    public void Dispose()
+    {
+        // Desincrever do evento para evitar vazamentos de memória
+        CartService.OnCartUpdated -= OnCartUpdatedHandler;
+    }
+    protected override async Task OnParametersSetAsync()
+    {
+        if (SelectedProducts != null)
+        {
+            await CartService.AddToCartAsync(SelectedProducts);
+            _lastProcessedProductIds.Add(SelectedProducts.Id);
+            await LoadCartAsync();
+            if (CartService.TotalUniqueItems == 1)
+            {
+                await OpenCart();
+            }
+        }
+    }
+    private async Task LoadCartAsync()
+    {
+        var newCartItems = await CartService.GetCartItemsAsync();
+        foreach (var item in newCartItems)
+        {
+            Console.WriteLine($"[ShoppingCartContextComponent] Item: {item.Name}, Quantidade: {item.Quantity}, ID: {item.ItemCartId}");
+        }
+
+        if (!CartItems.SequenceEqual(newCartItems))
+        {
+            CartItems = newCartItems;
+            TotalItems = CartService.TotalItems;
+            StateHasChanged();
+        }
+    }
+    private async Task DecreaseQuantityAsync(CartModel item)
+    {
+        await CartService.DecreaseQuantityAsync(item.ItemCartId);
+        await Task.Yield();
+        await LoadCartAsync();
+        await NotifyParentAsync();
+    }
+    private async Task IncreaseQuantityAsync(CartModel item)
+    {
+        await CartService.IncreaseQuantityAsync(item.ItemCartId);
+        await Task.Yield();
+        await LoadCartAsync();
+        await NotifyParentAsync();
+    }
+    public async Task RemoveFromCartAsync(CartModel item)
+    {
+        await CartService.RemoveFromCartAsync(item.ItemCartId);
+        await Task.Yield();
+        await LoadCartAsync();
+        await NotifyParentAsync();
+    }
+    private async Task EditItemCart(CartModel item)
+    {
+        SelectedItem = item;
+        await EditItem.InvokeAsync(item);
+        SelectedItem = null;
+
+        // Fechar o carrinho quando editar um item para melhor UX
+        CloseCart();
+
+
+    }
+
+
+
+
+    private async Task FinalizarPedidoWhatsapp()
+    {
+        // Primeiro verifica se tem telefone configurado
+        var telefoneEmpresa = empresa?.Telefone ?? empresa?.Celular;
+        if (empresa == null || string.IsNullOrWhiteSpace(telefoneEmpresa))
+        {
+            await JSRuntime.InvokeVoidAsync("alert", "Telefone da empresa não configurado!");
+            return;
+        }
+
+        var cartItems = await CartService.GetCartItemsAsync();
+        if (!cartItems.Any())
+        {
+            await JSRuntime.InvokeVoidAsync("alert", "Carrinho vazio!");
+            return;
+        }
+        var mesaPedido = Mesa;
+
+        // Limpa e formata o telefone
+        var telefone = telefoneEmpresa.Replace("(", "").Replace(")", "").Replace("-", "").Replace(" ", "").Replace("+", "");
+        if (!telefone.StartsWith("55")) telefone = "55" + telefone;
+        if (mesaPedido == null)
+        {
+            mesaPedido = "Sem mesa definida";
+        }
+
+        // Monta a mensagem do pedido
+        var dataHora = DateTime.Now.ToString("dd/MM/yyyy HH:mm");
+        var texto = $"*NOVO PEDIDO - {empresa?.Nome}*%0A";
+        texto += $"Data/Hora: {dataHora}%0A";
+        texto += $"{mesaPedido}%0A";
+        texto += "━━━━━━━━━━━━━━━━━━━━━━━━━%0A%0A";
+       
+
+        decimal total = 0;
+        int totalItens = 0;
+
+
+
+        foreach (var item in cartItems)
+
+        {
+            var productTotal = item.Price * item.Quantity;
+            var additionalTotal = item.AdditionalGroups?.Sum(group => group.Items?.Sum(add => add.TotalPrice) ?? 0) ?? 0;
+            var subtotal = productTotal + additionalTotal;
+            total += subtotal;
+            totalItens += item.Quantity;
+
+            
+
+
+            texto += $"*{item.Name}*%0A";
+            texto += $"   Valor unitário: R$ {item.Price:F2}%0A";
+            texto += $"   Quantidade: {item.Quantity}%0A";
+
+            // Adiciona adicionais se existirem
+            if (item.AdditionalGroups != null && item.AdditionalGroups.Any())
+            {
+                texto += $"   *Adicionais:*%0A";
+                foreach (var group in item.AdditionalGroups)
+                {
+                    if (group.Items != null && group.Items.Any())
+                    {
+                        texto += $"     *{group.GroupName}:*%0A";
+                        foreach (var additional in group.Items)
+                        {
+                            texto += $"       • {additional.Name} ({additional.Quantity}x) - R$ {additional.TotalPrice:F2}%0A";
+                        }
+                    }
+                }
+            }
+
+            // Adiciona observação se existir
+            if (!string.IsNullOrEmpty(item.Observation))
+            {
+                texto += $"   *Observação:* _{item.Observation}_%0A";
+            }
+
+            texto += $"   *Subtotal: R$ {subtotal:F2}*%0A";
+            texto += "   ─────────────────────────%0A";
+        }
+
+        texto += "%0A━━━━━━━━━━━━━━━━━━━━━━━━━%0A";
+        texto += $"*RESUMO DO PEDIDO*%0A";
+        texto += $"Total de itens: {totalItens}%0A";
+        texto += $"*VALOR TOTAL: R$ {total:F2}*%0A%0A";
+
+        texto += "*Próximos passos:*%0A";
+        texto += "• Confirme seu pedido%0A";
+        texto += "• Informe sua forma de pagamento%0A";
+        texto += "• Aguarde a confirmação do tempo de preparo%0A%0A";
+
+        texto += $"*{empresa?.Nome}*%0A";
+        texto += "_Pedido enviado via EscolhaAI_";
+        
+
+
+        
+
+
+        
+        // Abre o WhatsApp
+        var url = $"https://wa.me/{telefone}?text={texto}";
+        await JSRuntime.InvokeVoidAsync("open", url, "_blank");
+        
+        // Fecha o carrinho após enviar
+        CloseCart();
+    }
+    public async void CloseCart()
+    {
+        await JSRuntime.InvokeVoidAsync("removeOverflow1");
+        _isCartOpen = false;
+        await NotifyCartStateChanged(); // Notifica que o carrinho fechou
+        StateHasChanged();
+    }
+    
+    public async Task<bool> OpenCart()
+    {
+        _isCartOpen = true;
+        bool classApplied = await JSRuntime.InvokeAsync<bool>("addOverflow1");
+        await NotifyCartStateChanged(); // Notifica que o carrinho abriu
+        StateHasChanged();
+        return classApplied;
+    }
+}
+
+<div class="cart-backdrop @(_isCartOpen ? "show" : "")" @onclick="CloseCart"></div>
+
+<div class="container-cart @(_isCartOpen ? "open" : "")">
+    <div class="content-cart">
+        <div class="cart-header">
+            <div class="close" @onclick="CloseCart">
+                <span>Fechar carrinho</span>
+                <i class="fa-solid fa-xmark"></i>
+            </div>
+        </div>
+        @if (CartItems != null && CartItems.Any())
+        {
+            <div class="container-cart-content">
+                <ul class="products">
+                    @foreach (var item in CartItems)
+                    {
+                        <li class="product-item">
+                            <div class="display" @onclick="async () => await EditItemCart(item)">
+                                <div class="container-imagine-cart">
+                                    <div class="img-product" style="background-image: url('/imagens/ThumbnailProducts/@item.ImageUrl'); position: relative;">
+                                        <div class="edit" @onclick="async () => await EditItemCart(item)" title="Editar produto - Alterar observações e adicionais">
+                                            <i class="fa-regular fa-pen-to-square"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="container">
+                                    <div class="container-details">
+                                        <div class="header-details">
+                                            <span class="header">@item.Name</span>
+                                            <span class="number price">
+                                                @{
+                                                    var productPrice = item.Price * item.Quantity;
+                                                    var additionalPrice = item.AdditionalGroups?.Sum(group => group.Items?.Sum(add => add.TotalPrice) ?? 0) ?? 0;
+                                                    var totalItemPrice = productPrice + additionalPrice;
+                                                    Console.WriteLine($"[CART] {item.Name}: Produto={productPrice:C} + Adicional={additionalPrice:C} = Total={totalItemPrice:C}");
+                                                }
+                                                @(FormatarPreco(totalItemPrice))
+                                            </span>
+                                        </div>
+                                        <div class="container-middle">
+                                            <div class="container-quantity" @onclick:stopPropagation="true">
+                                                @if (item.Quantity == 1)
+                                                {
+                                                    <button class="remove-trash rz-ripple" @onclick="async () => await RemoveFromCartAsync(item)">
+                                                        <i class="fa-regular fa-trash-can" style="color: #EF476F;"></i>
+                                                    </button>
+                                                }
+                                                else
+                                                {
+                                                    <button class="remove rz-ripple" @onclick="async () => await DecreaseQuantityAsync(item)">
+                                                        <i class="fa-solid fa-minus"></i>
+                                                    </button>
+                                                }
+
+                                                <div class="quantity number">@item.Quantity</div>
+
+                                                <button class="add-button rz-ripple" @onclick="async () => await IncreaseQuantityAsync(item)">
+                                                    <i class="fa-solid fa-plus"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            @if (!string.IsNullOrEmpty(item.Observation) || (item.AdditionalGroups?.SelectMany(group => group.Items ?? new List<CartAdditionalItemModel>()).Any() ?? false))
+                            {
+                                var additionalItems = item.AdditionalGroups?
+                                .SelectMany(group => group.Items ?? new List<CartAdditionalItemModel>())
+                                .Select(additional => $"<span class=\"number\">{additional.Quantity}x</span> {additional.Name}")
+                                .ToList() ?? new List<string>();
+
+                                <div class="container-additional-observation">
+                                    @if (additionalItems.Any())
+                                    {
+                                        <div class="container-additional">
+                                            <p class="additional">@((MarkupString)string.Join(", ", additionalItems))</p>
+                                        </div>
+                                    }
+
+                                    @if (!string.IsNullOrEmpty(item.Observation))
+                                    {
+                                        <div class="container-observation">
+                                            <p class="observation">Obs.: @item.Observation</p>
+                                        </div>
+                                    }
+                                </div>
+                            }
+                        </li>
+                    }
+                </ul>
+                <div class="container-details-price">
+                    <div class="container-price">
+                        <div class="content-price">
+                            <p class="label">Total:</p>
+                            <p class="total number">@FormatarPreco(CartService.GetTotalValueAsync().Result)</p>
+                        </div>
+                    </div>
+                    <div class="container-buttons-finish">
+                        @if (empresa?.AtenderWhatsapp == true)
+                        {
+                            <button class="wts rz-ripple" @onclick="FinalizarPedidoWhatsapp" title="Redirecionará para o contato no whatsapp"><i class="fa-brands fa-whatsapp"></i> Finalizar por WhatsApp</button>
+                        }
+                        <button class="continuar rz-ripple" @onclick="CloseCart" title="Irá fechar o carrinho"><i class="fa-solid fa-arrow-turn-up fa-rotate-270"></i> Continuar comprando</button>
+                        <button class="finish rz-ripple" @onclick="FinalizarPedidoWhatsapp"><i class="fa-brands fa-whatsapp"></i> Finalizar Compra</button>
+                    </div>
+                </div>
+            </div>
+        } else
+        {
+            <div class="container-empty">
+                <i class="fa-solid fa-cart-shopping cart"></i>
+                <h4>
+                    Seu Carrinho está vazio, <br>
+                    adicione itens para visualizar
+                </h4>
+            </div>
+        }
+    </div>
+</div>
+<script>
+    async function ensureClassChange(action, className, add) {
+        await new Promise(resolve => {
+            setTimeout(resolve, 10);
+        });
+        action();
+        return true; // Retorna sucesso
+    }
+    async function addOverflow1() {
+        console.log('[ShoppingCartJS] addOverflow1 chamado');
+        try {
+            const result = await ensureClassChange(() => document.body.classList.add('no-scroll'), 'no-scroll', true);
+            console.log('[ShoppingCartJS] addOverflow1 sucesso:', result);
+            return result;
+        } catch (error) {
+            console.error('[ShoppingCartJS] Erro em addOverflow1:', error);
+            return false;
+        }
+    }
+    async function removeOverflow1() {
+        console.log('[ShoppingCartJS] removeOverflow1 chamado');
+        try {
+            const result = await ensureClassChange(() => document.body.classList.remove('no-scroll'), 'no-scroll', false);
+            console.log('[ShoppingCartJS] removeOverflow1 sucesso:', result);
+            return result;
+        } catch (error) {
+            console.error('[ShoppingCartJS] Erro em removeOverflow1:', error);
+            return false;
+        }
+    }
+    window.isMobile = function () {
+        return /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    };
+</script>

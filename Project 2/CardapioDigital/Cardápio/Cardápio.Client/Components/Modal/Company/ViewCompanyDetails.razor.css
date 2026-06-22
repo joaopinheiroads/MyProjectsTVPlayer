@@ -1,0 +1,85 @@
+﻿.company {
+	min-height: 450px;
+	max-width: 377px;
+}
+
+.banner-section .image {
+	border-top-left-radius: .25rem;
+	border-top-right-radius: .4rem;
+	width: 100%;
+	height: 100px;
+	background-image: url("./assets/banner.webp");
+	background-size: cover;
+	background-position: center;
+}
+
+.header {
+	width: 100%;
+	text-align: end;
+}
+
+.header .close {
+	color: #6B7280;
+	font-size: .9rem;
+	line-height: 0;
+	margin-bottom: 1rem;
+}
+
+.close i {
+	cursor: pointer;
+}
+
+.logo {
+	display: flex;
+	justify-content: center;
+	width: 100%;
+	position: relative;
+}
+
+.logo .image {
+	width: 60px;
+	height: 60px;
+	border-radius: 100%;
+	background-image: url("./assets/logo.webp");
+	background-size: cover;
+	background-position: center;
+	position: absolute;
+	top: -30px;
+}
+
+.info {
+	padding-top: 2rem;
+	padding-bottom: 2rem;
+	text-align: center;
+}
+
+.info h3 {
+	font-size: 1.25rem;
+	text-align: center;
+}
+
+.fields {
+	display: grid;
+	grid-template-columns: repeat(2, 1fr);
+	gap: 1rem;
+	justify-items: center; /* Centraliza horizontalmente */
+	align-items: center; /* Centraliza verticalmente */
+}
+
+.field {
+	width: 100%;
+	display: flex;
+	flex-direction: column;
+	gap: 0.1rem;
+	text-align: center; /* Centraliza o texto dentro de cada field */
+}
+
+.field span {
+	font-size: 0.9rem;
+	color: #073B4C;
+	font-weight: 600;
+}
+
+.field p {
+	font-weight: 600;
+}

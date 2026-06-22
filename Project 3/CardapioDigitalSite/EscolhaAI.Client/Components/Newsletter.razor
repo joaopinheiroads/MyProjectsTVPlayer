@@ -1,0 +1,111 @@
+﻿@inject HttpClient Http
+@inject NavigationManager Navigation
+@rendermode InteractiveServer
+
+<div class="col-md-5 offset-md-1 mb-3" id="newsletter">
+    <h5>Receba nossas atualizações</h5>
+
+    @if (!sucesso)
+    {
+        <div class="d-flex gap-2">
+            <input type="email"
+                   class="form-control"
+                   placeholder="Digite seu email"
+                   @bind="email"
+                   disabled="@loading" />
+
+            <button class="btn btn-primary"
+                    @onclick="Inscrever"
+                    disabled="@loading">
+                @(loading ? "Enviando..." : "Inscrever-se")
+            </button>
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(mensagem))
+    {
+        <div class="mt-3 alert @(sucesso ? "alert-success" : "alert-danger")">
+            @mensagem
+        </div>
+    }
+</div>
+
+
+@code {
+    private string email = string.Empty;
+    private string mensagem = string.Empty;
+    private bool loading = false;
+    private bool sucesso = false;
+
+    private async Task Inscrever()
+    {
+        loading = true;
+        mensagem = string.Empty;
+
+        try
+        {
+            // 🔹 URL ABSOLUTA do template
+            var templateUrl = new Uri(
+                Navigation.BaseUri + "Template/template_newsletter.html"
+            );
+
+            var htmlTemplate = await Http.GetStringAsync(templateUrl);
+            var htmlBody = htmlTemplate.Replace("{{EMAIL}}", email);
+
+            // 🔹 URL ABSOLUTA da API
+            var apiUrl = new Uri(
+                Navigation.BaseUri + "api/Email/send"
+            );
+
+           var payloadUser = new
+            {
+                Subject = "Bem-vindo à Newsletter do Escolha.AI",
+                Body = htmlBody,
+                From = "escolha@escolha.ai",
+                To = email,
+                Bcc = new List<string>()
+            };
+
+            // await Http.PostAsJsonAsync(apiUrl, payloadUser);
+
+             var response = await Http.PostAsJsonAsync(apiUrl, payloadUser);
+
+
+            var payloadAdmin = new
+                {
+                    Subject = "Nova inscrição na Newsletter",
+                    Body = $"<p>Um novo email foi inscrito na newsletter:</p><strong>{email}</strong>",
+                    From = "escolha@escolha.ai",
+                    To = "escolha@escolha.ai",
+                    Bcc = new List<string>()
+                };
+
+            //     await Http.PostAsJsonAsync(apiUrl, payloadAdmin);
+
+             var response2 = await Http.PostAsJsonAsync(apiUrl, payloadAdmin);
+
+            if (response.IsSuccessStatusCode)
+            {
+                sucesso = true;
+                mensagem = "Inscrição realizada com sucesso!";
+                email = string.Empty;
+            }
+            else
+            {
+                sucesso = false;
+                mensagem = "Erro ao enviar inscrição.";
+            }
+        }
+        catch (Exception ex)
+        {
+            sucesso = false;
+            mensagem = "Erro inesperado ao enviar inscrição.";
+            Console.WriteLine("❌ ERRO FRONT: " + ex);
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+
+}

@@ -1,0 +1,132 @@
+﻿@page "/completar-cadastro"
+
+@inject Cardápio.Client.Infra.Provider.CustomAuthenticationStateProvider Provider;
+@inject NavigationManager NavigationManager;
+@inject HttpClient HttpClient;
+
+@code {
+    private string email;
+    private string celular;
+    private string CPF;
+    private string nome;
+    private bool botaoHabilitado = false;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await Provider.GetClientUser();
+            await Task.Yield();
+            StateHasChanged();
+        }
+    }
+
+    private void ValidarCampos()
+    {
+        botaoHabilitado = !string.IsNullOrWhiteSpace(nome) &&
+                          !string.IsNullOrWhiteSpace(CPF) &&
+                          (!string.IsNullOrWhiteSpace(email) || !string.IsNullOrWhiteSpace(celular));
+
+
+        StateHasChanged();
+    }
+
+    private async void EnviarDados()
+    {
+        try
+        {
+            CompletarCadastroAddDTO data = new()
+                {
+                    Celular = celular,
+                    Email = email,
+                    Nome = nome,
+                    CPF = CPF
+                };
+
+            HttpClient.DefaultRequestHeaders.Authorization =
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", await Provider.GetTokenAsync());
+
+            var response = await HttpClient.PostAsJsonAsync("/api/users/complete-signup", data);
+
+            if (response.IsSuccessStatusCode)
+            {
+                NavigationManager.NavigateTo("/loja/rei-do-hamburguer-região-sul", false);
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Erro ao atualizar a ordem: {ex.Message}");
+        }
+    }
+}
+
+<div class="container-section">
+    @if (Provider.IsLoading)
+    {
+        <div class="loader-initial">
+            <SpinnerLoader PrimaryColor="#272A2D" SecondaryColor="#ffffff" Size="90" />
+        </div>
+    }
+    else
+    {
+        <div class="container">
+            <img class="logo" src="assets/d.png"/>
+            <div class="wizard">
+                <div class="step">
+                    <div class="circle completed"><i class="fas fa-check"></i></div>
+                    <div class="label">Criar conta</div>
+                </div>
+                <div class="line"></div>
+                <div class="step">
+                    <div class="circle pending">2</div>
+                    <div class="label">Preencher dados</div>
+                </div>
+            </div>
+            <h3 class="message">Falta pouco para continuar</h3>
+            <p class="descript">Preencha as informações abaixo para continuar</p>
+            <div class="content-input">
+                <div class="inputs">
+                    <label>Nome</label>
+                    <input id="nome" @bind="nome" @oninput="(e) => {
+                        nome = e.Value.ToString();
+                        ValidarCampos();
+                    }" />
+                    <span class="error"></span>
+                </div>
+                @if (Provider.UsuarioClienteGetDTO.Email == null)
+                {
+                    <div class="inputs">
+                        <label>Email</label>
+                        <input id="email" @bind="email" @oninput="(e) => {
+                        email = e.Value.ToString();
+                        ValidarCampos();
+                    }" />
+                        <span class="error"></span>
+                    </div>
+                }
+                @if (Provider.UsuarioClienteGetDTO.Celular == null)
+                {
+                    <div class="inputs">
+                        <label>Celular</label>
+                        <input id="celular" @bind="celular" @oninput="(e) => {
+                        celular = e.Value.ToString();
+                        ValidarCampos();
+                    }" />
+                        <span class="error"></span>
+                    </div>
+                }
+                <div class="inputs">
+                    <label>CPF</label>
+                    <input id="cpf" @bind-value="CPF" @oninput="(e) => {
+                        CPF = e.Value.ToString();
+                        ValidarCampos();
+                    }" />
+                    <span class="error"></span>
+                </div>
+            </div>
+            <div class="button-container">
+                <button @onclick="EnviarDados" disabled="@(!botaoHabilitado)">Continuar</button>
+            </div>
+        </div>
+    }
+</div>

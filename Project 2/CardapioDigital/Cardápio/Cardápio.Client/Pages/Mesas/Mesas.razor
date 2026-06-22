@@ -1,0 +1,305 @@
+﻿@page "/mesas";
+@layout Cardápio.Client.Components.Layout.SystemLayout;
+
+@inject SelectCompanyService EmpresaService;
+@inject MesasService MesasService;
+@inject HttpClient HttpClient;
+@inject Cardápio.Client.Infra.Provider.CustomAuthenticationStateProvider Provider;
+
+@using System.Collections.ObjectModel;
+@using System.Net.Http.Json;
+@using Cardápio.Client.Components.Modal;
+@using Cardápio.Client.Components.SelectCompany;
+@using Cardápio.Client.Pages.Cardapio;
+
+@code {
+    [Inject] private ModalService ModalService { get; set; }
+
+    private bool isLoading = true;
+    private string searchTerm = string.Empty;
+    private RadzenDataGrid<MesaGetDTO> dataGrid;
+    private ObservableCollection<MesaGetDTO> filteredMesas = new ObservableCollection<MesaGetDTO>();
+    private ObservableCollection<MesaGetDTO> mesas = new ObservableCollection<MesaGetDTO>();
+    private UsuarioGetDTO usuario;
+    private MesaGetDTO selectedMesa;
+    private string token;
+
+    private bool isEditingMesaModalOpen;
+    private bool isDeletingMesaModalOpen;
+    private bool isDownloadModalOpen;
+
+    protected async override void OnInitialized()
+    {
+        EmpresaService.EmpresaChanged += UpdateEmpresa;
+        ModalService.OnStateChange += StateHasChanged;
+        await Task.Yield();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            token = await Provider.GetTokenAsync();
+            //await GetUser();
+            usuario = Provider.UsuarioOwner;
+            await GetData();
+            await Task.Yield();
+        }
+    }
+
+    private async void UpdateEmpresa()
+    {
+        isLoading = true;
+        await InvokeAsync(StateHasChanged);
+        await GetData();
+        await Task.Yield();
+    }
+
+    public async void Dispose()
+    {
+        EmpresaService.EmpresaChanged -= UpdateEmpresa;
+        await Task.Yield();
+    }
+
+    async Task GetUser()
+    {
+        HttpClient.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+        var result = await HttpClient.GetFromJsonAsync<UsuarioGetDTO>("/api/authentication/getCompanyID");
+        usuario = result;
+    }
+
+    async Task GetData()
+    {
+        try
+        {
+            List<MesaGetDTO> result = await MesasService.GetData(ValidateSelectedCompanyID());
+            mesas = new ObservableCollection<MesaGetDTO>(result);
+
+            ApplyFilter();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.Message);
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void ApplyFilter()
+    {
+        filteredMesas = new ObservableCollection<MesaGetDTO>(mesas
+            .Where(c => string.IsNullOrEmpty(searchTerm) || c.NomeMesa.Contains(searchTerm, StringComparison.OrdinalIgnoreCase))
+            .ToList());
+
+        StateHasChanged();
+    }
+
+    private void FilterChanged(ChangeEventArgs e)
+    {
+        searchTerm = e.Value.ToString();
+        ApplyFilter();
+    }
+
+    private int ValidateSelectedCompanyID()
+    {
+        if (usuario != null && EmpresaService.EmpresaSelecionada == 0)
+        {
+            return usuario.EmpresaID ?? 0;
+        }
+
+        return EmpresaService.EmpresaSelecionada;
+    }
+
+    private async Task CreateNewMesa()
+    {
+        try {
+            await MesasService.OnCreateMesaConfirm(ValidateSelectedCompanyID());
+            await GetData();
+        } catch(Exception err)
+        {
+            throw err;
+        }
+    }
+
+    private void OpenDeleteMesaModal(MesaGetDTO mesa)
+    {
+        selectedMesa = mesa;
+        isDeletingMesaModalOpen = true;
+    }
+
+    private async Task OnDeleteMesaConfirm()
+    {
+        try
+        {
+            await MesasService.OnDeleteMesaConfirm(selectedMesa.ID, ValidateSelectedCompanyID());
+            await GetData();
+            selectedMesa = null;
+            isDeletingMesaModalOpen = false;
+        }
+        catch (Exception err)
+        {
+            Console.WriteLine(err.Message);
+        }
+    }
+
+    private Task OnDeleteMesaCancel()
+    {
+        selectedMesa = null;
+        isDeletingMesaModalOpen = false;
+        return Task.CompletedTask;
+    }
+
+    private void OpenEditMesaModal(MesaGetDTO mesa)
+    {
+        selectedMesa = mesa;
+        isEditingMesaModalOpen = true;
+    }
+
+    private async Task OnEditMesaConfirm(MesaUpdateDTO mesaUpdate)
+    {
+        try
+        {
+            await MesasService.OnEditMesaConfirm(ValidateSelectedCompanyID(), mesaUpdate);
+            await GetData();
+            selectedMesa = null;
+            isEditingMesaModalOpen = false;
+        } catch (Exception err)
+        {
+            throw err;
+        }
+    }
+
+    private Task OnEditMesaCancel()
+    {
+        selectedMesa = null;
+        isEditingMesaModalOpen = false;
+        return Task.CompletedTask;
+    }
+
+    private void OpenDownloadModal(MesaGetDTO mesa)
+    {
+        selectedMesa = mesa;
+        isDownloadModalOpen = true;
+    }
+
+    private Task OnDownloadCancel()
+    {
+        selectedMesa = null;
+        isDownloadModalOpen = false;
+        return Task.CompletedTask;
+    }
+}
+
+<head>
+    <HeadOutlet />
+    <PageTitle>Gerenciar mesas | Escolha AI</PageTitle>
+</head>
+
+<Modal T="object"
+    IsOpen="isDeletingMesaModalOpen"
+    OnConfirm="@OnDeleteMesaConfirm"
+    OnCancel="@OnDeleteMesaCancel"
+    ActionType="deleting/mesa"
+    SelectedDTO="object">
+</Modal>
+
+<Modal T="MesaUpdateDTO"
+    IsOpen="isEditingMesaModalOpen"
+    OnConfirm="@OnEditMesaConfirm"
+    OnCancel="@OnEditMesaCancel"
+    ActionType="editing/mesa"
+    SelectedDTO="MesaGetDTO"
+    Selected="selectedMesa">
+</Modal>
+
+<Modal T="object"
+       IsOpen="isDownloadModalOpen"
+       OnConfirm="() => {}"
+       OnCancel="@OnDownloadCancel"
+       ActionType="download/qrCode"
+       SelectedDTO="MesaGetDTO"
+       Selected="selectedMesa">
+</Modal>
+
+<Modal T="QrCodeLayoutAddDTO"
+       IsOpen="@(ModalService.GetModalState("CreatingFrame")?.IsOpen == true)"
+       OnConfirm="@((frame) => ModalService.GetModalState("CreatingFrame")?.OnConfirmWithParameter?.Invoke(frame) ?? Task.CompletedTask)"
+       OnCancel="@(() => ModalService.GetModalState("CreatingFrame")?.OnCancel?.Invoke() ?? Task.CompletedTask)"
+       ActionType="creating/frame"
+       SelectedDTO="object">
+</Modal>
+
+<div class="header">
+    <div class="container-title">
+        <i class="fa-solid fa-table-cells-large"></i>
+        <h3 class="title-page-section">Mesas</h3>
+    </div>
+    <Select />
+</div>
+<div class="container-section">
+    @if (isLoading || EmpresaService.IsLoading)
+    {
+        <div class="container">
+            <SpinnerLoader PrimaryColor="#272A2D" SecondaryColor="#ffffff" Size="90" />
+        </div>
+    }
+
+    @if (!isLoading && !EmpresaService.IsLoading)
+    {
+        <div class="container-group">
+            <div>
+                <input @oninput="FilterChanged" placeholder="Filtrar mesas..." class="input" style="width: 300px;" />
+            </div>
+            <div class="button-container">
+                <button class="rz-ripple button-green" @onclick="CreateNewMesa"><i class="fa-solid fa-plus"></i> Registrar Mesa</button>
+            </div>
+        </div>
+        <RadzenDataGrid @ref="dataGrid" AllowFiltering="true" AllowColumnResize="true" AllowAlternatingRows="true" AllowSorting="true" PageSize="12" AllowPaging="true"
+                        PagerHorizontalAlign="HorizontalAlign.Left" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive" ShowPagingSummary="true" Data="@filteredMesas"
+                        SelectionMode="DataGridSelectionMode.Single" class="rz-border-radius-1 rz-shadow-1" Page="@(() => {})"
+                        style="min-height: 600px; max-height: 600px; height: 100%;" HeaderStyle="font-weight: bold;" Responsive="true">
+            <EmptyTemplate>
+                <p style="color: lightgrey; font-size: 24px; text-align: center; margin: 2rem;">Nenhuma mesa foi encontrada.</p>
+            </EmptyTemplate>
+            <Columns>
+                <RadzenDataGridColumn TItem="MesaGetDTO" Property="QrCode" Title="QRCode" Filterable="false" Sortable="false" MinWidth="100px" Width="100px" Resizable="false" Frozen="true" FrozenPosition="FrozenColumnPosition.Right">
+                    <Template>
+                        <div class="image-container" style="background-image: url('@($"/imagens/QrCode/{context.QrCode}")')">
+                        </div>
+                    </Template>
+                </RadzenDataGridColumn>
+
+                <RadzenDataGridColumn TItem="MesaGetDTO" Property="Nome" Title="Nome da mesa" MinWidth="150px" Resizable="true" Filterable="false">
+                    <Template>
+                        @((context as MesaGetDTO).NomeMesa)
+                    </Template>
+                </RadzenDataGridColumn>
+
+                <RadzenDataGridColumn TItem="MesaGetDTO" Property="Buttons:" Filterable="false" Sortable="false" Width="165px" Resizable="false" Frozen="true" FrozenPosition="FrozenColumnPosition.Right">
+                    <Template>
+                        <div class="wrap">
+                            <button class="download-button rz-ripple button-green" @onclick="() => OpenDownloadModal((MesaGetDTO)context)"><i class="fa fa-download"></i></button>
+                            <button class="edit-button rz-ripple button-blue" @onclick="() => OpenEditMesaModal((MesaGetDTO)context)"><i class="fa-regular fa-pen-to-square"></i></button>
+                            <button class="trash-button rz-ripple button-pink" @onclick="() => OpenDeleteMesaModal((MesaGetDTO)context)"><i class="fa-regular fa-trash-can"></i></button>
+                        </div>
+                    </Template>
+                </RadzenDataGridColumn>
+            </Columns>
+        </RadzenDataGrid>
+    }
+</div>
+
+<style>
+    .rz-column-title-content {
+        font-weight: bold !important;
+    }
+
+    .rz-column-title {
+        font-weight: bold !important;
+    }
+</style>

@@ -1,0 +1,42 @@
+﻿@rendermode InteractiveServer
+@inject IJSRuntime JS
+@inject NavigationService Nav
+<div class="CardapioMain">
+	<div class="card">
+		<div class="textAndImage">
+			<h3>Conheça </h3>
+			<h3>modelos de</h3>
+			<h3>cardápios</h3>
+			<div class="experimenteDez" id="experimenteDez" @onclick="AbrirCardapio" b-0n0b4x3867="">
+				<img src="Images/icon-demonstração.png" alt="Descrição da imagem" class="image-access-system" >
+				<div class="textAndImage" b-0n0b4x3867="">
+					
+					<h3 b-0n0b4x3867="">Modelos</h3>
+				</div>
+			</div>
+			
+
+		</div>
+	</div>
+
+	
+
+</div>
+
+@code {
+
+	async Task AbrirCardapio()
+	{
+		await Nav.RedirectForCardapio();
+	}
+
+
+	async Task AbrirCardapioTwoo()
+	{
+		await Nav.RedirectForCardapioTwoo();
+	}
+
+}
+
+
+

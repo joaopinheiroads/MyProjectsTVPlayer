@@ -1,0 +1,196 @@
+﻿
+
+
+html, body {
+    /*font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;*/
+    font-family: 'Montserrat', sans-serif;
+    height: 100% !important;
+    margin: 0;
+}
+
+@keyframes pulse {
+    0% {
+        transform: scale(1); /* Estado inicial */
+        filter: brightness(100%);
+    }
+
+    100% {
+        transform: scale(1.1); /* Estado final (um pouco maior e mais brilhante) */
+        filter: brightness(120%);
+    }
+}
+
+
+.teste-agora-principal {
+    display: flex;
+    justify-content: center;
+    align-content: center;
+    height: 72vh;
+    background-image: url(Images/testeAgora.png);
+}
+
+.teste-agora-content {
+    width: 50%;
+    display: flex;
+    justify-content: center;
+    flex-direction: column;
+    align-items: center;
+    color: white;
+    line-height: 0.5;
+}
+
+    .teste-agora-content h1 {
+        color: #06D6A0;
+        margin-bottom: 12%;
+        font-weight: 600;
+    }
+
+.mainText {
+    margin-bottom: 5%;
+    width: 50%;
+    justify-content: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+
+.teste-agora-button {
+    height: 14vh;
+    width: 52vh;
+    border-radius: 7vh;
+    background-image: linear-gradient(135deg, #06D6A0 0%, #2AABE2 100%) !important;
+    text-align: center;
+    justify-content: center;
+    display: flex;
+    align-content: center;
+    justify-items: center;
+    align-items: center;
+    gap: 5vh;
+    cursor: pointer;
+
+}
+
+.teste-agora-button .textBox{
+    gap: 0;
+    margin-bottom: 0;
+
+}
+
+.teste-agora-button h1 {
+    text-align: center;
+    align-items: center;
+    justify-content: center;
+    display: flex;
+}
+
+
+.textBox {
+    display: flex;
+    justify-content: center;
+    flex-direction: column;
+    gap: 0.7vh;
+    line-height: 1 !important
+}
+
+
+    .textBox a, .textBox h3 {
+        text-decoration: unset;
+        color: white !important;
+        font-weight: 700;
+        font-size: 2.5vh;
+        margin: 0;
+        
+    }
+
+.teste-agora-button > img:nth-child(1) {
+    height: 10vh;
+    margin: 0
+
+}
+
+.teste-agora-button > img:nth-child(2) {
+    height: 5vh
+}
+
+
+
+.secondaryText {
+    line-height: 1;
+    color: #ced1cb
+}
+    .secondaryText p {
+        margin-bottom: unset;
+        text-wrap-mode: nowrap;
+    }
+
+.mainText h1{
+    font-size: 7.5vh;
+    text-wrap-mode: nowrap;
+}
+
+.secondaryText p {
+    font-size: 3vh
+}
+
+.teste-agora-button:hover {
+    animation: pulse 0.7s infinite alternate;
+}
+
+
+
+@media (orientation: portrait) {
+    .teste-agora-content{
+        width: 100%
+    }
+
+    .teste-agora-content img {
+        width: 25vh;
+    }
+
+    .mainText {
+        width: 100%;
+        text-align: center;
+    }
+
+    .secondaryText p {
+        font-size: 2.4vh
+    }
+
+    .teste-agora-button > img:nth-child(1) {
+
+        width: 4vh;
+    }
+
+    .teste-agora-button > img:nth-child(2) {
+        width: 0.2vh;
+    }
+
+    .teste-agora-button {
+        border-radius: 3vh;
+        width: 35vh;
+        height: 10vh;
+        border-radius: 5vh;
+        gap: 3vh
+    }
+
+    .textBox h3 {
+        font-size: 2vh;
+    }
+    .teste-agora-button > img:nth-child(1) {
+        width: 4vh;
+        height: 7vh;
+    }
+    }
+
+
+
+/*Responsividade mobile landscape*/
+@media (orientation: landscape) and (min-width: 400px) and (max-width: 1200px) and (min-height: 300px) and (max-height: 800px) {
+
+
+
+    #imageStars {
+        width: 20vw;
+    }
+}

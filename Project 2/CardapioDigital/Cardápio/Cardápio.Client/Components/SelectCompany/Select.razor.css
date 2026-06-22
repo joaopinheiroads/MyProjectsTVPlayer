@@ -1,0 +1,11 @@
+﻿.global-select {
+	display: flex;
+	flex-direction: column;
+	gap: .2rem;
+}
+
+.global-select label {
+	font-weight: 600;
+	color: #3D3D3D;
+	font-size: 13px;
+}

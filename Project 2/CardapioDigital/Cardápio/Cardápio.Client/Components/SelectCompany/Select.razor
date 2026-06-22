@@ -1,0 +1,145 @@
+﻿@inject SelectCompanyService EmpresaService
+@inject HttpClient HttpClient
+@inject IJSRuntime jsRuntime
+@inject Cardápio.Client.Infra.Provider.CustomAuthenticationStateProvider Provider;
+
+@using System.Collections.ObjectModel
+@using Radzen.Blazor
+
+@if (usuario != null && usuario.UsuarioTipoID != 2 && usuario.UsuarioTipoID != 3)
+{
+    <div class="global-select">
+        <label>Empresa Selecionada</label>
+
+        <RadzenDropDown @bind-Value="selectedEmpresa"
+                        Data="empresas"
+                        TextProperty="Nome"
+                        ValueProperty="ID"
+                        FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                        Placeholder="Selecione uma empresa"
+                        AllowFiltering="true"
+                        Change="@OnEmpresaChanged"
+                        class="custom-dropdown" />
+    </div>
+}
+
+@code {
+    private int selectedEmpresa;
+    private ObservableCollection<EmpresaGetDTO> empresas = new ObservableCollection<EmpresaGetDTO>();
+    private UsuarioGetDTO usuario;
+    private string token;
+
+    private void OnEmpresaChanged(object value)
+    {
+        if (value is int selectedValue)
+        {
+            selectedEmpresa = selectedValue;
+            EmpresaService.EmpresaSelecionada = selectedValue;
+            StateHasChanged();
+        }
+    }
+
+    protected override async void OnInitialized()
+    {
+        selectedEmpresa = EmpresaService.EmpresaSelecionada;
+        await Task.Yield();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            token = await Provider.GetTokenAsync();
+            //await GetUser();
+            usuario = Provider.UsuarioOwner;
+            await GetData();
+
+            if (usuario != null && empresas.Any())
+            {
+                EmpresaGetDTO? empresaSelecionada = empresas.FirstOrDefault(e => e.ID == usuario.EmpresaID);
+                if (empresaSelecionada != null && EmpresaService.EmpresaSelecionada == 0)
+                {
+                    selectedEmpresa = empresaSelecionada.ID;
+                    EmpresaService.EmpresaSelecionada = empresaSelecionada.ID;
+                }
+
+                if (empresas.Count == 1)
+                {
+                    selectedEmpresa = empresas.First().ID;
+                    EmpresaService.EmpresaSelecionada = empresas.First().ID;
+                }
+            }
+
+            EmpresaService.IsLoading = false;
+            await Task.Yield();
+            StateHasChanged();
+        }
+    }
+
+    async Task GetUser()
+    {
+        HttpClient.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+        var result = await HttpClient.GetFromJsonAsync<UsuarioGetDTO>("/api/authentication/getCompanyID");
+        usuario = result;
+    }
+
+    async Task GetData()
+    {
+        try
+        {
+            HttpClient.DefaultRequestHeaders.Authorization =
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+            var result = await HttpClient.GetFromJsonAsync<List<EmpresaGetDTO>>("/api/enterprise/GetEnterprises");
+            empresas = new ObservableCollection<EmpresaGetDTO>(result);
+
+            await Task.Yield();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.Message);
+        }
+    }
+}
+
+<style>
+    .rz-dropdown {
+        font-size: 0.875rem;
+        line-height: 1.25rem;
+        color: #272A2D;
+        font-weight: 500;
+        border: 1px solid #D0D5DD;
+        border-radius: 0.375rem;
+        letter-spacing: normal;
+        transition: border 0.2s ease;
+        outline: none;
+        box-shadow: 4px 4px 3px rgba(0, 0, 0, 0.02);
+        padding: 9px 12px;
+        width: 100%;
+        min-width: 215px;
+        max-width: 215px;
+    }
+
+    @@media screen and (max-width:800px) {
+        .rz-dropdown {
+            min-width: 215px;
+            max-width: 215px;
+        }
+    }
+
+    .rz-dropdown-items {
+        padding-bottom: 0;
+    }
+
+    .rz-dropdown-item {
+        font-size: 14px;
+    }
+
+    @@media screen and (max-width:600px) {
+        body .custom-dropdown {
+            font-size: 13px !important;
+        }
+    }
+</style>

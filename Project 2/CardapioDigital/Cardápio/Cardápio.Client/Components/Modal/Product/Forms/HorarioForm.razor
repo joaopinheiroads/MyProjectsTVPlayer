@@ -1,0 +1,493 @@
+@using Cardápio.Client.Services
+@using Microsoft.AspNetCore.Components
+@inject ProdutoHorarioService ProdutoHorarioService
+
+@code {
+    [Parameter] public ProdutoGetDTO? SelectedProduct { get; set; }
+
+    private List<ProdutoHorarioAddDTO> horarios = new List<ProdutoHorarioAddDTO>();
+    private List<ProdutoHorarioGetDTO> horariosSalvos = new List<ProdutoHorarioGetDTO>();
+    private Dictionary<string, string> validationErrors = new();
+    private bool firstCall = false;
+    private bool isLoading = false;
+
+    // Formulário para novo horário
+    private ProdutoHorarioAddDTO novoHorario = new ProdutoHorarioAddDTO
+    {
+        DiaSemana = "",
+        HoraInicio = "00:00",
+        HoraFim = "23:59",
+        Ativo = true
+    };
+
+    protected override async Task OnParametersSetAsync()
+    {
+       
+        
+        if (!firstCall && SelectedProduct != null)
+        {
+            await LoadProductHorarios(SelectedProduct.ID);
+            firstCall = true;
+        }
+    }
+
+    private async Task LoadProductHorarios(int produtoId)
+    {
+        try
+        {
+            isLoading = true;
+            
+            horariosSalvos.Clear();
+            horarios.Clear();
+            
+            
+            // Primeiro, verificar se os horários já estão no SelectedProduct
+            if (SelectedProduct?.Horarios != null && SelectedProduct.Horarios.Count > 0)
+            {
+                Console.WriteLine($"[DEBUG] Horários encontrados no produto: {SelectedProduct.Horarios.Count}");
+                
+                foreach (var horario in SelectedProduct.Horarios)
+                {
+                    horariosSalvos.Add(horario);
+                    
+                    // Adiciona também na lista de horários para envio no formulário
+                    horarios.Add(new ProdutoHorarioAddDTO
+                    {
+                        DiaSemana = horario.DiaSemana,
+                        HoraInicio = FormatarHorarioIndividual(horario.HoraInicio),
+                        HoraFim = FormatarHorarioIndividual(horario.HoraFim),
+                        Ativo = horario.Ativo
+                    });
+                }
+            }
+            else
+            {
+                // SEMPRE buscar via API quando não há horários no produto
+                var horariosFromApi = await ProdutoHorarioService.GetHorariosByProdutoId(produtoId);
+                
+                if (horariosFromApi != null)
+                {
+                    foreach (var horario in horariosFromApi)
+                    {
+                        horariosSalvos.Add(horario);
+                        
+                        // Adiciona também na lista de horários para envio no formulário
+                        horarios.Add(new ProdutoHorarioAddDTO
+                        {
+                            DiaSemana = horario.DiaSemana,
+                            HoraInicio = FormatarHorarioIndividual(horario.HoraInicio),
+                            HoraFim = FormatarHorarioIndividual(horario.HoraFim),
+                            Ativo = horario.Ativo
+                        });
+                    }
+                }
+            }
+
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Erro ao carregar horários do produto {produtoId}: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void AdicionarHorario()
+    {
+        if (ValidarHorario(novoHorario))
+        {
+            try
+            {
+                isLoading = true;
+
+                // Sempre adiciona apenas à lista local
+                // O salvamento no banco será feito quando o produto for salvo
+                horarios.Add(new ProdutoHorarioAddDTO
+                {
+                    DiaSemana = novoHorario.DiaSemana,
+                    HoraInicio = FormatarHorarioIndividual(novoHorario.HoraInicio),
+                    HoraFim = FormatarHorarioIndividual(novoHorario.HoraFim),
+                    Ativo = novoHorario.Ativo
+                });
+
+                // Resetar formulário
+                novoHorario = new ProdutoHorarioAddDTO
+                {
+                    DiaSemana = "",
+                    HoraInicio = "00:00",
+                    HoraFim = "23:59",
+                    Ativo = true
+                };
+
+                validationErrors.Clear();
+                StateHasChanged();
+            }
+            catch (Exception ex)
+            {
+                validationErrors["Geral"] = "Erro ao salvar horário. Tente novamente.";
+            }
+            finally
+            {
+                isLoading = false;
+            }
+        }
+    }
+
+    private async Task RemoverHorarioSalvo(ProdutoHorarioGetDTO horario)
+    {
+        try
+        {
+            isLoading = true;
+
+            if (SelectedProduct != null)
+            {
+                // Remover do banco de dados
+                await ProdutoHorarioService.DeleteHorario(horario.ID);
+            }
+
+            // Remover das listas locais
+            horariosSalvos.Remove(horario);
+            
+            var horarioLocal = horarios.FirstOrDefault(h => 
+                h.DiaSemana == horario.DiaSemana && 
+                h.HoraInicio == horario.HoraInicio && 
+                h.HoraFim == horario.HoraFim);
+                
+            if (horarioLocal != null)
+            {
+                horarios.Remove(horarioLocal);
+            }
+
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Erro ao remover horário: {ex.Message}");
+            validationErrors["Geral"] = "Erro ao remover horário. Tente novamente.";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void RemoverHorarioTemporario(ProdutoHorarioAddDTO horario)
+    {
+        try
+        {
+            isLoading = true;
+
+            // Remover apenas da lista local
+            horarios.Remove(horario);
+
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Erro ao remover horário temporário: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private bool ValidarHorario(ProdutoHorarioAddDTO horario)
+    {
+        validationErrors.Clear();
+        bool isValid = true;
+
+        if (string.IsNullOrWhiteSpace(horario.DiaSemana))
+        {
+            validationErrors["DiaSemana"] = "Selecione um dia da semana";
+            isValid = false;
+        }
+
+        if (string.IsNullOrWhiteSpace(horario.HoraInicio))
+        {
+            validationErrors["HoraInicio"] = "Informe a hora de início";
+            isValid = false;
+        }
+
+        if (string.IsNullOrWhiteSpace(horario.HoraFim))
+        {
+            validationErrors["HoraFim"] = "Informe a hora de fim";
+            isValid = false;
+        }
+
+        if (!string.IsNullOrWhiteSpace(horario.HoraInicio) && !string.IsNullOrWhiteSpace(horario.HoraFim))
+        {
+            if (TimeSpan.TryParse(horario.HoraInicio, out var inicio) && TimeSpan.TryParse(horario.HoraFim, out var fim))
+            {
+                if (inicio >= fim)
+                {
+                    validationErrors["HoraFim"] = "Hora de fim deve ser maior que hora de início";
+                    isValid = false;
+                }
+            }
+        }
+
+        // Verificar se já existe horário para o mesmo dia (incluindo horários temporários)
+        var horarioExistente = horariosSalvos.Any(h => h.DiaSemana == horario.DiaSemana) ||
+                              horarios.Any(h => h.DiaSemana == horario.DiaSemana);
+        
+        if (horarioExistente)
+        {
+            validationErrors["DiaSemana"] = "Já existe um horário configurado para este dia";
+            isValid = false;
+        }
+
+        return isValid;
+    }
+
+    public List<ProdutoHorarioAddDTO> GetHorarios()
+    {
+        return horarios.ToList();
+    }
+
+    public void ResetHorarios()
+    {
+        horarios.Clear();
+        horariosSalvos.Clear();
+        validationErrors.Clear();
+        firstCall = false;
+        novoHorario = new ProdutoHorarioAddDTO
+        {
+            DiaSemana = "",
+            HoraInicio = "00:00",
+            HoraFim = "23:59",
+            Ativo = true
+        };
+        StateHasChanged();
+    }
+
+    private string GetDiaSemanaNome(string diaSemana)
+    {
+        return diaSemana switch
+        {
+            "Segunda" => "Segunda-feira",
+            "Terça" => "Terça-feira",
+            "Quarta" => "Quarta-feira", 
+            "Quinta" => "Quinta-feira",
+            "Sexta" => "Sexta-feira",
+            "Sábado" => "Sábado",
+            "Domingo" => "Domingo",
+            _ => diaSemana
+        };
+    }
+
+    private string FormatarHorario(string horaInicio, string horaFim)
+    {
+        return $"{horaInicio} às {horaFim}";
+    }
+
+    private string FormatarHorarioIndividual(string? horario)
+    {
+        if (string.IsNullOrEmpty(horario))
+            return "00:00";
+            
+        // Se o horário já está no formato HH:mm, retorna como está
+        if (horario.Length == 5 && horario.Contains(":"))
+            return horario;
+            
+        // Se está em formato diferente, tenta converter
+        if (TimeSpan.TryParse(horario, out var time))
+        {
+            return time.ToString(@"hh\:mm");
+        }
+        
+        return "00:00";
+    }
+}
+
+<div class="horarios-container">
+    <div class="horarios-header">
+        <h4>Configurar Horários de Disponibilidade</h4>
+        <p class="horarios-description">
+            Defina em quais horários este produto estará disponível para os clientes. 
+            Se nenhum horário for configurado, o produto estará disponível o tempo todo.
+        </p>
+    </div>
+
+    @if (validationErrors.ContainsKey("Geral"))
+    {
+        <div class="alert alert-error">
+            @validationErrors["Geral"]
+        </div>
+    }
+
+    <!-- Formulário para adicionar novo horário -->
+    <div class="add-horario-form">
+        <h5>Adicionar Novo Horário</h5>
+        <div class="form-row">
+            <div class="form-group">
+                <label>Dia da Semana:</label>
+                <select @bind="novoHorario.DiaSemana" class="form-select">
+                    <option value="">Selecione o dia</option>
+                    <option value="Segunda">Segunda-feira</option>
+                    <option value="Terça">Terça-feira</option>
+                    <option value="Quarta">Quarta-feira</option>
+                    <option value="Quinta">Quinta-feira</option>
+                    <option value="Sexta">Sexta-feira</option>
+                    <option value="Sábado">Sábado</option>
+                    <option value="Domingo">Domingo</option>
+                </select>
+                @if (validationErrors.ContainsKey("DiaSemana"))
+                {
+                    <div class="field-error">@validationErrors["DiaSemana"]</div>
+                }
+            </div>
+
+            <div class="form-group">
+                <label>Hora Início:</label>
+                <input type="time" value="@novoHorario.HoraInicio" @onchange="(e) => novoHorario.HoraInicio = FormatarHorarioIndividual(e.Value?.ToString())" class="form-input" />
+                @if (validationErrors.ContainsKey("HoraInicio"))
+                {
+                    <div class="field-error">@validationErrors["HoraInicio"]</div>
+                }
+            </div>
+
+            <div class="form-group">
+                <label>Hora Fim:</label>
+                <input type="time" value="@novoHorario.HoraFim" @onchange="(e) => novoHorario.HoraFim = FormatarHorarioIndividual(e.Value?.ToString())" class="form-input" />
+                @if (validationErrors.ContainsKey("HoraFim"))
+                {
+                    <div class="field-error">@validationErrors["HoraFim"]</div>
+                }
+            </div>
+
+            <div class="form-group">
+                <button type="button" class="btn-add-horario" @onclick="AdicionarHorario" disabled="@isLoading">
+                    @if (isLoading)
+                    {
+                        <i class="fa-solid fa-spinner fa-spin"></i>
+                    }
+                    else
+                    {
+                        <i class="fa-solid fa-plus"></i>
+                    }
+                    Adicionar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lista de horários configurados (salvos e adicionados) -->
+    @if (horariosSalvos.Any() || horarios.Any())
+    {
+        <div class="horarios-salvos">
+            <h5>Horários Configurados</h5>
+            <div class="horarios-list">
+                <!-- Horários já salvos no banco -->
+                @foreach (var horario in horariosSalvos)
+                {
+                    <div class="horario-item-saved">
+                        <div class="horario-info">
+                            <div class="dia-semana">
+                                <i class="fa-solid fa-calendar-day"></i>
+                                <span>@GetDiaSemanaNome(horario.DiaSemana)</span>
+                            </div>
+                            <div class="horario-time">
+                                <i class="fa-solid fa-clock"></i>
+                                <span>@FormatarHorario(horario.HoraInicio, horario.HoraFim)</span>
+                            </div>
+                            <div class="horario-status">
+                                @if (horario.Ativo)
+                                {
+                                    <span class="status-ativo"><i class="fa-solid fa-check-circle"></i> Ativo</span>
+                                }
+                                else
+                                {
+                                    <span class="status-inativo"><i class="fa-solid fa-times-circle"></i> Inativo</span>
+                                }
+                            </div>
+                            <div class="horario-badge">
+                                <span class="badge-salvo">SALVO</span>
+                            </div>
+                        </div>
+                        <div class="horario-actions">
+                            <button type="button" class="btn-remove-horario-saved" @onclick="() => RemoverHorarioSalvo(horario)" 
+                                    disabled="@isLoading" title="Remover horário">
+                                @if (isLoading)
+                                {
+                                    <i class="fa-solid fa-spinner fa-spin"></i>
+                                }
+                                else
+                                {
+                                    <i class="fa-solid fa-trash"></i>
+                                }
+                            </button>
+                        </div>
+                    </div>
+                }
+                
+                <!-- Horários adicionados temporariamente (não salvos ainda) -->
+                @foreach (var horario in horarios.Where(h => !horariosSalvos.Any(hs => hs.DiaSemana == h.DiaSemana && hs.HoraInicio == h.HoraInicio && hs.HoraFim == h.HoraFim)))
+                {
+                    <div class="horario-item-temp">
+                        <div class="horario-info">
+                            <div class="dia-semana">
+                                <i class="fa-solid fa-calendar-day"></i>
+                                <span>@GetDiaSemanaNome(horario.DiaSemana)</span>
+                            </div>
+                            <div class="horario-time">
+                                <i class="fa-solid fa-clock"></i>
+                                <span>@FormatarHorario(horario.HoraInicio, horario.HoraFim)</span>
+                            </div>
+                            <div class="horario-status">
+                                @if (horario.Ativo)
+                                {
+                                    <span class="status-ativo"><i class="fa-solid fa-check-circle"></i> Ativo</span>
+                                }
+                                else
+                                {
+                                    <span class="status-inativo"><i class="fa-solid fa-times-circle"></i> Inativo</span>
+                                }
+                            </div>
+                            <div class="horario-badge">
+                                <span class="badge-temp">AGUARDANDO SALVAMENTO</span>
+                            </div>
+                        </div>
+                        <div class="horario-actions">
+                            <button type="button" class="btn-remove-horario-temp" @onclick="() => RemoverHorarioTemporario(horario)" 
+                                    disabled="@isLoading" title="Remover horário">
+                                @if (isLoading)
+                                {
+                                    <i class="fa-solid fa-spinner fa-spin"></i>
+                                }
+                                else
+                                {
+                                    <i class="fa-solid fa-trash"></i>
+                                }
+                            </button>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="horarios-empty">
+            <div class="empty-icon">
+                <i class="fa-solid fa-clock"></i>
+            </div>
+            <h5>Nenhum horário específico configurado</h5>
+            <p>O produto estará disponível 24 horas por dia, 7 dias por semana.</p>
+            <p class="empty-tip">Use o formulário acima para adicionar horários específicos de disponibilidade.</p>
+        </div>
+    }
+
+    @if (isLoading)
+    {
+        <div class="loading-overlay">
+            <div class="loading-content">
+                <i class="fa-solid fa-spinner fa-spin"></i>
+                <span>Processando...</span>
+            </div>
+        </div>
+    }
+</div>

@@ -1,0 +1,287 @@
+﻿@page "/qrcode"
+@layout Cardápio.Client.Components.Layout.SystemLayout
+
+@inject IJSRuntime JSRuntime;
+@inject HttpClient HttpClient;
+@inject Cardápio.Client.Infra.Crypto.Crypto Crypto;
+@inject SelectCompanyService EmpresaService;
+@inject Cardápio.Client.Infra.Provider.CustomAuthenticationStateProvider Provider;
+@inject NavigationManager Navigation;
+
+@using Cardápio.Client.Components.SelectCompany;
+@using Cardápio.Client.Dto;
+@using System.Text.Json.Serialization;
+@using System.Collections.ObjectModel;
+@using System.IO
+@using System.IO.Compression
+@using QRCoder
+@using SkiaSharp
+
+<head>
+    <HeadOutlet />
+    <PageTitle>Compartilhar sua loja | Escolha AI</PageTitle>
+</head>
+
+@code {
+    private bool isLoading = true;
+    private UsuarioGetDTO usuario;
+    private EmpresaGetDTO company;
+    string token;
+    private string EncryptedUrl;
+    private string formattedName;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            token = await Provider.GetTokenAsync();
+            //await GetUser();
+            usuario = Provider.UsuarioOwner;
+            await GetData();
+        }
+    }
+
+    async Task GetData()
+    {
+        try
+        {
+            HttpClient.DefaultRequestHeaders.Authorization =
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+            var result = await HttpClient.GetFromJsonAsync<EmpresaGetDTO>("/api/enterprise/GetEnterpriseByID/" + ValidateSelectedCompanyID());
+            company = result;
+            formattedName = company.Nome.Replace(" ", "-");
+
+            formattedName = System.Text.RegularExpressions.Regex.Replace(formattedName, "-{2,}", "-");
+            EncryptedUrl = $"{Navigation.BaseUri.TrimEnd('/')}/loja/{formattedName}"; // alterado
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.Message);
+        }
+        finally
+        {
+            isLoading = false;
+
+            StateHasChanged();
+        }
+    }
+
+    async Task GetUser()
+    {
+        HttpClient.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+        var result = await HttpClient.GetFromJsonAsync<UsuarioGetDTO>("/api/authentication/getCompanyID");
+        usuario = result;
+    }
+
+    private int ValidateSelectedCompanyID()
+    {
+        if (usuario != null && EmpresaService.EmpresaSelecionada == 0)
+        {
+            return usuario.EmpresaID ?? 0;
+        }
+
+        return EmpresaService.EmpresaSelecionada;
+    }
+
+    protected override void OnInitialized()
+    {
+        EmpresaService.EmpresaChanged += UpdateEmpresa;
+    }
+
+    private async void UpdateEmpresa()
+    {
+        isLoading = true;
+        await InvokeAsync(StateHasChanged);
+        await GetData();
+    }
+
+    public void Dispose()
+    {
+        EmpresaService.EmpresaChanged -= UpdateEmpresa;
+    }
+}
+
+<div class="header">
+    <div class="container-title-header">
+        <i class="fa-solid fa-qrcode"></i>
+        <h3 class="title-page-section">QRCode</h3>
+    </div>
+    <div class="container-select">
+        <Select />
+    </div>
+</div>
+
+<div class="container-section">
+    @if (isLoading || EmpresaService.IsLoading)
+    {
+        <div class="container">
+            <SpinnerLoader PrimaryColor="#272A2D" SecondaryColor="#ffffff" Size="90" />
+        </div>
+    }
+
+    @if (company != null && !isLoading && !EmpresaService.IsLoading)
+    {
+        <div class="content">
+            <div class="container">
+                <div>
+                    <div>
+                        <span class="title-label">QRCode por empresa:</span>
+                    </div>
+                    <div class="qr-code-container">
+                        <div class="qr-code" style="background-image:url('/imagens/QrCode/@company.QRCode')"></div>
+                        <div class="input-container">
+                            <input class="input" id="urlInput" value="@EncryptedUrl" readonly /> @* alterado *@
+                            <button class="button-copy rz-ripple" type="button" @onclick="@CopyToClipboard" title="Copiar link">
+                                @if (isCopied)
+                                {
+                                    <i class="fas fa-check"></i>
+                                }
+                                else
+                                {
+                                    <span>Copiar</span>
+                                }
+                            </button>
+                        </div>
+                        <span class="link">@EncryptedUrl</span>
+                        <button class="download" type="button" title="baixar" @onclick="DownloadQRCode">Baixar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private async Task DownloadQRCode()
+    {
+        var response = await HttpClient.GetAsync("/api/imagem/download/" + company.QRCode);
+
+        if (response.IsSuccessStatusCode)
+        {
+            var fileName = "QRCode.png";
+            var imageBytes = await response.Content.ReadAsByteArrayAsync();
+
+            var base64Image = Convert.ToBase64String(imageBytes);
+            var downloadUrl = $"data:image/png;base64,{base64Image}";
+
+            await JSRuntime.InvokeVoidAsync("BlazorDownloadFile", downloadUrl, fileName);
+        }
+    }
+}
+
+@code {
+    private int mesaInicial = 1;
+    private int mesaFinal = 10;
+    private bool isLoadingQrCode = false;
+    private int progressValue = 0;
+    private string errorMessage = string.Empty;
+
+    private async Task GenerateAndDownloadZip()
+    {
+        if (!IsValidInput())
+        {
+            return;
+        }
+
+        isLoadingQrCode = true;
+        StateHasChanged();
+        progressValue = 0;
+
+        try
+        {
+            using var zipStream = new MemoryStream();
+            using (var archive = new ZipArchive(zipStream, ZipArchiveMode.Create, true))
+            {
+                for (int i = mesaInicial; i <= mesaFinal; i++)
+                {
+                    progressValue = (int)((i - mesaInicial + 1) / (double)(mesaFinal - mesaInicial + 1) * 100);
+                    StateHasChanged();
+
+                    var url = $"{Navigation.BaseUri.TrimEnd('/')}/loja/{formattedName}?qrcode-mesa={i}"; // alterado
+                    using var qrGenerator = new QRCodeGenerator();
+                    using var qrCodeData = qrGenerator.CreateQrCode(url, QRCodeGenerator.ECCLevel.Q);
+                    using var qrCode = new PngByteQRCode(qrCodeData);
+
+                    byte[] qrCodeImage = qrCode.GetGraphic(20);
+
+                    var entry = archive.CreateEntry($"Mesa_{i}.png");
+                    using var entryStream = entry.Open();
+                    await entryStream.WriteAsync(qrCodeImage, 0, qrCodeImage.Length);
+                }
+            }
+
+            zipStream.Position = 0;
+            var zipBytes = zipStream.ToArray();
+            var zipBase64 = Convert.ToBase64String(zipBytes);
+            var downloadLink = $"data:application/zip;base64,{zipBase64}";
+
+            await JSRuntime.InvokeVoidAsync("BlazorDownloadFile", downloadLink, "QrCodes.zip");
+        }
+        finally
+        {
+            isLoadingQrCode = false;
+            progressValue = 0;
+            StateHasChanged();
+        }
+    }
+
+    private void ValidateInputs()
+    {
+        if (!IsValidInput())
+        {
+            errorMessage = "Mesa inicial deve ser menor ou igual a mesa final.";
+        }
+        else
+        {
+            errorMessage = string.Empty;
+        }
+    }
+
+    private bool IsValidInput()
+    {
+        return mesaInicial <= mesaFinal && mesaInicial > 0 && mesaFinal > 0;
+    }
+
+    private void PrintPage()
+    {
+        JSRuntime.InvokeVoidAsync("window.print");
+    }
+
+    private bool isCopied = false;
+
+    private async void CopyToClipboard()
+    {
+        await JSRuntime.InvokeVoidAsync("copyToClipboard", EncryptedUrl);
+
+        isCopied = true;
+
+        StateHasChanged();
+        await Task.Delay(2000);
+        isCopied = false;
+        StateHasChanged();
+    }
+}
+
+<script>
+    function copyToClipboard(text) {
+        navigator.clipboard.writeText(text);
+    }
+
+    window.BlazorDownloadFile = (url, fileName) => {
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+</script>
+
+<style>
+    .global-select {
+        align-items: end !important;
+    }
+</style>

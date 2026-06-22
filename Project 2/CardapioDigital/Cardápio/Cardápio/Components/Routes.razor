@@ -1,0 +1,141 @@
+﻿@inherits ComponentBase
+@inject NavigationManager Navigation
+@inject Cardápio.Client.Infra.Provider.CustomAuthenticationStateProvider Provider;
+@inject IJSRuntime JSRuntime;
+
+@code {
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await Provider.GetOwnerUser();
+
+            if (Provider.UsuarioOwner != null)
+            {
+                if (Navigation.Uri.Contains("/login") || Navigation.Uri.Contains("/signup"))
+                {
+                    Navigation.NavigateTo("/categorias", false);
+                    return;
+                }
+
+                if (Provider.UsuarioOwner.UsuarioTipoID != 4 && Navigation.Uri.Contains("/grupos"))
+                {
+                    Navigation.NavigateTo("/categorias", false);
+                    return;
+                }
+
+                if (Provider.UsuarioOwner.UsuarioTipoID == 2)
+                {
+                    if (Navigation.Uri.Contains("/empresas") || Navigation.Uri.Contains("/usuarios"))
+                    {
+                        Navigation.NavigateTo("/categorias", false);
+                        return;
+                    }
+                }
+
+
+
+                if (Provider.UsuarioOwner.UsuarioTipoID == 4)
+                {
+                    Navigation.NavigateTo("/grupos", false);
+                        return;
+                    
+                }
+
+
+                // Removido o redirecionamento da /loja para permitir acesso público
+                // if (Navigation.Uri.Contains("/loja"))
+                // {
+                //     Navigation.NavigateTo("/", false);
+                //     return;
+                // }
+
+                if (Navigation.Uri.Contains("entrar") || Navigation.Uri.Contains("completar-cadastro"))
+                {
+                    Navigation.NavigateTo("/categorias", false);
+                    return;
+                }
+            }
+
+            if (Provider.UsuarioOwner == null)
+            {
+                await Provider.GetClientUser();
+
+                if (Provider.UsuarioClienteGetDTO != null)
+                {
+                    var returnUrl = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "returnUrl");
+
+                    if (Navigation.Uri.Contains("/loja/"))
+                    {
+                        await JSRuntime.InvokeVoidAsync("localStorage.setItem", "returnUrl", Navigation.Uri);
+                    }
+
+                    bool precisaCompletarCadastro = (Provider.UsuarioClienteGetDTO.CPF == null || Provider.UsuarioClienteGetDTO.Nome == null) &&
+                                                    (Provider.UsuarioClienteGetDTO.Email == null || Provider.UsuarioClienteGetDTO.Celular == null);
+
+                    if (precisaCompletarCadastro && !Navigation.Uri.Contains("/completar-cadastro"))
+                    {
+                        Navigation.NavigateTo("/completar-cadastro", true);
+                        return;
+                    }
+
+                    if (!precisaCompletarCadastro && Navigation.Uri.Contains("/completar-cadastro"))
+                    {
+                        string redirectUrl = string.IsNullOrEmpty(returnUrl) ? "/loja/Rei-do-Hamburguer-Região-Leste" : returnUrl;
+                        Navigation.NavigateTo(redirectUrl, false);
+                    }
+
+                    if (Provider.UsuarioClienteGetDTO != null && Navigation.Uri.Contains("/entrar"))
+                    {
+                        string redirectUrl = string.IsNullOrEmpty(returnUrl) ? "/loja/Rei-do-Hamburguer-Região-Leste" : returnUrl;
+                        Navigation.NavigateTo(redirectUrl, false);
+                    }
+                }
+            }
+        }
+
+        // if (Provider.UsuarioClienteGetDTO != null)
+        // {
+        //     if (Provider.UsuarioClienteGetDTO.UsuarioTipoID == 5 && !Navigation.Uri.Contains("/loja"))
+        //     {
+        //         _hasRedirected = true;
+        //         Navigation.NavigateTo("/loja", false);
+        //         return;
+        //     }
+
+        //     if ((Provider.UsuarioClienteGetDTO.CPF == null || Provider.UsuarioClienteGetDTO.Nome == null)
+        //         && (Provider.UsuarioClienteGetDTO.Email == null || Provider.UsuarioClienteGetDTO.Celular == null))
+        //     {
+        //         if (!Navigation.Uri.Contains("/completar-cadastro"))
+        //         {
+        //             _hasRedirected = true;
+        //             Navigation.NavigateTo("/completar-cadastro", false);
+        //             return;
+        //         }
+        //     }
+
+        //     if (Navigation.Uri.Contains("/entrar") || Navigation.Uri.Contains("/cadastro"))
+        //     {
+        //         _hasRedirected = true;
+        //         Navigation.NavigateTo("/loja", false);
+        //         return;
+        //     }
+        // }
+
+        // Redireciona Owner se estiver acessando a página de login ou signup
+        // if (Provider.UsuarioOwner != null &&
+        //     (Navigation.Uri.Contains("/login") || Navigation.Uri.Contains("/signup")))
+        // {
+        //     _hasRedirected = true;
+        //     Navigation.NavigateTo("/loja", false);
+        // }
+    }
+}
+
+
+<Router AppAssembly="typeof(Program).Assembly" AdditionalAssemblies="new[] { typeof(Client._Imports).Assembly }">
+    <Found Context="routeData">
+        <RouteView RouteData="routeData" DefaultLayout="typeof(Layout.MainLayout)" />
+        <FocusOnNavigate RouteData="routeData" Selector="h1" />
+    </Found>
+</Router>

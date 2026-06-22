@@ -1,0 +1,432 @@
+﻿@inject ShoppingCartContextService CartService;
+@inject NavigationManager navigationManager;
+@inject IJSRuntime JSRuntime;
+@inject Cardápio.Client.Infra.Provider.CustomAuthenticationStateProvider Provider;
+@inject NavigationManager NavigationManager;
+@inject HttpClient HttpClient;
+@inject Cardápio.Client.Pages.ConfirmarPedido.PedidoStorage PedidoStorage;
+
+@code {
+    [Parameter]
+    public EventCallback OnCartChanged { get; set; }
+    [Parameter]
+    public EventCallback<CartModel> EditItem { get; set; }
+    [Parameter]
+    public EventCallback<bool> OnCartStateChanged { get; set; }
+    [Parameter]
+    public EmpresaGetDTO empresa { get; set; } = null;
+
+    public CartModel SelectedItem { get; set; } = null;
+
+    private List<CartModel> CartItems = new List<CartModel>();
+    private int TotalItems;
+    private string FormatarPreco(decimal? preco) => preco.HasValue ? $"R$ {preco.Value:F2}" : "Preço indisponível";
+
+    public bool _isCartOpen = false;
+
+    private async Task NotifyParentAsync()
+    {
+        if (OnCartChanged.HasDelegate)
+        {
+            await OnCartChanged.InvokeAsync();
+        }
+    }
+
+    private async Task NotifyCartStateChanged()
+    {
+        Console.WriteLine($"[ShoppingCartContextComponent] NotifyCartStateChanged called: _isCartOpen={_isCartOpen}");
+        if (OnCartStateChanged.HasDelegate)
+        {
+            await OnCartStateChanged.InvokeAsync(_isCartOpen);
+        }
+    }
+
+    protected override async void OnInitialized()
+    {
+        await LoadCartAsync();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        // Método removido pois não há mais dependência de parâmetros SelectedProducts
+        await base.OnParametersSetAsync();
+    }
+
+    private async Task LoadCartAsync()
+    {
+        var newCartItems = await CartService.GetCartItemsAsync();
+        if (!CartItems.SequenceEqual(newCartItems))
+        {
+            CartItems = newCartItems;
+            TotalItems = CartService.TotalItems;
+
+            StateHasChanged();
+        }
+    }
+
+    private async Task DecreaseQuantityAsync(CartModel item)
+    {
+        await CartService.DecreaseQuantityAsync(item.ItemCartId);
+        await Task.Yield();
+        await LoadCartAsync();
+        await NotifyParentAsync();
+    }
+
+    private async Task IncreaseQuantityAsync(CartModel item)
+    {
+        await CartService.IncreaseQuantityAsync(item.ItemCartId);
+        await Task.Yield();
+        await LoadCartAsync();
+        await NotifyParentAsync();
+    }
+
+    public async Task RemoveFromCartAsync(CartModel item)
+    {
+        await CartService.RemoveFromCartAsync(item.ItemCartId);
+        await Task.Yield();
+        await LoadCartAsync();
+        await NotifyParentAsync();
+    }
+
+    private async Task EditItemCart(CartModel item)
+    {
+        SelectedItem = item;
+        await EditItem.InvokeAsync(item);
+        SelectedItem = null;
+    }
+
+    public async void CloseCart()
+    {
+        Console.WriteLine("[ShoppingCartContextComponent] CloseCart chamado");
+        try
+        {
+            _isCartOpen = false;
+            StateHasChanged();
+            
+            // Notificar o componente pai sobre a mudança de estado
+            await NotifyCartStateChanged();
+            
+            // Usar as funções auxiliares JavaScript
+            bool success = await JSRuntime.InvokeAsync<bool>("ShoppingCartHelpers.closeCart");
+            Console.WriteLine($"[ShoppingCartContextComponent] CloseCart - success: {success}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[ShoppingCartContextComponent] Erro ao fechar carrinho: {ex.Message}");
+            // Fallback para o método original
+            try
+            {
+                await JSRuntime.InvokeVoidAsync("removeOverflow1");
+            }
+            catch { }
+        }
+    }
+
+    public async Task<bool> OpenCart()
+    {
+        Console.WriteLine($"[ShoppingCartContextComponent] OpenCart chamado. _isCartOpen atual: {_isCartOpen}");
+        
+        try
+        {
+            // Sempre recarrega o carrinho antes de abrir
+            await LoadCartAsync();
+            
+            _isCartOpen = true;
+            StateHasChanged();
+            
+            // Notificar o componente pai sobre a mudança de estado
+            await NotifyCartStateChanged();
+            
+            // Aguarda um pequeno delay para garantir que o DOM foi atualizado
+            await Task.Delay(50);
+            
+            // Usar as funções auxiliares JavaScript
+            bool success = await JSRuntime.InvokeAsync<bool>("ShoppingCartHelpers.openCart");
+            
+            Console.WriteLine($"[ShoppingCartContextComponent] OpenCart - success: {success}, _isCartOpen agora: {_isCartOpen}");
+            Console.WriteLine("[ShoppingCartContextComponent] OpenCart concluído");
+            
+            return success;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[ShoppingCartContextComponent] Erro ao abrir carrinho: {ex.Message}");
+            // Fallback para o método original
+            try
+            {
+                bool classApplied = await JSRuntime.InvokeAsync<bool>("addOverflow1");
+                return classApplied;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+    }
+
+    private string BaseUrl => NavigationManager.BaseUri;
+}
+
+<div class="container-cart @(_isCartOpen ? "open" : "")">
+    <div class="content-cart">
+        <div class="cart-header">
+            <div class="close" @onclick="CloseCart">
+                <span>Fechar carrinho</span>
+                <i class="fa-solid fa-xmark"></i>
+            </div>
+        </div>
+        @if (CartItems != null && CartItems.Any())
+        {
+            <div class="container-cart-content">
+                <ul class="products">
+                    @foreach (var item in CartItems)
+                    {
+                        <li class="product-item">
+                            <div class="display" @onclick="async () => await EditItemCart(item)">
+                                <div class="container-imagine-cart">
+                                    <div class="img-product" style="background-image: url('@(BaseUrl + "imagens/ThumbnailProducts/" + item.ImageUrl)'); position: relative;">
+                                        <div class="edit" @onclick="async () => await EditItemCart(item)">
+                                            <i class="fa-regular fa-pen-to-square"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="container">
+                                    <div class="container-details">
+                                        <div class="header-details">
+                                            <span class="header">@item.Name</span>
+                                            <span class="number price">
+                                                @{
+                                                    var productPrice = item.Price * item.Quantity;
+                                                    var additionalPrice = item.AdditionalGroups?.Sum(group => group.Items?.Sum(add => add.TotalPrice) ?? 0) ?? 0;
+                                                    var totalItemPrice = productPrice + additionalPrice;
+                                                    Logger.LogInformation("[CART] {item.Name}: Produto={productPrice:C} + Adicional={additionalPrice:C} = Total={totalItemPrice:C}", item.Name, productPrice, additionalPrice, totalItemPrice);
+                                                }
+                                                @(FormatarPreco(totalItemPrice))
+                                            </span>
+                                        </div>
+                                        <div class="container-middle">
+                                            <div class="container-quantity" @onclick:stopPropagation="true">
+                                                @if (item.Quantity == 1)
+                                                {
+                                                    <button class="remove-trash rz-ripple" @onclick="async () => await RemoveFromCartAsync(item)">
+                                                        <i class="fa-regular fa-trash-can" style="color: #EF476F;"></i>
+                                                    </button>
+                                                }
+                                                else
+                                                {
+                                                    <button class="remove rz-ripple" @onclick="async () => await DecreaseQuantityAsync(item)">
+                                                        <i class="fa-solid fa-minus"></i>
+                                                    </button>
+                                                }
+
+                                                <div class="quantity number">@item.Quantity</div>
+
+                                                <button class="add-button rz-ripple" @onclick="async () => await IncreaseQuantityAsync(item)">
+                                                    <i class="fa-solid fa-plus"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            @if (!string.IsNullOrEmpty(item.Observation) || item.AdditionalGroups.SelectMany(group => group.Items).Any())
+                            {
+                                var additionalItems = item.AdditionalGroups
+                                .SelectMany(group => group.Items)
+                                .Select(additional => $"<span class=\"number\">{additional.Quantity}x</span> {additional.Name}")
+                                .ToList();
+
+                                <div class="container-additional-observation">
+                                    @if (additionalItems.Any())
+                                    {
+                                        <div class="container-additional">
+                                            <p class="additional">@((MarkupString)string.Join(", ", additionalItems))</p>
+                                        </div>
+                                    }
+
+                                    @if (!string.IsNullOrEmpty(item.Observation))
+                                    {
+                                        <div class="container-observation">
+                                            <p class="observation">Obs.: @item.Observation</p>
+                                        </div>
+                                    }
+                                </div>
+                            }
+                        </li>
+                    }
+                </ul>
+                <div class="container-details-price">
+                    <div class="container-price">
+                        <div class="content-price">
+                            <p class="label">Total:</p>
+                            <p class="total number">@FormatarPreco(CartService.GetTotalValueAsync().Result)</p>
+                        </div>
+                    </div>
+                    <div class="container-buttons-finish">
+                        @if (empresa.AtenderWhatsapp)
+                        {
+                            <button class="wts rz-ripple" @onclick="OpenWhatsApp" title="Redirecionará para o contato no whatsapp"><i class="fa-brands fa-whatsapp"></i> Encomendar por Whatsapp</button>
+                        }
+                        <button class="continuar rz-ripple" @onclick="() => _isCartOpen = false" title="Irá fechar o carrinho"><i class="fa-solid fa-arrow-turn-up fa-rotate-270"></i> Continuar comprando</button>
+                        <button class="finish rz-ripple" @onclick="SendOrder"><i class="fa-solid fa-check"></i> Concluir compra</button>
+                    </div>
+                </div>
+            </div>
+        } else
+        {
+            <div class="container-empty">
+                <i class="fa-solid fa-cart-shopping cart"></i>
+                <h4>
+                    Seu Carrinho está vazio, <br>
+                    adicione itens para visualizar
+                </h4>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    private string GenerateWhatsAppMessage()
+    {
+        var message = "Olá, gostaria de encomendar os seguintes itens:\n\n";
+
+        foreach (var item in CartItems)
+        {
+            string priceInfo;
+            if (item.HasPromotion && item.OriginalPrice.HasValue && item.OriginalPrice > item.Price)
+            {
+                // Item em promoção - mostra preço original riscado e preço promocional
+                priceInfo = $"~~{FormatarPreco(item.OriginalPrice.Value)}~~ {FormatarPreco(item.Price)} 🔥";
+            }
+            else
+            {
+                // Item sem promoção - mostra apenas o preço normal
+                priceInfo = FormatarPreco(item.Price);
+            }
+
+            message += $"🛒 *{item.Quantity}x {item.Name}* - {priceInfo} cada\n";
+
+            if (item.AdditionalGroups.Any(g => g.Items.Any()))
+            {
+                message += "  _Adicionais (por unidade):_\n";
+
+                foreach (var group in item.AdditionalGroups)
+                {
+                    foreach (var additional in group.Items)
+                    {
+                        message += $"    ✅ {additional.Quantity}x {additional.Name} - {FormatarPreco(additional.UnitPrice)} cada\n";
+                    }
+                }
+            }
+
+            if (!string.IsNullOrEmpty(item.Observation))
+            {
+                message += $"  📝 _Obs.: {item.Observation}_\n";
+            }
+
+            message += "\n";
+        }
+
+        message += $"💰 *Total geral:* {FormatarPreco(CartService.GetTotalValueAsync().Result)}";
+        return message;
+    }
+
+    public async Task<string> GetWhatsAppLinkAsync()
+    {
+        var message = Uri.EscapeDataString(GenerateWhatsAppMessage());
+        var isMobile = await JSRuntime.InvokeAsync<bool>("isMobile");
+
+        return isMobile
+            ? $"https://api.whatsapp.com/send?phone={empresa.Celular}&text={message}"
+            : $"https://web.whatsapp.com/send?phone={empresa.Celular}&text={message}";
+    }
+
+    private async void OpenWhatsApp()
+    {
+        var link = await GetWhatsAppLinkAsync();
+        await JSRuntime.InvokeVoidAsync("openInNewTab", link);
+    }
+
+    private async Task SendOrder()
+    {
+        if (Provider.UsuarioClienteGetDTO == null) {
+            var returnUrl = NavigationManager.Uri;
+            await JSRuntime.InvokeVoidAsync("localStorage.setItem", "returnUrl", returnUrl);
+
+            NavigationManager.NavigateTo("/entrar", false);
+            return;
+        }
+
+        var pedido = new PedidoAddDTO
+            {
+                UsuarioClienteNome = Provider.UsuarioClienteGetDTO.Nome,
+                NomeMesa = null,
+                EmpresaID = empresa.ID,
+                EmpresaNome = empresa.Nome,
+                EmpresaImageUrl = empresa.ImageLogo ?? "Default.png",
+                StatusPedidoID = 1,
+                Total = CartService.GetTotalValueAsync().Result,
+                ColPedidoItem = CartItems.Select(item => new PedidoItemAddDTO
+                {
+                    ProdutoID = item.Id,
+                    Quantidade = item.Quantity,
+                    Observacao = item.Observation,
+                    Nome = item.Name,
+                    Preco = item.Price,
+                    Subtotal = (item.Price * item.Quantity) + (item.AdditionalGroups?.Sum(group => group.Items?.Sum(add => add.TotalPrice) ?? 0) ?? 0),
+                    ColPedidoItemAdicional = item.AdditionalGroups
+                        .SelectMany(group => group.Items)
+                        .Select(additional => new PedidoItemAdicionalAddDTO
+                        {
+                            GrupoAdicionalItemID = additional.ID,
+                            Nome = additional.Name,
+                            Quantidade = additional.Quantity,
+                            PrecoUnitario = additional.UnitPrice,
+                            Subtotal = additional.TotalPrice
+                        }).ToList()
+                }).ToList()
+            };
+
+        PedidoStorage.SetPedido(pedido);
+
+        NavigationManager.NavigateTo("confirmar-pedido", false);
+    }
+}
+
+<script src="/js/shoppingcart-helpers.js"></script>
+<script>
+    function openInNewTab(url) {
+        window.open(url, '_blank', 'noopener,noreferrer');
+    }
+
+    function ensureClassChange(action, className, checkAdd) {
+        return new Promise((resolve) => {
+            const observer = new MutationObserver(() => {
+                const hasClass = document.body.classList.contains(className);
+                if ((checkAdd && hasClass) || (!checkAdd && !hasClass)) {
+                    observer.disconnect();
+                    console.log(`Classe "${className}" foi ${checkAdd ? 'adicionada' : 'removida'}.`);
+                    resolve(true);
+                }
+            });
+
+            observer.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+
+            action();
+        });
+    }
+
+    async function addOverflow1() {
+        return await ensureClassChange(() => document.body.classList.add('no-scroll'), 'no-scroll', true);
+    }
+
+    async function removeOverflow1() {
+        return await ensureClassChange(() => document.body.classList.remove('no-scroll'), 'no-scroll', false);
+    }
+
+    window.isMobile = function () {
+        return /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    };
+
+</script>

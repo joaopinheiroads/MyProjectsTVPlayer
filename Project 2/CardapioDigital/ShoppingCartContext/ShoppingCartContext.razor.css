@@ -1,0 +1,480 @@
+﻿.container-cart {
+	width: 472px;
+	min-width: 472px;
+	background-color: white;
+	height: calc(100vh - 60px);
+	position: fixed !important;
+	right: -500px !important;
+	top: 62px !important;
+	z-index: 999999 !important; /* Valor máximo para garantir que fique acima de tudo */
+	box-shadow: -5px 0 15px rgba(0, 0, 0, 0.1);
+	padding: .5rem 2rem;
+	transition: right 0.3s ease-in-out !important;
+	overflow: hidden;
+	display: flex;
+	flex-direction: column;
+	border-left: 1px solid #e0e0e0;
+}
+
+.container-cart.open {
+	right: 0 !important;
+}
+
+@media screen and (max-width: 800px) {
+	.container-cart {
+		width: 100% !important;
+		top: 0 !important;
+		min-width: initial !important;
+		padding: .5rem 1rem;
+		right: -100% !important;
+		height: 100vh !important;
+	}
+
+	.container-cart.open {
+		right: 0 !important;
+	}
+}
+
+.content-cart {
+	flex-grow: 1;
+	overflow-y: auto;
+	position: relative;
+	padding-bottom: 1.25rem;
+}
+
+.container-cart-content {
+	display: flex;
+	flex-direction: column;
+	flex-grow: 1;
+	justify-content: space-between;
+	gap: 1rem;
+	height: 94%;
+	margin-top: 1.5rem;
+}
+
+.cart-header {
+	width: 100%;
+	display: flex;
+	justify-content: end;
+	position: absolute;
+}
+
+.close {
+	color: #073B4C;
+	font-size: 1.25rem;
+	line-height: 0;
+	cursor: pointer;
+	margin-bottom: 1rem;
+	padding: .4rem 0;
+	display: flex;
+	align-items: center;
+	gap: .5rem;
+	cursor: pointer;
+	width: fit-content;
+}
+
+.close i {
+	color: #073B4C;
+}
+
+.close span {
+	font-size: 14px;
+	color: #073B4C;
+	font-weight: 600;
+	opacity: 0.5;
+}
+
+.products {
+	display: flex;
+	flex-direction: column;
+	gap: 2rem;
+	min-height: 150px;
+	overflow-y: auto;
+	padding-top: 1rem;
+	padding-bottom: .5rem;
+}
+
+ul li {
+	list-style: none;
+}
+
+.img-product {
+	width: 100px;
+	height: 100px;
+	background-size: cover;
+	background-position: center;
+	border-radius: 0.375rem;
+	will-change: transform;
+}
+
+.product-item {
+	display: flex;
+	flex-direction: column;
+	gap: .5rem;
+	transition-duration: .3s;
+	background-color: white;
+	padding: .5rem .2rem;
+	border-radius: 0.375rem;
+	cursor: pointer;
+}
+
+.product-item:not(:has(.container-quantity:hover)):hover {
+	background-color: #edf0f3;
+}
+
+@media screen and (max-width: 600px) {
+	.img-product {
+		width: 80px;
+		height: 80px;
+	}
+
+	.product-item {
+		padding: .2rem;
+	}
+}
+
+.container {
+	width: 100%;
+	display: flex;
+	flex-direction: column;
+	justify-content: space-between;
+}
+
+.display {
+	width: 100%;
+	display: flex;
+}
+
+.container-details {
+	width: 100%;
+	display: flex;
+}
+
+.header-details {
+	display: flex;
+	flex-direction: column;
+	justify-content: space-between;
+	width: 100%;
+}
+
+.header-details .header {
+	font-size: 16px;
+	padding-left: 1.25rem;
+	max-width: 190px;
+	text-wrap: wrap;
+	font-weight: 600;
+	max-height: 40px;
+	overflow: hidden;
+	display: -webkit-box;
+	-webkit-box-orient: vertical;
+	-webkit-line-clamp: 2;
+	text-overflow: ellipsis;
+	margin-bottom: .2rem;
+}
+
+.price {
+	font-size: 15px;
+	font-weight: 500;
+	color: #272A2D;
+	padding-left: 1.25rem;
+}
+
+@media screen and (max-width: 600px) {
+	.header-details .header {
+		padding-left: 1rem;
+		max-width: 150px;
+	}
+
+	.price {
+		padding-left: 1rem;
+	}
+}
+
+.container-additional,
+.container-observation {
+	max-height: 32px;
+	overflow: hidden;
+	display: -webkit-box;
+	-webkit-box-orient: vertical;
+	-webkit-line-clamp: 2;
+	text-overflow: ellipsis;
+}
+
+.observation {
+	font-size: 13px;
+	font-weight: 600;
+	color: #272A2D;
+	opacity: .7;
+	word-wrap: break-word;
+	max-width: 100%;
+}
+
+.additional {
+	font-size: 13px;
+	font-weight: 600;
+	color: #272A2D;
+	opacity: .9;
+	word-wrap: break-word;
+	max-width: 100%;
+}
+
+.container-middle {
+	display: flex;
+	flex-direction: column;
+}
+
+.container-middle .container-quantity {
+	display: flex;
+	align-items: center;
+}
+
+@media screen and (max-width: 500px) {
+	.header-details .header {
+		font-size: 1rem;
+	}
+}
+
+.container-quantity {
+	display: flex;
+	align-items: center;
+	border: 1px solid #272a2d2a;
+	border-radius: 0.375rem;
+	box-shadow: 4px 4px 3px rgba(0, 0, 0, 0.02);
+}
+
+.container-quantity button {
+	padding: .4rem .6rem;
+	cursor: pointer;
+	background-color: transparent;
+	border: none;
+	box-shadow: 4px 4px 3px rgba(0, 0, 0, 0.02);
+	font-weight: 500;
+	font-size: 0.87rem;
+	line-height: 1.25rem;
+	letter-spacing: 0;
+}
+
+.container-quantity button i {
+	color: #38B972;
+	font-size: .9rem;
+}
+
+.container-quantity .quantity {
+	min-width: 50px;
+	padding: 0 .5rem;
+	text-align: center;
+	font-size: 14px;
+}
+
+@media screen and (max-width: 600px) {
+	.container-quantity .quantity {
+		min-width: 45px;
+	}
+}
+
+.edit {
+	position: absolute;
+	top: -15px;
+	right: -15px;
+	z-index: 10;
+	cursor: pointer;
+	background-color: #118AB2;
+	border: 1px solid #118AB2;
+	border-radius: 50%;
+	padding: 10px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	box-shadow: 4px 4px 3px rgba(0, 0, 0, 0.02);
+}
+
+.edit i {
+	color: white;
+}
+
+@media screen and (max-width: 600px) {
+	.edit {
+		top: -10px;
+		right: -10px;
+		padding: 8px;
+	}
+}
+
+.container-footer .trash {
+	display: flex;
+	align-items: center;
+	padding: .44rem .44rem;
+	color: white;
+	background-color: #EF476F;
+	border-radius: 0.375rem;
+	border: none;             
+	cursor: pointer;
+}
+
+@media screen and (max-width: 800px) {
+	.container-footer .trash {
+		padding: .44rem .8rem;
+	}
+	.container-footer .edit {
+		padding: .44rem .7rem;
+	}
+
+	.container-quantity button {
+		padding: .5rem .6rem !important;
+	}
+}
+
+.container-empty {
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	align-items: center;
+	text-align: center;
+	gap: 1rem;
+	height: 90%;
+}
+
+.container-empty i {
+	font-size: 4rem;
+	color: #D0D5DD;
+}
+
+.container-empty h4 {
+	color: #073B4C;
+	font-weight: 600;
+	opacity: .6;
+}
+
+.content-price {
+	display: flex;
+	gap: .5rem;
+	justify-content: space-between;
+	border-top: 1px dashed #D0D5DD;
+	border-bottom: 1px dashed #D0D5DD;
+	padding: 2rem 0 1rem;
+}
+
+.content-price .label {
+	font-size: 1rem;
+	font-weight: 600;
+}
+
+.content-price .total {
+	font-size: 1rem;
+	font-weight: 600;
+	color: #272A2D;
+}
+
+.container-buttons-finish {
+	padding-top: 1rem;
+	display: flex;
+	flex-direction: column;
+	gap: .5rem;
+}
+
+.container-buttons-finish button {
+	padding: 0.7rem 1rem;
+	border-radius: 0.375rem;
+	cursor: pointer;
+	box-shadow: 4px 4px 3px rgba(0, 0, 0, 0.02);
+	font-weight: 600;
+	font-size: 0.87rem;
+	line-height: 1.25rem;
+	letter-spacing: 0;
+}
+
+.container-buttons-finish .continuar {
+	background-color: #073B4C;
+	border: 1px solid #073B4C;
+	color: white;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: .5rem;
+}
+
+.continuar i {
+	color: white;
+}
+
+.container-buttons-finish .finish {
+	background-color: #38b972;
+	border: 1px solid #38b972;
+	color: white;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: .5rem;
+}
+
+.finish i {
+	color: white;
+}
+
+.container-buttons-finish .wts {
+	background-color: white;
+	border: 1px solid #38b972;
+	color: #38b972;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: .5rem;
+}
+
+.wts i {
+	color: #38b972;
+}
+
+body.no-scroll {
+	overflow: hidden !important;
+	overflow-y: hidden !important;
+}
+
+/* Garantir que o modal apareça sobre todos os elementos */
+.container-cart {
+	z-index: 11111 !important;
+	position: fixed !important;
+	right: -500px !important;
+}
+
+/* Regra específica para garantir o posicionamento correto */
+.container-cart:not(.open) {
+	right: -500px !important;
+	transform: translateX(0) !important;
+}
+
+.container-cart.open {
+	right: 0 !important;
+	transform: translateX(0) !important;
+}
+
+/* Adicionar backdrop quando o carrinho está aberto */
+.container-cart.open::before {
+	content: '';
+	position: fixed;
+	top: 0;
+	left: 0;
+	width: 100vw;
+	height: 100vh;
+	background-color: rgba(0, 0, 0, 0.5);
+	z-index: -1;
+}
+
+/* Melhorar a sombra do modal */
+.container-cart.open {
+	box-shadow: -10px 0 30px rgba(0, 0, 0, 0.3);
+}
+
+/* Força máxima para garantir o posicionamento correto do modal */
+body .container-cart {
+	position: fixed !important;
+	z-index: 11111 !important;
+}
+
+body .container-cart:not(.open) {
+	right: -500px !important;
+}
+
+body .container-cart.open {
+	right: 0 !important;
+}

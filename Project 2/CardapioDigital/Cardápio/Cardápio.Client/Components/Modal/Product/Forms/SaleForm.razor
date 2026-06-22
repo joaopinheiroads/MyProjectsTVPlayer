@@ -1,0 +1,154 @@
+﻿@using System.Globalization
+@using Radzen
+@inject IJSRuntime JSRuntime;
+
+<div class="container-availabilities">
+    <div class="title">
+        <label>Dias disponíveis</label>
+        <Cardápio.Client.Components.Tooltip.Tooltip TooltipText="Selecione os dias que o produto irá aparecer no cardápio" />
+    </div>
+    <div class="week-day-selector">
+        @foreach (var dayAvailability in DayAvailabilities)
+        {
+            var dayInitial = CultureInfo.CurrentCulture.DateTimeFormat.GetAbbreviatedDayName(dayAvailability.Day).Substring(0, 3).ToUpper();
+
+            <div class="day-row">
+                <div class="checkbox-container">
+                    <RadzenCheckBox TValue="bool"
+                                    Value="@dayAvailability.IsSelected"
+                                    Change="@(args => UpdateDaySelection(dayAvailability, args))"
+                                    Name="@dayAvailability.Day.ToString()" />
+                    <label for="checkbox-@dayAvailability.Day" class="day-initial">@dayInitial</label>
+                </div>
+                <div class="input-container">
+                    <label>Hora início <span class="number">(de: 00:00)</span></label>
+                    <input type="time" class="time-input number" disabled="@(dayAvailability.IsSelected ? false : true)"
+                           @bind="dayAvailability.StartHour" />
+                </div>
+                <div class="input-container">
+                    <label>Hora final <span class="number">(até: 23:59)</span></label>
+                    <input type="time" class="time-input number" disabled="@(dayAvailability.IsSelected ? false : true)"
+                           @bind="dayAvailability.EndHour" />
+                </div>
+                <div class="input-container">
+                    <label>Preço <span class="number">(em R$)</span></label>
+                    <input type="text" id="priceInput-@dayAvailability.Day"
+                           class="price-input number"
+                           disabled="@(dayAvailability.IsSelected ? false : true)"
+                           @bind="@dayAvailability.Price"
+                           @bind:event="oninput" />
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public List<DayOfWeek> SelectedDays { get; set; } = new List<DayOfWeek>();
+
+    [Parameter]
+    public EventCallback<List<DayOfWeek>> SelectedDaysChanged { get; set; }
+
+    private List<DayAvailability> DayAvailabilities { get; set; }
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+
+        // Inicializa a lista de disponibilidades de dias com os valores padrão.
+        DayAvailabilities = Enum.GetValues(typeof(DayOfWeek))
+            .Cast<DayOfWeek>()
+            .Select(day => new DayAvailability
+                {
+                    Day = day,
+                    IsSelected = SelectedDays.Contains(day),
+                    StartHour = null,
+                    EndHour = null,
+                    Price = "0"
+                })
+            .ToList();
+    }
+
+    private void UpdateDaySelection(DayAvailability dayAvailability, bool isSelected)
+    {
+        dayAvailability.IsSelected = isSelected;
+        if (isSelected && !SelectedDays.Contains(dayAvailability.Day))
+        {
+            SelectedDays.Add(dayAvailability.Day);
+        }
+        else if (!isSelected && SelectedDays.Contains(dayAvailability.Day))
+        {
+            SelectedDays.Remove(dayAvailability.Day);
+        }
+
+        SelectedDaysChanged.InvokeAsync(SelectedDays);
+    }
+
+    private void FormatPriceInput(ChangeEventArgs e, DayAvailability dayAvailability)
+    {
+        // string value = e.Value.ToString().Replace("R$", "").Trim();
+        // if (decimal.TryParse(value, out decimal parsedValue))
+        // {
+        //     dayAvailability.Price = parsedValue;
+        // }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await InitializeInputsMask();
+        }
+    }
+
+    private async Task InitializeInputsMask()
+    {
+        foreach (var dayAvailability in DayAvailabilities)
+        {
+            string inputId = $"priceInput-{dayAvailability.Day}";
+            await JSRuntime.InvokeVoidAsync("applyVMaskerMoney", inputId);
+        }
+    }
+
+    public class DayAvailability
+    {
+        public DayOfWeek Day { get; set; }
+        public bool IsSelected { get; set; }
+        public DateTime? StartHour { get; set; }
+        public DateTime? EndHour { get; set; }
+        public string Price { get; set; }
+    }
+}
+
+<style>
+    .rzi-check {
+        background-color: #118AB2 !important;
+        width: 22px !important;
+        height: 22px !important;
+        line-height: 1.4;
+    }
+
+    .rz-chkbox-box {
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        border: 1px solid #D0D5DD !important;
+        text-align: center !important;
+    }
+
+    .rz-state-active {
+        border: 1px solid #118AB2 !important;
+    }
+
+    .rz-chkbox:focus-visible .rz-chkbox-box {
+        outline: none;
+    }
+
+    .rz-chkbox {
+        width: 22px;
+        height: 22px;
+    }
+
+    .price-input {
+        width: 100px;
+    }
+</style>

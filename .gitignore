@@ -1,0 +1,50 @@
+# =====================================================================
+#  Segredos / arquivos de configuração sensíveis  (NÃO versionar)
+# =====================================================================
+appsettings.json
+appsettings.*.json
+!appsettings.example.json
+
+# Certificados e chaves
+*.pfx
+*.p12
+*.pem
+*.key
+*.snk
+
+# Segredos diversos
+secrets.json
+.env
+.env.*
+
+# Perfis de publicação (podem conter credenciais de deploy)
+*.pubxml.user
+
+# =====================================================================
+#  .NET / Visual Studio
+# =====================================================================
+[Bb]in/
+[Oo]bj/
+.vs/
+*.user
+*.suo
+*.userprefs
+
+# =====================================================================
+#  Node.js (Projeto 6)
+# =====================================================================
+node_modules/
+dist/
+build/
+npm-debug.log*
+yarn-error.log*
+
+# =====================================================================
+#  Logs (apenas arquivos .log gerados em runtime — não a pasta de código)
+# =====================================================================
+*.log
+
+# =====================================================================
+#  Metadados de SVN (este repositório usa Git)
+# =====================================================================
+.svn/

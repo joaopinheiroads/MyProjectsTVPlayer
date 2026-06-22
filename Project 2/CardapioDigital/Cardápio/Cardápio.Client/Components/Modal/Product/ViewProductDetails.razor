@@ -1,0 +1,758 @@
+﻿@typeparam T;
+@typeparam SelectedDTO;
+
+@inject IJSRuntime JSRuntime;
+@inject NavigationManager NavigationManager;
+@inject Cardápio.Client.Pages.ConfirmarPedido.PedidoStorage PedidoStorage;
+@inject Cardápio.Client.Pages.Cardapio.ShoppingCartContext.ShoppingCartContextService CartService;
+
+@using Cardápio.Client.Pages.Cardapio.ShoppingCartContext;
+
+@code {
+    [Parameter] public string ActionType { get; set; } = string.Empty;
+    [Parameter] public EventCallback<T?> OnSubmit { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+    [Parameter] public SelectedDTO? ProductSelected { get; set; }
+    [Parameter] public EventCallback? ComponentIsLoaded { get; set; }
+
+    private Dictionary<string, string> validationErrors = new();
+
+    private string description { get; set; } = string.Empty;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JSRuntime.InvokeVoidAsync("handleEscKey", DotNetObjectReference.Create(this));
+
+            if (ComponentIsLoaded is EventCallback isLoaded)
+            {
+                await isLoaded.InvokeAsync();
+            }
+
+            await Task.Yield();
+        }
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (ProductSelected is ProdutoGetDTO produtoSelecionado)
+        {
+            // Calcular preço promocional atual baseado nos horários
+            var precoAtual = CalcularPrecoAtual(produtoSelecionado);
+            totalPriceView = precoAtual;
+
+            productClient = produtoSelecionado;
+
+            if (produtoSelecionado.CartItem != null && !string.IsNullOrEmpty(produtoSelecionado.CartItem.Observation))
+            {
+                description = produtoSelecionado.CartItem.Observation;
+            }
+
+            if (produtoSelecionado.CartItem != null)
+            {
+                quantity = produtoSelecionado.CartItem.Quantity;
+            }
+
+            if (produtoSelecionado.CartItem?.AdditionalGroups != null && ActionType.Contains("view-cart"))
+            {
+                foreach (var cartGroup in produtoSelecionado.CartItem.AdditionalGroups)
+                {
+                    var productGroup = produtoSelecionado.ColGrupoAdicional
+                        .OrderBy(pg => pg.Posicao)
+                        .FirstOrDefault(g => g.Nome == cartGroup.GroupName);
+
+                    if (productGroup != null)
+                    {
+                        foreach (var cartItem in cartGroup.Items)
+                        {
+                            var additionalItem = productGroup.ColGrupoAdicionalItem
+                                .FirstOrDefault(i => i.Nome == cartItem.Name);
+
+                            if (additionalItem != null)
+                            {
+                                if (productGroup.Maximo == 1)
+                                {
+                                    selectedRadioValues[productGroup.ID] = additionalItem.ID;
+                                }
+                                else
+                                {
+                                    quantities[additionalItem.ID] = cartItem.Quantity;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            await RecalculateTotalPrice();
+        }
+    }
+
+    [JSInvokable("HandleEscapeKey")]
+    public async Task HandleEscapeKey()
+    {
+        await CancelAsync();
+    }
+
+    [JSInvokable("CloseModal")]
+    public async Task CloseModal()
+    {
+        await CancelAsync();
+    }
+
+    public async Task SubmitAsync()
+    {
+        try
+        {
+            if (ProductSelected is ProdutoGetDTO productModel)
+            {
+                var precoAtual = CalcularPrecoAtual(productModel);
+                var temPromocao = precoAtual < productModel.Preco;
+                
+                CartModel data = new CartModel
+                    {
+                        Id = productModel.ID,
+                        ImageUrl = productModel.ImagemThumbnail,
+                        Name = productModel.Nome,
+                        Price = precoAtual, // Preço atual (promocional se houver promoção)
+                        OriginalPrice = temPromocao ? productModel.Preco : null, // Preço original apenas se há promoção
+                        HasPromotion = temPromocao,
+                        Quantity = quantity,
+                        Observation = description,
+                        AdditionalGroups = new List<CartAdditionalGroupModel>()
+                    };
+
+                foreach (var groupAdditional in productModel.ColGrupoAdicional)
+                {
+                    var selectedItems = groupAdditional.ColGrupoAdicionalItem
+                        .Where(item => quantities.GetValueOrDefault(item.ID, 0) > 0)
+                        .ToList();
+
+                    if (selectedRadioValues.TryGetValue(groupAdditional.ID, out int selectedRadioId))
+                    {
+                        var radioItem = groupAdditional.ColGrupoAdicionalItem
+                            .FirstOrDefault(item => item.ID == selectedRadioId);
+
+                        if (radioItem != null && !selectedItems.Contains(radioItem))
+                        {
+                            selectedItems.Add(radioItem);
+                        }
+                    }
+
+                    if (selectedItems.Any())
+                    {
+                        Console.WriteLine($"[DEBUG] Grupo: {groupAdditional.Nome}");
+                        
+                        var groupModel = new CartAdditionalGroupModel
+                            {
+                                GroupName = groupAdditional.Nome,
+                                Items = selectedItems.Select(item =>
+                                {
+                                    var isRadioSelected = selectedRadioValues.TryGetValue(groupAdditional.ID, out int radioId) && radioId == item.ID;
+                                    var additionalQuantity = isRadioSelected ? 1 : quantities.GetValueOrDefault(item.ID, 0);
+                                    
+
+                                    return new CartAdditionalItemModel
+                                    {
+                                        ID = item.ID,
+                                        Name = item.Nome,
+                                        UnitPrice = item.Preco ?? 0,
+                                        Quantity = additionalQuantity,
+                                        TotalPrice = (item.Preco ?? 0) * additionalQuantity
+                                    };
+                                }).ToList(),
+                                GroupTotalPrice = selectedItems.Sum(item =>
+                                {
+                                    var isRadioSelected = selectedRadioValues.TryGetValue(groupAdditional.ID, out int radioId) && radioId == item.ID;
+                                    var additionalQuantity = isRadioSelected ? 1 : quantities.GetValueOrDefault(item.ID, 0);
+                                    return (item.Preco ?? 0) * additionalQuantity;
+                                })
+                            };
+
+                        data.AdditionalGroups.Add(groupModel);
+                    }
+                }
+
+                if (productModel.CartItem != null)
+                {
+                    data.ItemCartId = productModel.CartItem.ItemCartId;
+                }
+
+                await OnSubmit.InvokeAsync((T)(object)data);
+            }
+
+            ResetFields();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Erro ao submeter produto: {ex.Message}");
+        }
+    }
+
+    private async Task CancelAsync()
+    {
+        await OnCancel.InvokeAsync();
+        ResetFields();
+    }
+
+    private void ResetFields()
+    {
+        quantity = 1;
+        description = string.Empty;
+        productClient = new ProdutoGetDTO();
+        selectedRadioValues = new Dictionary<int, int>();
+        quantities = new Dictionary<int, int>();
+
+        StateHasChanged();
+    }
+}
+
+@if (ProductSelected is ProdutoGetDTO product && !NavigationManager.Uri.Contains("/loja/", StringComparison.OrdinalIgnoreCase))
+{
+    <div class="modal-custom">
+        <div class="header-mobile">
+                <h4 class="title">@product.Nome[0].ToString().ToUpper()@product.Nome.Substring(1)</h4>
+            <div class="close" @onclick="CancelAsync"><i class="fa-solid fa-x"></i></div>
+        </div>
+        <div class="container-view">
+            <div class="product-image">
+                <div class="image-overlay" style="background-image: url('/imagens/ImageProducts/@(product.ImagesID?.FirstOrDefault() ?? "Default.png")');"></div>
+                <img src="/imagens/ImageProducts/@(product.ImagesID?.FirstOrDefault() ?? "Default.png")" />
+            </div>
+            <div class="container-content">
+                <div class="header-desktop">
+                    <h4 class="title">@product.Nome[0].ToString().ToUpper()@product.Nome.Substring(1)</h4>
+                    <div class="close" @onclick="CancelAsync"><i class="fa-solid fa-x"></i></div>
+                </div>
+                <div class="content loja">
+                    <div class="title-container">
+                        <div class="container-badge">
+                            <h5 class="category">@product.Categoria</h5>
+                            @if (product != null && product.Destaque)
+                            {
+                                <h5 class="favorite">Produto destaque</h5>
+                            }
+                        </div>
+                    </div>
+                    <div class="content-details">
+                        @if (product?.Descricao != null && !string.IsNullOrEmpty(product.Descricao))
+                        {
+                            <div class="content-descript">
+                                <p class="descript">@product.Descricao[0].ToString().ToUpper()@product.Descricao.Substring(1)</p>
+                            </div>
+                        }
+                        <p class="alert"><i class="fa-solid fa-bell-concierge"></i> Serve <span class="number">@(product?.QTDPessoa ?? 0)</span> pessoa</p>
+                        <div>
+                            <span class="descript-title">Valor: </span>
+                            @if (product != null)
+                            {
+                                var precoAtual = CalcularPrecoAtual(product);
+                                var temPromocao = precoAtual < (product?.Preco ?? 0);
+                                
+                                @if (temPromocao)
+                                {
+                                    <h5 class="price number" style="color: #1db954; font-weight: bold;">R$ <span class="number value">@precoAtual</span></h5>
+                                    <span style="text-decoration: line-through; color: #888; margin-left: 8px;">R$ @(product?.Preco ?? 0)</span>
+                                }
+                                else
+                                {
+                                    <h5 class="price number">R$ <span class="number value">@(product?.Preco ?? 0)</span></h5>
+                                }
+                            }
+                            else
+                            {
+                                <h5 class="price number">R$ 0</h5>
+                            }
+                        </div>
+                    </div>
+                    @if (product != null && product?.ColGrupoAdicional != null && product.ColGrupoAdicional.Any())
+                    {
+                        <div class="additional-group-container">
+                            @foreach (var groupAdditional in product.ColGrupoAdicional.OrderBy(pg => pg.Posicao))
+                            {
+                                <div class="additional-group">
+                                    <div class="title-group">
+                                        <div class="info-title">
+                                            <h4>@groupAdditional.Nome</h4>
+                                            @if (groupAdditional.Minimo > 0)
+                                            {
+                                                if (groupAdditional.Maximo > 1)
+                                                {
+                                                    <span>Escolha @groupAdditional.Maximo opções</span>
+                                                }
+                                                else
+                                                {
+                                                    <span>Escolha @groupAdditional.Maximo opção</span>
+                                                }
+                                            }
+                                            else
+                                            {
+                                                if (groupAdditional.Maximo > 1)
+                                                {
+                                                    <span>Escolha até @groupAdditional.Maximo opções</span>
+                                                }
+                                                else
+                                                {
+                                                    <span>Escolha até @groupAdditional.Maximo opção</span>
+                                                }
+                                            }
+                                        </div>
+                                        @if (groupAdditional.Minimo > 0)
+                                        {
+                                            <div class="badge-required">
+                                                Obrigatório
+                                            </div>
+                                        }
+                                    </div>
+                                    <div class="additional">
+                                        @foreach (var additional in groupAdditional.ColGrupoAdicionalItem)
+                                        {
+                                            <div class="item">
+                                                <div class="item-container">
+                                                    <div class="image-additional" style="background-image: url('/imagens/ImageAdditional/@(additional.ColGrupoAdicionalItemImagem.Arquivo)');"></div>
+                                                    <div class="info-additional">
+                                                        <p>@additional.Nome</p>
+                                                        <span>R$ <span class="number">@additional.Preco</span></span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@if (ProductSelected is ProdutoGetDTO productClient && NavigationManager.Uri.Contains("/loja/", StringComparison.OrdinalIgnoreCase))
+{
+    <div class="modal-custom">
+        <div class="header-mobile">
+            <h4 class="title">@productClient.Nome[0].ToString().ToUpper()@productClient.Nome.Substring(1)</h4>
+            <div class="close" @onclick="CancelAsync"><i class="fa-solid fa-x"></i></div>
+        </div>
+        <div class="container-view">
+            <div class="product-image">
+                <div class="image-overlay" style="background-image: url('/imagens/ImageProducts/@(productClient.ImagesID?.FirstOrDefault() ?? "Default.png")');"></div>
+                <img src="/imagens/ImageProducts/@(productClient.ImagesID?.FirstOrDefault() ?? "Default.png")" />
+            </div>
+            <div class="container-content">
+                <div class="header-desktop">
+                    <h4 class="title">@productClient.Nome[0].ToString().ToUpper()@productClient.Nome.Substring(1)</h4>
+                    <div class="close" @onclick="CancelAsync"><i class="fa-solid fa-x"></i></div>
+                </div>
+                <div class="content loja">
+                    <div class="title-container">
+                        <div class="container-badge">
+                            <h5 class="category">@productClient.Categoria</h5>
+                            @if (productClient != null && productClient.Destaque)
+                            {
+                                <h5 class="favorite">Produto destaque</h5>
+                            }
+                        </div>
+                    </div>
+                    <div class="content-details">
+                        @if (productClient?.Descricao != null && !string.IsNullOrEmpty(productClient.Descricao))
+                        {
+                            <div class="content-descript">
+                                <p class="descript">@productClient.Descricao[0].ToString().ToUpper()@productClient.Descricao.Substring(1)</p>
+                            </div>
+                        }
+                        <p class="alert"><i class="fa-solid fa-bell-concierge"></i> Serve <span class="number">@(productClient?.QTDPessoa ?? 0)</span> pessoa</p>
+                        <div>
+                            <span class="descript-title">Valor: </span>
+                            @if (productClient != null)
+                            {
+                                var precoAtualClient = CalcularPrecoAtual(productClient);
+                                var temPromocaoClient = precoAtualClient < (productClient?.Preco ?? 0);
+                                
+                                @if (temPromocaoClient)
+                                {
+                                    <h5 class="price number" style="color: #1db954; font-weight: bold;">R$ <span class="number value">@precoAtualClient</span></h5>
+                                    <span style="text-decoration: line-through; color: #888; margin-left: 8px;">R$ @(productClient?.Preco ?? 0)</span>
+                                }
+                                else
+                                {
+                                    <h5 class="price number">R$ <span class="number value">@(productClient?.Preco ?? 0)</span></h5>
+                                }
+                            }
+                            else
+                            {
+                                <h5 class="price number">R$ 0</h5>
+                            }
+                        </div>
+                    </div>
+                    @if (productClient != null && productClient?.ColGrupoAdicional != null && productClient.ColGrupoAdicional.Any())
+                    {
+                        <div class="additional-group-container">
+                            @foreach (var groupAdditional in productClient.ColGrupoAdicional.OrderBy(pg => pg.Posicao))
+                            {
+                                <div class="additional-group">
+                                    <div class="title-group">
+                                        <div class="info-title">
+                                            <h4>@groupAdditional.Nome</h4>
+                                            @if (groupAdditional.Minimo > 0)
+                                            {
+                                                if (groupAdditional.Maximo > 1)
+                                                {
+                                                    <span>Escolha pelo menos @groupAdditional.Minimo e no máximo @groupAdditional.Maximo opções (@groupAdditional.ColGrupoAdicionalItem.Sum(item => quantities.GetValueOrDefault(item.ID, 0))/@groupAdditional.Maximo).</span>
+                                                }
+                                                else
+                                                {
+                                                    <span>Escolha pelo menos @groupAdditional.Minimo e no máximo @groupAdditional.Maximo opção (@groupAdditional.ColGrupoAdicionalItem.Sum(item => quantities.GetValueOrDefault(item.ID, 0))/@groupAdditional.Maximo).</span>
+                                                }
+                                            }
+                                            else
+                                            {
+                                                if (groupAdditional.Maximo > 1)
+                                                {
+                                                    <span>Escolha até @groupAdditional.Maximo opções (@groupAdditional.ColGrupoAdicionalItem.Sum(item => quantities.GetValueOrDefault(item.ID, 0))/@groupAdditional.Maximo).</span>
+                                                }
+                                                else
+                                                {
+                                                    <span>Escolha até @groupAdditional.Maximo opção (@groupAdditional.ColGrupoAdicionalItem.Sum(item => quantities.GetValueOrDefault(item.ID, 0))/@groupAdditional.Maximo).</span>
+                                                }
+                                            }
+                                        </div>
+                                        @if (groupAdditional.Minimo > 0)
+                                        {
+                                            <div class="badge-required">
+                                                Obrigatório
+                                            </div>
+                                        }
+                                    </div>
+                                    <div class="additional">
+                                        @foreach (var additional in groupAdditional.ColGrupoAdicionalItem)
+                                        {
+                                            <div class="item">
+                                                <div class="item-container">
+                                                    <div class="image-additional" style="background-image: url('/imagens/ImageAdditional/@(additional.ColGrupoAdicionalItemImagem.Arquivo)');"></div>
+                                                    <div class="info-additional">
+                                                        <p class="name-additional">@additional.Nome</p>
+                                                        <span>R$ <span class="number">@additional.Preco</span></span>
+                                                    </div>
+                                                </div>
+                                                <div class="check">
+                                                    @if (groupAdditional.Maximo == 1)
+                                                    {
+                                                        <input class="radio-group"
+                                                               type="radio"
+                                                               name="group-@groupAdditional.ID"
+                                                               value="@additional.ID.ToString()"
+                                                               id="group-@groupAdditional.ID-@additional.ID"
+                                                               @onclick="() => OnRadioClicked(groupAdditional, additional)"
+                                                               checked="@(selectedRadioValues.TryGetValue(groupAdditional.ID, out int selectedId) && selectedId == additional.ID)" />
+                                                        <label for="group-@groupAdditional.ID-@additional.ID"></label>
+                                                    }
+                                                    else
+                                                    {
+                                                        <div class="quantity-container-group">
+                                                            <button class="remove-group rz-ripple" @onclick="() => DecreaseQuantityGroup(groupAdditional, additional)"><i class="fa-solid fa-minus"></i></button>
+                                                            <div class="quantity-group number">@quantities.GetValueOrDefault(additional.ID, 0)</div>
+                                                            <button class="add-button-group rz-ripple" @onclick="() => IncreaseQuantityGroup(groupAdditional, additional)"><i class="fa-solid fa-plus"></i></button>
+                                                        </div>
+                                                    }
+                                                </div>
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                    <div class="obs">
+                        <label>Observação</label>
+                        <textarea @bind="description" @bind:event="oninput" placeholder="Ex: retirar cebola, maionese à parte etc" />
+                        <span class="error">@validationErrors.GetValueOrDefault("Descricao")</span>
+                    </div>
+                </div>
+    <div class="footer">
+        <div class="quantity-container">
+            <button class="remove rz-ripple" @onclick="DecreaseQuantity"><i class="fa-solid fa-minus"></i></button>
+            <div class="quantity number">@quantity</div>
+            <button class="add-button rz-ripple" @onclick="IncreaseQuantity"><i class="fa-solid fa-plus"></i></button>
+        </div>
+        <div class="confirm" style="display: flex; gap: 8px;">
+            <button class="rz-ripple button-green"
+                    onclick="@SubmitAsync"
+                    disabled="@(!IsSelectionValid())">
+                Adicionar ao Carrinho <span class="quantity-price">R$ <span class="number">@totalPriceView</span></span>
+            </button>
+        </div>
+        <!-- Botão 'Voltar ao Cardápio' removido, deve estar na página de confirmação de pedido -->
+    </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    // Renderização dos itens do carrinho com opção de remover
+    private RenderFragment RenderCarrinhoItens() => builder =>
+    {
+        var seq = 0;
+        CartService.GetCartItemsAsync().ContinueWith(task =>
+        {
+            var itens = task.Result;
+            foreach (var item in itens)
+            {
+                builder.OpenElement(seq++, "div");
+                builder.AddAttribute(seq++, "class", "cart-item");
+                builder.AddContent(seq++, $"{item.Name} - Qtd: {item.Quantity}");
+                builder.OpenElement(seq++, "button");
+                builder.AddAttribute(seq++, "class", "rz-ripple button-red");
+                builder.AddAttribute(seq++, "onclick", EventCallback.Factory.Create(this, () => RemoverItemDoCarrinho(item.ItemCartId)));
+                builder.AddContent(seq++, "Remover");
+                builder.CloseElement();
+                builder.CloseElement();
+            }
+        });
+    };
+    private async Task RemoverItemDoCarrinho(string itemCartId)
+    {
+        await CartService.RemoveFromCartAsync(itemCartId);
+        StateHasChanged();
+    }
+    private Dictionary<int, int> quantities = new();
+    private Dictionary<int, int> selectedRadioValues = new();
+    private int quantity = 1;
+    private decimal totalPriceView = 0;
+
+    private decimal totalPrice => productClient?.Preco.HasValue == true ? productClient.Preco.Value * quantity : 0;
+    private ProdutoGetDTO productClient = new();
+    private bool wasValid = true;
+
+    private async void OnRadioClicked(GrupoAdicionalGetDTO group, GrupoAdicionalItemGetDTO additional)
+    {
+        if (selectedRadioValues.TryGetValue(group.ID, out int currentId) && currentId == additional.ID)
+        {
+            selectedRadioValues.Remove(group.ID);
+        }
+        else
+        {
+            selectedRadioValues[group.ID] = additional.ID;
+        }
+
+        await RecalculateTotalPrice();
+    }
+
+    private async Task RecalculateTotalPrice()
+    {
+        // Calcular preço base do produto (com possível promoção)
+        var precoBase = Math.Round(CalcularPrecoAtual(productClient), 2);
+        
+        // Calcular preço dos adicionais (independente da quantidade do produto)
+        decimal precoAdicionais = 0;
+
+        foreach (var groupAdditional in productClient.ColGrupoAdicional)
+        {
+            if (groupAdditional.TipoNome is not null)
+            {
+                decimal groupValue = groupAdditional.TipoNome switch
+                {
+                    "Média de valor" => Math.Round(CalculateAverageValue(groupAdditional), 2),
+                    "Maior valor" => Math.Round(CalculateMaxSelectedValue(groupAdditional), 2),
+                    "Somatório" => Math.Round(CalculateSumValue(groupAdditional), 2),
+                    _ => 0
+                };
+
+                if (selectedRadioValues.ContainsKey(groupAdditional.ID))
+                {
+                    var selectedItem = groupAdditional.ColGrupoAdicionalItem
+                        .FirstOrDefault(item => item.ID == selectedRadioValues[groupAdditional.ID]);
+
+                    if (selectedItem != null)
+                    {
+                        precoAdicionais += Math.Round(selectedItem.Preco ?? 0, 2);
+                    }
+                }
+
+                precoAdicionais += groupValue;
+            }
+        }
+
+        // Fórmula correta: (preço base * quantidade) + preço adicionais
+        totalPriceView = (precoBase * quantity) + precoAdicionais;
+
+        StateHasChanged();
+        await Task.Yield();
+    }
+
+    private decimal CalculateAverageValue(GrupoAdicionalGetDTO groupAdditional)
+    {
+        var selectedItems = groupAdditional.ColGrupoAdicionalItem
+            .Where(item => quantities.GetValueOrDefault(item.ID, 0) > 0)
+            .ToList();
+
+        if (!selectedItems.Any()) return 0;
+
+        decimal totalValue = 0;
+        int totalQuantity = 0;
+
+        foreach (var item in selectedItems)
+        {
+            int itemQuantity = quantities.GetValueOrDefault(item.ID, 0);
+            decimal itemTotalValue = (item.Preco ?? 0) * itemQuantity;
+
+            totalValue += itemTotalValue;
+            totalQuantity += itemQuantity;
+        }
+
+        decimal averageValue = totalQuantity > 0 ? totalValue / totalQuantity : 0;
+
+        return averageValue;
+    }
+
+    private decimal CalculateMaxSelectedValue(GrupoAdicionalGetDTO groupAdditional)
+    {
+        var selectedItems = groupAdditional.ColGrupoAdicionalItem
+            .Where(item => quantities.GetValueOrDefault(item.ID, 0) > 0)
+            .ToList();
+
+        if (!selectedItems.Any()) return 0;
+
+        decimal maxValue = 0;
+
+        foreach (var item in selectedItems)
+        {
+            var itemQuantity = quantities.GetValueOrDefault(item.ID, 0);
+
+            decimal itemValue = (item.Preco ?? 0) * (itemQuantity > 1 ? 1 : itemQuantity);
+
+            maxValue = Math.Max(maxValue, itemValue);
+        }
+
+        return maxValue;
+    }
+
+    private decimal CalculateSumValue(GrupoAdicionalGetDTO groupAdditional)
+    {
+        return groupAdditional.ColGrupoAdicionalItem
+            .Sum(item => (item.Preco ?? 0) * quantities.GetValueOrDefault(item.ID, 0));
+    }
+
+    private bool IsSelectionValid()
+    {
+        if (productClient?.ColGrupoAdicional == null) return true;
+
+        bool isValid = productClient.ColGrupoAdicional.All(group =>
+        {
+            int totalSelected = group.ColGrupoAdicionalItem.Sum(item =>
+                quantities.GetValueOrDefault(item.ID, 0) +
+                (selectedRadioValues.TryGetValue(group.ID, out int radioId) && radioId == item.ID ? 1 : 0));
+
+            return totalSelected >= group.Minimo && totalSelected <= group.Maximo;
+        });
+
+        if (isValid != wasValid)
+        {
+            wasValid = isValid;
+            StateHasChanged();
+        }
+
+        return isValid;
+    }
+
+    private async void IncreaseQuantityGroup(GrupoAdicionalGetDTO groupAdditional, GrupoAdicionalItemGetDTO additional)
+    {
+        int totalGroupQuantity = groupAdditional.ColGrupoAdicionalItem
+            .Sum(item => quantities.GetValueOrDefault(item.ID, 0));
+
+        if (totalGroupQuantity < groupAdditional.Maximo)
+        {
+            quantities[additional.ID] = quantities.GetValueOrDefault(additional.ID, 0) + 1;
+            await RecalculateTotalPrice();
+        }
+    }
+
+    private async void DecreaseQuantityGroup(GrupoAdicionalGetDTO groupAdditional, GrupoAdicionalItemGetDTO additional)
+    {
+        if (quantities.GetValueOrDefault(additional.ID, 0) > 0)
+        {
+            quantities[additional.ID]--;
+            if (quantities[additional.ID] == 0)
+            {
+                quantities.Remove(additional.ID);
+            }
+
+            await RecalculateTotalPrice();
+        }
+    }
+
+    private async void IncreaseQuantity()
+    {
+        quantity++;
+        await RecalculateTotalPrice();
+    }
+
+    private async void DecreaseQuantity()
+    {
+        if (quantity > 1)
+        {
+            quantity--;
+            await RecalculateTotalPrice();
+        }
+    }
+
+    /// <summary>
+    /// Calcula o preço atual do produto considerando promoções ativas por horário
+    /// </summary>
+    private decimal CalcularPrecoAtual(ProdutoGetDTO produto)
+    {
+        // Se não há promoções por horário, retorna preço original
+        if (produto.PromocoesPorHorario == null || !produto.PromocoesPorHorario.Any())
+        {
+            return produto.Preco ?? 0;
+        }
+
+        var agora = DateTime.Now;
+        var diaSemanaAtual = GetDiaSemanaPortugues(agora.DayOfWeek);
+        var horaAtual = agora.TimeOfDay;
+
+
+        // Buscar promoção ativa no momento atual
+        var promocaoAtiva = produto.PromocoesPorHorario
+            .Where(p => p.DiaSemana == diaSemanaAtual)
+            .Where(p => 
+            {
+                if (TimeSpan.TryParse(p.HoraInicio, out var horaInicio) && 
+                    TimeSpan.TryParse(p.HoraFim, out var horaFim))
+                {
+                    return horaAtual >= horaInicio && horaAtual <= horaFim;
+                }
+                return false;
+            })
+            .OrderBy(p => p.PrecoPromocional)
+            .FirstOrDefault();
+
+        if (promocaoAtiva != null)
+        {
+            return promocaoAtiva.PrecoPromocional;
+        }
+
+        return produto.Preco ?? 0;
+    }
+
+    /// <summary>
+    /// Converte DayOfWeek para string em português
+    /// </summary>
+    private static string GetDiaSemanaPortugues(DayOfWeek dayOfWeek)
+    {
+        return dayOfWeek switch
+        {
+            DayOfWeek.Sunday => "Domingo",
+            DayOfWeek.Monday => "Segunda",
+            DayOfWeek.Tuesday => "Terça",
+            DayOfWeek.Wednesday => "Quarta",
+            DayOfWeek.Thursday => "Quinta",
+            DayOfWeek.Friday => "Sexta",
+            DayOfWeek.Saturday => "Sábado",
+            _ => "Segunda"
+        };
+    }
+}

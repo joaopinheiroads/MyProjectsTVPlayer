@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Impostômetro Nacional - Digital Signage</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Sora:wght@800&family=Roboto+Mono:wght@700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" type="text/css" href="style.css">
+
+
+</head>
+
+<body>
+    <div class="scanline"></div>
+<header>
+            <div class="logo-icon">
+                <img src="src/logoest.png" alt="Logo do Impostômetro" id="logo">
+            </div>
+            <div class="header-text">
+                <h1>Impostômetro nacional</h1>
+                <h2>Dados em Tempo Real</h2>
+            </div>
+            
+
+        </header>
+    <div class="container">
+        
+
+        <div class="main-counter" id="total-counter">R$ CARREGANDO...</div>
+        <div class="label-main">Total Arrecadado no Brasil em Tempo Real</div>
+
+   
+
+
+    </div>
+
+    <script>
+        async function carregar() {
+            const fps = 10;
+            const incrementoPorSegundo = 95238.10;
+            const incrementoPorFrame = incrementoPorSegundo / fps;
+
+            function parseBRL(valor) {
+                return parseFloat(valor.replace(/\./g, "").replace(",", "."));
+            }
+
+            function formatCurrency(value) {
+                return value.toLocaleString('pt-BR', {
+                    style: 'currency',
+                    currency: 'BRL'
+                });
+            }
+
+            // 🔥 valor atual exibido
+            let total = 0;
+
+            // 🔥 valor real vindo do backend
+            let valorReal = 0;
+
+            async function sincronizar() {
+                const res = await fetch("https://191.6.5.106:3001/impostometro");
+                const data = await res.json();
+
+                valorReal = parseBRL(data.valor);
+            }
+
+            // primeira carga
+            await sincronizar();
+            total = valorReal;
+
+            // 🔄 sincroniza a cada 10s
+            setInterval(sincronizar, 5000);
+
+            function updateCounters() {
+                // incremento local
+                total += incrementoPorFrame;
+
+                // 🔥 correção suave (anti-drift)
+                const diferenca = valorReal - total;
+                total += diferenca * 0.05; // 5% de ajuste por frame
+
+                document.getElementById('total-counter').innerText = formatCurrency(total);
+            }
+
+            setInterval(updateCounters, 1000 / fps);
+        }
+
+        carregar();
+    </script>
+</body>
+
+</html>

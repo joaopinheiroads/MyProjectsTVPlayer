@@ -1,0 +1,288 @@
+﻿@page "/grupos"
+@layout Cardápio.Client.Components.Layout.SystemLayout;
+@inject HttpClient HttpClient;
+@inject IJSRuntime jsRuntime;
+@inject Cardápio.Client.Infra.Provider.CustomAuthenticationStateProvider Provider;
+@inject GrupoService GrupoService;
+
+@using System.Text.Json.Serialization;
+@using System.Collections.ObjectModel;
+@using Cardápio.Client.Components.Modal;
+
+<Modal T="GrupoAddDTO"
+       IsOpen="isCreatingGroupModalOpen"
+       OnConfirm="@OnCreateGroupConfirm"
+       OnCancel="@OnCreateGroupCancel"
+       ActionType="creating/grupo"
+       SelectedDTO="GrupoGetDTO"
+       Selected="selectedGrupoModal">
+</Modal>
+
+<head>
+    <HeadOutlet />
+    <PageTitle>Gerenciar Grupos | Escolha AI</PageTitle>
+</head>
+
+<div class="container-title">
+        <i class="fa-solid fa-tags"></i>
+    <h3 class="title-page-section">Grupos</h3>
+</div>
+
+<div class="container-section">
+    @if (isLoading)
+    {
+        <div class="container">
+            <SpinnerLoader PrimaryColor="#073B4C" SecondaryColor="#ffffff" Size="90" />
+        </div>
+    }
+    else
+    {
+        <RadzenTabs SelectedIndex="@selectedTabIndex" Change="@OnTabChange">
+            <Tabs>
+                <div style="display: flex;">
+                    <RadzenTabsItem Text="Clientes">
+                        <Cardápio.Client.Components.TableGroup.ClientTable Grupos="@filteredGrupos["Clients"]" HandleConfirm="@HandleData" SelectedGrupo="SelectedGrupo" SelectedTypeChanged="(e => SelectedGrupo = e)" />
+                    </RadzenTabsItem>
+                    <RadzenTabsItem Text="Demos">
+                        <Cardápio.Client.Components.TableGroup.DemoTable Grupos="@filteredGrupos["Demo"]" HandleConfirm="@HandleData" SelectedGrupo="SelectedGrupo" SelectedTypeChanged="(e => SelectedGrupo = e)" />
+                    </RadzenTabsItem>
+                    <RadzenTabsItem Text="Excluídos">
+                        <Cardápio.Client.Components.TableGroup.DeletedTable Grupos="@filteredGrupos["Exclude"]" HandleConfirm="@HandleData" SelectedGrupo="SelectedGrupo" SelectedTypeChanged="(e => SelectedGrupo = e)" />
+                    </RadzenTabsItem>
+                </div>
+                <div class="container-group">
+                    <div>
+                        <input @oninput="FilterChanged" placeholder="Filtrar grupos..." class="input" style="width: 300px;" />
+                    </div>
+                    <div class="button-container">
+                        <button class="rz-ripple button-green" @onclick="OpenCreatingGroupModal"><i class="fa-solid fa-plus"></i> Registrar grupo</button>
+                    </div>
+                </div>
+            </Tabs>
+        </RadzenTabs>
+    }
+</div>
+
+@code {
+    private string searchTerm = string.Empty;
+    private int selectedTabIndex = 0;
+    private bool isLoading = true;
+    private bool isCreatingGroupModalOpen;
+    private GrupoGetDTO selectedGrupoModal;
+
+    private Dictionary<string, ObservableCollection<GrupoGetDTO>> originalGrupos = new Dictionary<string, ObservableCollection<GrupoGetDTO>>()
+    {
+        { "Clients", new ObservableCollection<GrupoGetDTO>() },
+        { "Exclude", new ObservableCollection<GrupoGetDTO>() },
+        { "Demo", new ObservableCollection<GrupoGetDTO>() }
+    };
+
+    private Dictionary<string, ObservableCollection<GrupoGetDTO>> filteredGrupos = new Dictionary<string, ObservableCollection<GrupoGetDTO>>()
+    {
+        { "Clients", new ObservableCollection<GrupoGetDTO>() },
+        { "Exclude", new ObservableCollection<GrupoGetDTO>() },
+        { "Demo", new ObservableCollection<GrupoGetDTO>() }
+    };
+
+    private IList<GrupoGetDTO> SelectedGrupo = new List<GrupoGetDTO>();
+    private UsuarioGetDTO usuario;
+    private string token;
+
+    async Task GetUser()
+    {
+        HttpClient.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+        var result = await HttpClient.GetFromJsonAsync<UsuarioGetDTO>("/api/authentication/getCompanyID");
+        usuario = result;
+    }
+
+    private void FilterChanged(ChangeEventArgs e)
+    {
+        searchTerm = e.Value.ToString();
+        ApplyFilter();
+    }
+
+    void OnTabChange(int index)
+    {
+        selectedTabIndex = index;
+
+        if (selectedTabIndex != index)
+        {
+            if (SelectedGrupo.Count != 0)
+            {
+                SelectedGrupo.Clear();
+            }
+        }
+
+        ApplyFilter();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            token = await Provider.GetTokenAsync();
+            //await GetUser();
+            usuario = Provider.UsuarioOwner;
+            await GetData();
+            StateHasChanged();
+        }
+    }
+
+    async Task HandleData(IList<GrupoGetDTO> grupos)
+    {
+        SelectedGrupo = grupos;
+        await GetData();
+    }
+
+    private async Task GetData()
+    {
+        try
+        {
+            List<GrupoGetDTO> result = await GrupoService.GetData();
+            SetGroups(result);
+
+            await LoadSelectedGrupo(SelectedGrupo.ToList());
+
+            if (filteredGrupos["Exclude"].Count == 0 && selectedTabIndex == 2)
+            {
+                selectedTabIndex = 0;
+            }
+
+            if (filteredGrupos["Demo"].Count == 0 && selectedTabIndex == 1)
+            {
+                selectedTabIndex = 0;
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.Message);
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private string GetTabName(int index)
+    {
+        return index switch
+        {
+            0 => "Clients",
+            1 => "Demo",
+            2 => "Exclude",
+            _ => "Desconhecido"
+        };
+    }
+
+    private async Task LoadSelectedGrupo(List<GrupoGetDTO> result)
+    {
+        if (SelectedGrupo != null && SelectedGrupo.Any())
+        {
+            var selectedIds = SelectedGrupo.Select(g => g.ID).ToHashSet();
+            var selectedGrupos = result.Where(g => selectedIds.Contains(g.ID)).ToList();
+
+            SelectedGrupo.Clear();
+            foreach (var grupo in selectedGrupos)
+            {
+                SelectedGrupo.Add(grupo);
+            }
+        }
+    }
+
+    private async void SetGroups(List<GrupoGetDTO> groups)
+    {
+        originalGrupos["Exclude"] = await GrupoService.SetGroupsDeleted(groups);
+        originalGrupos["Demo"] = await GrupoService.SetGroupsDemo(groups);
+        originalGrupos["Clients"] = await GrupoService.SetGroupsClients(groups);
+
+        filteredGrupos["Exclude"] = new ObservableCollection<GrupoGetDTO>(originalGrupos["Exclude"]);
+        filteredGrupos["Demo"] = new ObservableCollection<GrupoGetDTO>(originalGrupos["Demo"]);
+        filteredGrupos["Clients"] = new ObservableCollection<GrupoGetDTO>(originalGrupos["Clients"]);
+
+        ApplyFilter();
+    }
+
+    private void ApplyFilter()
+    {
+        string tabKey = selectedTabIndex switch
+        {
+            0 => "Clients",
+            1 => "Demo",
+            2 => "Exclude",
+            _ => "Clients"
+        };
+
+        var filtered = string.IsNullOrEmpty(searchTerm)
+            ? originalGrupos[tabKey]
+            : new ObservableCollection<GrupoGetDTO>(
+                originalGrupos[tabKey]
+                    .Where(g => g.Nome.Contains(searchTerm, StringComparison.OrdinalIgnoreCase))
+                    .ToList()
+            );
+
+        filteredGrupos[tabKey] = filtered;
+
+        SelectedGrupo = filtered.Where(g => SelectedGrupo.Any(s => s.ID == g.ID)).ToList();
+
+        StateHasChanged();
+    }
+
+    private void OpenCreatingGroupModal()
+    {
+        isCreatingGroupModalOpen = true;
+    }
+
+    private Task OnCreateGroupCancel()
+    {
+        isCreatingGroupModalOpen = false;
+        return Task.CompletedTask;
+    }
+
+    private async Task OnCreateGroupConfirm(GrupoAddDTO grupoDataDTO)
+    {
+        try
+        {
+            HttpClient.DefaultRequestHeaders.Authorization =
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+            HttpResponseMessage result = await HttpClient.PostAsJsonAsync("/api/group/CreateGroup", grupoDataDTO);
+
+            // <-- adicione isso para ver o erro real
+            if (!result.IsSuccessStatusCode)
+            {
+                var erro = await result.Content.ReadAsStringAsync();
+                throw new Exception($"Status: {result.StatusCode} | Detalhe: {erro}");
+            }
+
+            await GetData();
+            isCreatingGroupModalOpen = false;
+        }
+        catch (Exception err)
+        {
+            throw err;
+        }
+    }
+}
+
+<style type="text/css">
+    .rz-tabview.rz-tabview-top > .rz-tabview-nav .rz-tabview-selected {
+        border-bottom: 2px solid #118AB2;
+    }
+
+    @@media screen and (max-width: 934px) {
+        ul[role=tablist] {
+            flex-wrap: wrap-reverse;
+        }
+    }
+
+    .rz-pager-page {
+        font-family: "Montserrat", sans-serif !important;
+    }
+
+    .rz-pager-page.rz-state-active {
+        background-color: #CEE2F7 !important;
+        color: #118AB2 !important;
+    }
+</style>

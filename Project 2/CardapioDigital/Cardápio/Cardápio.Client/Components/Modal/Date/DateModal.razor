@@ -1,0 +1,223 @@
+﻿@typeparam T
+@typeparam SelectedDTOParam
+
+@inject IJSRuntime JSRuntime
+
+@code {
+    [Parameter] public string ActionType { get; set; }
+    [Parameter] public EventCallback<T> OnSubmit { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+    [Parameter] public SelectedDTOParam? SelectedDTO { get; set; }
+    [Parameter] public bool IsLoading { get; set; }
+    [Parameter] public EventCallback? ComponentIsLoaded { get; set; }
+
+    private ElementReference InputFocus;
+
+    private UsuarioGetDTO usuario = new UsuarioGetDTO();
+    private bool firstCall { get; set; } = false;
+
+    private int diasDemo { get; set; } = 10;
+    private DateTime diasEstimativa { get; set; }
+    private DateTime dataCriacao { get; set; }
+    private string classColor { get; set; } = string.Empty;
+    private string errorMessage { get; set; } = string.Empty;
+
+    private string Title = "Editar dias de demonstração";
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JSRuntime.InvokeVoidAsync("handleEscKey", DotNetObjectReference.Create(this));
+            await JSRuntime.InvokeVoidAsync("handleModalEnterKey", DotNetObjectReference.Create(this));
+
+            if (ComponentIsLoaded is EventCallback isLoaded)
+            {
+                await isLoaded.InvokeAsync();
+            }
+
+            StateHasChanged();
+
+            await FocusInputRecursively();
+        }
+    }
+
+    private async Task FocusInputRecursively()
+    {
+        while (true)
+        {
+            bool isFocused = await JSRuntime.InvokeAsync<bool>("tryFocusElementDirect", InputFocus);
+
+            if (isFocused)
+            {
+                break;
+            }
+        }
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (!firstCall && ActionType == "editing/date" && SelectedDTO is EmpresaGetDTO empresa)
+        {
+            if (empresa != null)
+            {
+                diasDemo = empresa.DiasDemo ?? 10;
+                diasEstimativa = empresa.DataCadastro.AddDays(diasDemo);
+                dataCriacao = empresa.DataCadastro;
+                UpdateClassColor();
+            }
+
+            firstCall = true;
+        }
+    }
+
+    private void UpdateDiasEstimativa(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value.ToString(), out int dias))
+        {
+            if (dias >= 1 && dias <= 10000)
+            {
+                diasDemo = dias;
+
+                if (SelectedDTO is EmpresaGetDTO empresa)
+                {
+                    diasEstimativa = empresa.DataCadastro.AddDays(diasDemo);
+                    UpdateClassColor();
+                    errorMessage = string.Empty;
+                }
+            }
+            else
+            {
+                errorMessage = "Por favor, insira um número de dias válido (1 a 10.000).";
+                UpdateClassColor();
+            }
+        }
+        else
+        {
+            errorMessage = "Por favor, insira um número válido.";
+            UpdateClassColor();
+        }
+    }
+
+    private void UpdateClassColor()
+    {
+        classColor = diasEstimativa < DateTime.Today ? "expired" : "valid";
+    }
+
+    private async Task SubmitAsync()
+    {
+        try
+        {
+            DateDTO data = new DateDTO
+                {
+                    DiasDemo = diasDemo
+                };
+
+            await OnSubmit.InvokeAsync((T)(object)data);
+            ResetFields();
+        }
+        catch (Exception err)
+        {
+            Console.WriteLine("error modal " + err.Message);
+        } finally {
+            if (ComponentIsLoaded is EventCallback isLoaded)
+            {
+                await isLoaded.InvokeAsync();
+            }
+        }
+    }
+
+    [JSInvokable("HandleModalEnterKey")]
+    public async Task HandleModalEnterKey()
+    {
+        if (IsLoading)
+        {
+            return;
+        }
+
+        StateHasChanged();
+        await SubmitAsync();
+    }
+
+    [JSInvokable("HandleEscapeKey")]
+    public async Task HandleEscapeKey()
+    {
+        await CancelAsync();
+    }
+
+    private async Task CancelAsync()
+    {
+        await OnCancel.InvokeAsync();
+        ResetFields();
+    }
+
+    private void ResetFields()
+    {
+        diasDemo = 10;
+        classColor = string.Empty;
+        errorMessage = string.Empty;
+        firstCall = false;
+    }
+}
+
+<div class="form">
+    <div class="form-header">
+        <div class="header">
+            <div class="content-header">
+                <div class="icon"><i class="fa-regular fa-calendar-days"></i></div>
+                <div class="title-container">
+                    <h4 class="title">@Title</h4>
+                </div>
+            </div>
+            <div class="close" @onclick="CancelAsync"><i class="fa-solid fa-x"></i></div>
+        </div>
+    </div>
+    <form class="form-body">
+        <div class="content-inputs">
+            <div class="inputs">
+                <label>Dias</label>
+                <input @ref="InputFocus" value="@diasDemo" @oninput="UpdateDiasEstimativa" type="number" min="1" max="10000" class="number" />
+                @if (!string.IsNullOrEmpty(errorMessage))
+                {
+                    <div class="error">@errorMessage</div>
+                }
+                <span class="temp">
+                    Data de criação:
+                    <span class="number">@dataCriacao.ToString("dd/MM/yyyy")</span>
+                </span>
+                <span class="temp">
+                    Previsão de expiração:
+                    <span class="@classColor">@diasEstimativa.ToString("dd/MM/yyyy")</span>
+                </span>
+            </div>
+        </div>
+    </form>
+    <div class="form-footer">
+        <button type="button" @onclick="CancelAsync" class="cancel rz-ripple" disabled="@IsLoading"><span>Cancelar</span></button>
+        <button type="button" @onclick="SubmitAsync" class="confirm rz-ripple button-green" disabled="@IsLoading">
+            @if (IsLoading)
+            {
+                <SpinnerLoader PrimaryColor="#FFFFFF" SecondaryColor="#118AB2" Size="20" />
+            }
+            else
+            {
+                <span>Salvar</span>
+            }
+        </button>
+    </div>
+</div>
+
+<script type="text/javascript">
+    document.querySelector('form').addEventListener('submit', function(event) {
+        event.preventDefault();
+    });
+
+    window.tryFocusElementDirect = async function (element) {
+        if (element && document.activeElement !== element) {
+            element.focus();
+            return document.activeElement === element;
+        }
+
+        return document.activeElement === element;
+    };
+</script>

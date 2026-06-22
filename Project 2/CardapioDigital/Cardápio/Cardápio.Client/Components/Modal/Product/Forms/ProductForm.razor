@@ -1,0 +1,493 @@
+﻿@using SixLabors.ImageSharp;
+@using SixLabors.ImageSharp.Processing;
+@using SixLabors.ImageSharp.Formats;
+@using Cardápio.Client.Services;
+
+@inject IJSRuntime JSRuntime;
+@inject ImageUploadService ImageUploadService;
+@inject SelectCompanyService EmpresaService;
+@inject Cardápio.Client.Infra.Provider.CustomAuthenticationStateProvider Provider;
+
+
+@code {
+    [Parameter] public EventCallback<ProductTransferDataDTO> OnSubmit { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+    [Parameter] public EventCallback OnOpenCategoryModal { get; set; }
+    [Parameter] public List<CategoriaGetDTO> CategoriesDataAPI { get; set; }
+    [Parameter] public ProdutoGetDTO productSelected { get; set; }
+    [Parameter] public EventCallback ComponentIsLoaded { get; set; }
+
+    private Dictionary<string, string> validationErrors = new();
+    private ElementReference InputFocus;
+
+    private MemoryStream selectedBanner = new MemoryStream();
+    private ElementReference valorInput;
+
+    private bool firstCall { get; set; } = false;
+
+    private Stream selectedImage { get; set; } = new MemoryStream();
+    private string productName { get; set; } = string.Empty;
+    private int? category { get; set; } = null;
+    private int QTDPessoa { get; set; } = 1;
+    private string productPrice { get; set; } = "0";
+    private string description { get; set; } = string.Empty;
+    private bool isDestaque { get; set; } = false;
+    private bool isAtivo { get; set; } = true;
+    private string imageID { get; set; }
+    private UsuarioGetDTO usuario;
+
+    private bool imageLoading = false;
+    private string ImageDataUrl;
+
+    private int currentLength => description.Length;
+
+    private bool isCreateCategoryModalOpen;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {   usuario = Provider.UsuarioOwner;
+            await InitializeInputsMask();
+            await FocusInputRecursively();
+        }
+    }
+
+    protected async override Task OnParametersSetAsync()
+    {
+        if (!firstCall && productSelected is ProdutoGetDTO product)
+        {
+            if (product != null)
+            {
+                productName = product.Nome;
+                category = product.CategoriaID;
+                QTDPessoa = product.QTDPessoa;
+                productPrice = product.Preco?.ToString() ?? "0";
+                description = product.Descricao ?? string.Empty;
+                isDestaque = product.Destaque;
+                ImageDataUrl = "/imagens/ImageProducts/" + product.ImagesID?.FirstOrDefault();
+                isAtivo = product.Ativo;
+                
+                // 🔧 CORREÇÃO: Garantir que imageID seja preenchido com a imagem atual na edição
+                var currentImageName = product.ImagesID?.FirstOrDefault();
+                
+                if (!string.IsNullOrEmpty(currentImageName) && currentImageName != "Default.png")
+                {
+                    imageID = currentImageName;
+                }
+                else if (!string.IsNullOrEmpty(product.ImagemThumbnail) && product.ImagemThumbnail != "Default.png")
+                {
+                    // Se não há imagem na lista ImagesID, verifica o thumbnail
+                    imageID = product.ImagemThumbnail;
+                }
+                else
+                {
+                    imageID = string.Empty;
+                }
+            }
+
+            firstCall = true;
+        }
+    }
+
+    private async Task FocusInputRecursively()
+    {
+        while (true)
+        {
+            bool isFocused = await JSRuntime.InvokeAsync<bool>("tryFocusElementDirect", InputFocus);
+
+            if (isFocused)
+            {
+                break;
+            }
+        }
+    }
+
+    private async Task InitializeInputsMask()
+    {
+        await JSRuntime.InvokeVoidAsync("applyVMaskerMoney", "priceInput");
+        await JSRuntime.InvokeVoidAsync("applyVMaskerMoney", "precoPromocional");
+    }
+
+    private void OnRadioChanged(bool value)
+    {
+        isAtivo = value;
+    }
+
+    private async Task ChamaCategoria()
+    {
+        await OnOpenCategoryModal.InvokeAsync();
+    }
+
+     private async Task<byte[]> ResizeImageAsync(Stream imageStream, int targetWidth, int targetHeight)
+{
+    using var image = await Image.LoadAsync(imageStream);
+
+    // Redimensiona proporcionalmente, sem cortar
+    image.Mutate(x => x.Resize(new ResizeOptions
+    {
+        Mode = ResizeMode.Max, // Mantém proporção, ajustando à menor dimensão
+        Size = new Size(targetWidth, targetHeight)
+    }));
+
+    using var output = new MemoryStream();
+    await image.SaveAsJpegAsync(output);
+    return output.ToArray();
+}
+
+    private async Task SelectedFile(InputFileChangeEventArgs e)
+    {
+        try
+        {
+            using var memoryStream = new MemoryStream();
+            await e.File.OpenReadStream(maxAllowedSize: 50 * 1024 * 1024).CopyToAsync(memoryStream);
+            memoryStream.Position = 0;
+
+            int targetWidth = 500;
+            int targetHeight = 500;
+
+            var resizedBuffer = await ResizeImageAsync(memoryStream, targetWidth, targetHeight);
+
+            // Fazer upload da imagem para o servidor
+            using var uploadStream = new MemoryStream(resizedBuffer);
+            var uploadResponse = await ImageUploadService.UploadTempImageAsync(uploadStream, $"{Guid.NewGuid()}.jpg");
+
+            // Usar os dados retornados pelo servidor
+            ImageDataUrl = uploadResponse.ImageUrl;
+            imageID = uploadResponse.ImageId;
+
+
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Erro ao processar o arquivo: {ex.Message}");
+        }
+        finally
+        {
+            imageLoading = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task RemoveTempImage()
+    {
+        try
+        {
+            if (!string.IsNullOrEmpty(imageID) && imageID.Contains("temp"))
+            {
+                // Deletar arquivo temporário no servidor
+                await ImageUploadService.DeleteTempImageAsync(imageID);
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[RemoveTempImage] Erro ao remover do servidor: {ex.Message}");
+        }
+        finally
+        {
+            // 🔧 CORREÇÃO: Sempre limpar para mostrar área de upload
+            // A imagem default só será aplicada no backend se não houver imagem
+            imageID = string.Empty;
+            ImageDataUrl = string.Empty;
+
+
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    public async Task CancelAsync()
+    {
+        await OnCancel.InvokeAsync();
+        await ResetFields();
+    }
+
+
+
+
+    private int ValidateSelectedCompanyID()
+    {
+        if (usuario != null && EmpresaService.EmpresaSelecionada == 0)
+        {
+            return usuario.EmpresaID ?? 0;
+        }
+
+        return EmpresaService.EmpresaSelecionada;
+    }
+
+    public async Task<ProductTransferDataDTO> GetProductForm()
+    {
+        try {
+            if (selectedImage != null && selectedImage.Length == 0)
+            {
+                selectedImage = null;
+            }
+
+            ProductTransferDataDTO dataDTO = new ProductTransferDataDTO
+            {
+                Nome = productName,
+                QTDPessoa = QTDPessoa,
+                CategoriaID = category ?? 0,
+                Preco = decimal.TryParse(
+                                        productPrice.Replace("R$", "").Trim(),
+                                        System.Globalization.NumberStyles.AllowDecimalPoint,
+                                        new System.Globalization.CultureInfo("pt-BR"),
+                                        out var preco)
+                                        ? preco
+                                        : (decimal?)0.0m,
+                Descricao = description,
+                Destaque = isDestaque,
+                Ativo = isAtivo,
+                ImagesID = new List<string>(),
+                Horarios = new List<ProdutoHorarioAddDTO>(),
+                Promocao = false,
+                PrecoPromocional = null,
+                FimPromocao = null,
+                PromocoesPorHorario = new List<ProdutoPromocaoHorarioAddDTO>(),
+                EmpresaID = ValidateSelectedCompanyID()
+            };
+            // 🔧 CORREÇÃO: Só adicionar imageID se não estiver vazio
+            // Se estiver vazio, o backend aplicará Default.png automaticamente
+            if (!string.IsNullOrEmpty(imageID))
+            {
+                dataDTO.ImagesID.Add(imageID);
+            }
+            else
+            {
+                Console.WriteLine($"[ProductForm] ⚠️ ImageID está vazio - backend usará Default.png");
+            }
+            
+
+            if (!await ValidateEntityAsync(dataDTO, nameof(dataDTO.Nome), nameof(dataDTO.Preco), nameof(dataDTO.CategoriaID), nameof(dataDTO.QTDPessoa)))
+            {
+                StateHasChanged();
+                throw new Exception();
+            }
+
+            return dataDTO;
+        } catch(Exception err)
+        {
+            throw err;
+        }
+    }
+
+    public async Task ErrorForm(Exception err)
+    {
+        if (err.Message.Contains("Nome"))
+        {
+            validationErrors["Nome"] = "Nome já registrado nessa categoria.";
+        }
+    }
+
+    private async Task<bool> ValidateEntityAsync<GenericValidate>(GenericValidate entity, params string[] requiredFields)
+    {
+        var validator = new ValidationService<GenericValidate>();
+        var validationResult = validator.Validate(entity, requiredFields);
+
+        if (!validationResult.IsValid)
+        {
+            validationErrors = validationResult.Errors;
+            return false;
+        }
+
+        validationErrors.Clear();
+        return true;
+    }
+
+    private async Task ResetFields()
+    {
+        productName = string.Empty;
+        category = null;
+        productPrice = "0";
+        description = string.Empty;
+        isDestaque = false;
+        isAtivo = true;
+
+        firstCall = false;
+
+        // 🔧 CORREÇÃO: Sempre limpar completamente no reset
+        imageID = string.Empty;
+        ImageDataUrl = string.Empty;
+        
+        // Se havia uma imagem temporária, tentar removê-la
+        try
+        {
+            if (!string.IsNullOrEmpty(imageID) && imageID.Contains("temp"))
+            {
+                await ImageUploadService.DeleteTempImageAsync(imageID);
+                Console.WriteLine($"[ResetFields] Imagem temporária removida: {imageID}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[ResetFields] Erro ao remover imagem temporária: {ex.Message}");
+        }
+    }
+
+    private async Task ValidateApiResponseError(Exception err)
+    {
+        ValidationErrorResponseApi errorResponse = ValidationErrorResponseApi.ConvertJsonToData(err.Message);
+        if (errorResponse.Errors != null)
+        {
+            foreach (var apiError in errorResponse.Errors)
+            {
+                foreach (var message in apiError.Value)
+                {
+                    validationErrors[apiError.Key] = message;
+                }
+            }
+        }
+
+        validationErrors["API"] = "Erro ao processar a solicitação.";
+    }
+}
+
+<form class="form-body">
+    <div class="container-fluid">
+        <div class="row">
+            <!-- PRIMEIRA COLUNA -->
+            <div class="col-md-6">
+                <div class="inputs mb-3">
+                    <label>Nome</label>
+                    <input @ref="InputFocus" @bind="productName" @bind:event="oninput" autofocus="true" />
+                    <span class="error">@validationErrors.GetValueOrDefault("Nome")</span>
+                </div>
+                <div class="inputs select mb-3">
+                    <label>Categoria</label>
+                    <div class="container-category">
+                        <RadzenDropDown @bind-Value="category"
+                                        Data="CategoriesDataAPI"
+                                        TextProperty="Nome"
+                                        ValueProperty="ID"
+                                        Placeholder="Selecione uma categoria"
+                                        AllowClear="true"
+                                        AllowFiltering="true"
+                                        class="product-dropdown">
+                        </RadzenDropDown>
+                        <div class="category-add">
+                            <button type="button" class="category-plus button-blue" @onclick="@ChamaCategoria">
+                                <i class="fa-solid fa-plus"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <span class="error">@validationErrors.GetValueOrDefault("CategoriaID")?.Replace("CategoriaID", "Categoria")</span>
+                </div>
+                <div class="inputs mb-3">
+                    <label>Serve (QTD) Pessoas</label>
+                    <input @bind="QTDPessoa" @bind:event="oninput" type="number" class="number" />
+                    <span class="error">@validationErrors.GetValueOrDefault("QTDPessoa")?.Replace("QTDPessoa", "Quantidade")</span>
+                </div>
+                <div class="inputs mb-3">
+                    <div class="label-container">
+                        <label>Descrição </label>
+                        <span class="number limit">@currentLength/400</span>
+                    </div>
+                    <textarea @bind="description" @bind:event="oninput" maxlength="400" />
+                    <span class="error">@validationErrors.GetValueOrDefault("Descricao")</span>
+                </div>
+            </div>
+
+            <!-- SEGUNDA COLUNA -->
+            <div class="col-md-6">
+                @if (productSelected != null && productSelected.Horarios != null && productSelected.Horarios.Count > 0)
+                {
+                    <div class="inputs mb-3">
+                        <label>Horários do produto:</label>
+                        <ul>
+                        @foreach (var horario in productSelected.Horarios)
+                        {
+                            <li>
+                                <b>@horario.DiaSemana</b>: @horario.HoraInicio - @horario.HoraFim
+                            </li>
+                        }
+                        </ul>
+                    </div>
+                }
+                <div class="inputs price-input mb-3">
+                    <label for="priceInput">Preço</label>
+                    <input @ref="valorInput" id="priceInput" type="text" @bind="productPrice" @bind:event="oninput" class="number" style="width: 100%; font-size: 1.1rem;" />
+                    <span class="error">@validationErrors.GetValueOrDefault("Preco")</span>
+                </div>
+                <div class="inputs mb-3">
+                    <label class="checkbox-container checkbox">
+                        <input class="custom-checkbox" @bind="isDestaque" type="checkbox">
+                        <span class="checkmark"></span>
+                        <label class="check">Produto destaque</label>
+                    </label>
+                </div>
+                <div class="inputs mb-3">
+                    <div class="status-container">
+                        <label>Status</label>
+                        <Cardápio.Client.Components.Tooltip.Tooltip TooltipText="Define se o produto irá aparecer no cardápio ou não" />
+                    </div>
+                    <div class="radios">
+                        <div class="input-radio">
+                            <input type="radio" id="ativo" name="status" value="true" checked="@isAtivo" @onchange="() => OnRadioChanged(true)" />
+                            <label class="active" for="ativo">Ativo</label>
+                        </div>
+
+                        <div class="input-radio">
+                            <input type="radio" id="desativado" name="status" value="false" checked="@(isAtivo == false)" @onchange="() => OnRadioChanged(false)" />
+                            <label class="disabled" for="desativado">Desativado</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- IMAGEM OCUPA TODA A LARGURA -->
+        <div class="row">
+            <div class="col-12">
+                <div class="content-images">
+                    <div class="inputs">
+                        <label>Imagem do produto:</label>
+                        @if (!string.IsNullOrEmpty(ImageDataUrl) && !imageLoading)
+                        {
+                            <div class="thumb-selected">
+                                <div class="thumb-image" style="background-image: url('@ImageDataUrl');">
+                                    <i class="fa-solid fa-xmark remove-icon" title="Clique para remover" @onclick="RemoveTempImage"></i>
+                                </div>
+                            </div>
+
+                            <button class="confirm rz-ripple image-button button-green" @onclick="RemoveTempImage" type="button">Remover Imagem</button>
+                        }
+
+                        @if (imageLoading)
+                        {
+                            <div class="thumb-selected-image-loader">
+                                <div class="spinner-logo">
+                                    <SpinnerLoader Size="30" PrimaryColor="#118AB2" SecondaryColor="#FFFFFF" />
+                                </div>
+                            </div>
+                        }
+
+                        <div class="thumb" style="@((!imageLoading && string.IsNullOrEmpty(ImageDataUrl)) ? "display: flex;" : "display: none;")">
+                            <div class="icon-thumb">
+                                <label for="productImageUploadEdit" class="upload-label">
+                                    <i class="fa-solid fa-cloud-arrow-up"></i>
+                                    <span>Arraste e solte ou clique para selecionar a imagem do produto</span>
+                                </label>
+                                <InputFile type="file" id="productImageUploadEdit" style="display: none;" accept="image/*" OnChange="SelectedFile" />
+                            </div>
+                        </div>
+
+                        @if (!imageLoading && string.IsNullOrEmpty(ImageDataUrl))
+                        {
+                            <span class="recomend">Tamanho recomendável: <span class="number">500px</span> (pixels) x <span class="number">500px</span> (pixels)</span>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+
+<script type="text/javascript">
+    window.tryFocusElementDirect = async function (element) {
+        if (element && document.activeElement !== element) {
+            element.focus();
+            return document.activeElement === element;
+        }
+
+        return document.activeElement === element
+    };
+</script>

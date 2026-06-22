@@ -1,0 +1,116 @@
+﻿@typeparam T
+@typeparam SelectedDTOParam
+@inject IJSRuntime JSRuntime
+@inject HttpClient HttpClient
+@inject Cardápio.Client.Infra.Provider.CustomAuthenticationStateProvider Provider;
+
+@code {
+    [Parameter] public string ActionType { get; set; }
+    [Parameter] public EventCallback<T> OnSubmit { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+    [Parameter] public bool IsLoading { get; set; }
+    [Parameter] public EventCallback? ComponentIsLoaded { get; set; }
+    [Parameter] public SelectedDTOParam? SelectedDTO { get; set; }
+
+    string token;
+    private List<ProdutoGetDTO> produtos = new();
+    private int grupoID = 0;
+    private bool firstCall = false;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            token = await Provider.GetTokenAsync();
+            await JSRuntime.InvokeVoidAsync("handleEscKey", DotNetObjectReference.Create(this));
+
+            if (grupoID > 0)
+            {
+                await GetProducts();
+            }
+
+            if (ComponentIsLoaded is EventCallback isLoaded)
+            {
+                await isLoaded.InvokeAsync();
+            }
+        }
+    }
+
+    protected async override void OnParametersSet()
+    {
+        if (!firstCall && SelectedDTO is object groupAdditional)
+        {
+            produtos = (List<ProdutoGetDTO>)groupAdditional;
+            firstCall = true;
+        }
+    }
+
+    private async Task GetProducts()
+    {
+        try
+        {
+            HttpClient.DefaultRequestHeaders.Authorization =
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+            var response = await HttpClient.GetFromJsonAsync<List<ProdutoGetDTO>>("/api/additional-group/verify-products");
+
+            produtos = response;
+        } catch (Exception err)
+        {
+            throw err;
+        }
+    }
+
+    private async Task SubmitAsync()
+    {
+        await OnSubmit.InvokeAsync();
+    }
+
+    [JSInvokable("HandleEscapeKey")]
+    public async Task HandleEscapeKey()
+    {
+        await CancelAsync();
+    }
+
+    private async Task CancelAsync()
+    {
+        await OnCancel.InvokeAsync();
+    }
+}
+
+<div class="form-delete">
+    <div class="form-header">
+        <div class="header">
+            <div class="content-header">
+                <div class="icon"><i class="fa-solid fa-pen"></i></div>
+                <div class="title-container">
+                    <h4 class="title">Editar todos os grupos</h4>
+                </div>
+            </div>
+            <div class="close" @onclick="CancelAsync"><i class="fa-solid fa-x"></i></div>
+        </div>
+    </div>
+    <p class="text">Ao confirmar você irá editar todos os produtos que estão utilizando o mesmo grupo.</p>
+    <p class="text list">Lista de produtos que estão utilizando o grupo:</p>
+    <ul class="products-list">
+        @foreach(var product in produtos)
+        {
+            <li class="product text">
+                <span>@product.Nome</span>
+            </li>
+        }
+    </ul>
+    <div class="form-footer">
+        <button type="button" @onclick="CancelAsync" class="cancel rz-ripple" disabled="@IsLoading"><span>Cancelar</span></button>
+        <button type="button" @onclick="SubmitAsync" class="confirm rz-ripple button-pink">
+            @if (IsLoading)
+            {
+                <SpinnerLoader PrimaryColor="#FFFFFF" SecondaryColor="#EF476F" Size="20" />
+            }
+            else
+            {
+                <span>Confirmar</span>
+            }
+        </button>
+    </div>
+</div>

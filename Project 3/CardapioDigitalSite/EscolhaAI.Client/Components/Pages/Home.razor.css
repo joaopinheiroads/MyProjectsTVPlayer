@@ -1,0 +1,305 @@
+﻿
+
+@keyframes pulse {
+    0% {
+        transform: scale(1); /* Estado inicial */
+        filter: brightness(100%);
+    }
+
+    100% {
+        transform: scale(1.1); /* Estado final (um pouco maior e mais brilhante) */
+        filter: brightness(120%);
+    }
+}
+
+
+@keyframes pulse-blue {
+    0% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.1);
+    }
+
+    100% {
+        transform: scale(1);
+    }
+}
+
+
+#whatsapp-button:hover {
+    animation: pulse-blue 1.5s infinite;
+}
+
+
+html, body {
+    
+    overflow-x: hidden;
+    width: 100%
+}
+
+
+.text-center{
+    width: 50%
+}
+
+
+.image-center {
+    justify-content: center;
+    display: flex;
+    align-items: center;
+    height: 100%;
+   
+}
+
+
+.textAndImage{
+    line-height: 1
+}
+
+article {
+    height: 100%;
+    display: flex !important;
+    flex-direction: row !important;
+}
+
+.content {
+    height: 100%;
+    display: flex !important;
+    flex-direction: row !important;
+    padding: 0 !important
+}
+
+    .content .divCenter .divCenterLeft h1 {
+        justify-content: center;
+        display: flex;
+        align-items: center;
+        color: #FAFAFA;
+        font-weight: 700;
+        width: 70%;
+    }
+
+
+.divCenterRight img:hover {
+    animation: pulse 0.7s infinite alternate;
+}
+
+ .image-center img {
+        width: 25rem;
+    }
+
+.content, article[b-8u0n9kndi6] {
+    padding: 0 !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important
+}
+
+.experimenteDez {
+    cursor: pointer;
+}
+
+    .experimenteDez:hover {
+        animation: pulse 0.7s infinite alternate;
+    }
+
+    .textBottom{
+        width: 60%
+    }
+
+.content .divBottom .textBottom {
+    display: flex !important;
+    flex-direction: row
+}
+
+
+.content .divBottom .textBottom > :nth-child(1){
+    padding-right: 1%
+}
+
+
+#textAndImage {
+    display: none;
+}
+
+.content .divCenter .divCenterLeft h1 {
+    height: 10%;
+    margin-bottom: 0 !important;
+    justify-content: start;
+    font-size: 4vw;
+    padding-left: 24%;
+    width: 100%;
+    max-width: 130vh;
+    text-wrap-mode: nowrap;
+}
+
+.divCenter .divCenterLeft > h1:nth-of-type(3) {
+    margin-bottom: 0vh !important
+}
+
+
+
+@media (orientation: landscape) and (min-width:2160px) {
+
+    .content .divCenter .divCenterLeft h1, #demonstracao-bottom {
+        padding-left: 40%;
+        min-width: max-content;
+    }
+
+
+    .content .divCenter .divCenterLeft h1 {
+        height: 10%;
+        margin-bottom: 0 !important;
+        justify-content: start;
+        font-size: 3vw;
+        padding-left: 40%;
+        width: 100%;
+        max-width: 170vh;
+        text-wrap-mode: nowrap;
+    }
+
+    #demonstracao-bottom{
+        max-width: 170vh
+    }
+
+
+}
+
+@media(orientation: portrait) {
+
+    .content .divCenter .divCenterLeft h1 {
+        padding-left: 12% !important;
+    }
+
+
+    .divCenter {
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+        height: 100%
+    }
+
+    .divCenterLeft, .divCenterRight {
+        width: 100%
+    }
+
+        .divCenterRight img{
+            width: 60% !important
+        }
+
+
+        #demonstracao-bottom {
+            justify-content: start;
+            align-items: center;
+            display: flex;
+        }
+
+    .divCenterRight{
+        justify-content: center
+    }
+
+    .content .divCenter .divCenterLeft h1 {
+        margin-bottom: 1.8vh !important;
+    }
+
+    .content .divCenter .divCenterLeft h1 {
+        font-size: 3.4vh !important;
+    }
+
+    .experimenteDez {
+        width: 22vh;
+        height: 6vh;
+    }
+
+    .content .divCenter .divCenterLeft h1 {
+        padding-left: 6% !important
+    }
+
+    .divCenter .divCenterRight a {
+        width: 100%;
+        left: unset;
+        align-items: center;
+        justify-content: center;
+        display: flex;
+    }
+
+    .textAndImage h3{
+        margin: 0
+    }
+
+    .content .divBottom img {
+        height: 5.5vh;
+    }
+
+    .divBottom .textBottom h1 {
+        font-size: 3vh !important;
+    }
+}
+
+
+/*responsividade de telas tablets*/
+@media (orientation: portrait) and (min-height: 1100px) and (max-height: 1400px) and (min-width: 720px) and (max-width: 1500px) {
+
+
+    .content .divCenter .divCenterLeft h1[b-0n0b4x3867] {
+        margin-bottom: 0.8vh !important;
+    }
+    .divCenterRight img {
+        width: 38% !important;
+    }
+}
+
+/*Responsividade mobile landscape*/
+@media (orientation: landscape) and (min-width: 400px) and (max-width: 1200px) and (min-height: 300px) and (max-height: 800px) {
+
+    #demonstracao-bottom img {
+        width: 1.8rem;
+    }
+
+    .experimenteDez {
+        width: 42vh;
+    }
+
+    .textAndImage a, .textAndImage h3 {
+        color: #6622CC !important;
+        font-size: 3vh;
+        font-weight: 600;
+        margin: 0;
+    }
+
+    .divBottom .textBottom h1 {
+        font-size: 2rem;
+        margin: 0;
+    }
+ 
+    
+}
+
+
+
+    @media(max-width: 1700px) and (min-height: 721px) and (max-height: 1080px) {
+
+
+        .content .divCenter .divCenterLeft h1 {
+            height: 7% !important;
+        }
+
+        #demonstracao-bottom {
+            height: 24% !important;
+        }
+
+        .content .divBottom {
+            height: 10vh;
+        }
+    }
+
+
+/*Responsividade mobile landscape*/
+@media (orientation: landscape) and (min-width: 400px) and (max-width: 1200px) and (min-height: 300px) and (max-height: 800px) {
+
+
+    #whatsapp-button {
+        width: 35px !important;
+        height: 35px !important;
+    }
+}

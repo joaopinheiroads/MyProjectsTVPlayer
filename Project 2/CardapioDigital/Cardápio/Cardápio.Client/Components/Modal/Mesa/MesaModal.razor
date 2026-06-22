@@ -1,0 +1,205 @@
+﻿@typeparam T;
+@typeparam SelectedDTOParam
+
+@inject IJSRuntime JSRuntime;
+
+@using System.Collections.ObjectModel
+
+@code {
+    [Parameter] public string ActionType { get; set; }
+    [Parameter] public EventCallback<T> OnSubmit { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+    [Parameter] public SelectedDTOParam? SelectedDTO { get; set; }
+    [Parameter] public bool IsLoading { get; set; }
+    [Parameter] public EventCallback? ComponentIsLoaded { get; set; }
+
+    private ElementReference InputFocus;
+    private bool firstCall { get; set; } = false;
+    private string Title => ActionType == "creating/mesa" ? "Registrar Mesa" : "Editar Mesa";
+
+    private string nomeMesa { get; set; } = string.Empty;
+
+    private Dictionary<string, string> validationErrors = new();
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JSRuntime.InvokeVoidAsync("handleEscKey", DotNetObjectReference.Create(this));
+            await JSRuntime.InvokeVoidAsync("handleModalEnterKey", DotNetObjectReference.Create(this));
+
+            if (ComponentIsLoaded is EventCallback isLoaded)
+            {
+                await isLoaded.InvokeAsync();
+            }
+
+            await FocusInputRecursively();
+        }
+    }
+
+    private async Task FocusInputRecursively()
+    {
+        while (true)
+        {
+            bool isFocused = await JSRuntime.InvokeAsync<bool>("tryFocusElementDirect", InputFocus);
+
+            if (isFocused)
+            {
+                break;
+            }
+        }
+    }
+
+    protected async override void OnParametersSet()
+    {
+        if (!firstCall && ActionType.Contains("editing") && SelectedDTO is MesaGetDTO mesa)
+        {
+            if (mesa != null)
+            {
+                nomeMesa = mesa.NomeMesa;
+            }
+
+            firstCall = true;
+        }
+    }
+
+    private async Task SubmitAsync()
+    {
+        try
+        {
+            if (ActionType == "editing/mesa" && !IsLoading)
+            {
+                await SendEdit();
+            }
+        }
+        catch (Exception err)
+        {
+            if (err.Message.Contains("Nome"))
+            {
+                validationErrors["NomeMesa"] = "NomeMesa já registrado.";
+            }
+        }
+        finally
+        {
+            if (ComponentIsLoaded is EventCallback isLoaded)
+            {
+                await isLoaded.InvokeAsync();
+            }
+        }
+    }
+
+    private async Task SendEdit()
+    {
+        MesaUpdateDTO data = new MesaUpdateDTO
+            {
+                ID = (SelectedDTO as MesaGetDTO).ID,
+                NomeMesa = nomeMesa
+            };
+
+        if (!await ValidateEntityAsync(data, nameof(data.NomeMesa)))
+        {
+            return;
+        }
+
+        await OnSubmit.InvokeAsync((T)(object)data);
+        ResetFields();
+    }
+
+    [JSInvokable("HandleModalEnterKey")]
+    public async Task HandleModalEnterKey()
+    {
+        if (IsLoading)
+        {
+            return;
+        }
+
+        StateHasChanged();
+        await SubmitAsync();
+    }
+
+    [JSInvokable("HandleEscapeKey")]
+    public async Task HandleEscapeKey()
+    {
+        await CancelAsync();
+    }
+
+    private async Task CancelAsync()
+    {
+        await OnCancel.InvokeAsync();
+        ResetFields();
+    }
+
+    private async Task<bool> ValidateEntityAsync<GenericValidate>(GenericValidate entity, params string[] requiredFields)
+    {
+        var validator = new ValidationService<GenericValidate>();
+        var validationResult = validator.Validate(entity, requiredFields);
+
+        if (!validationResult.IsValid)
+        {
+            validationErrors = validationResult.Errors;
+            StateHasChanged();
+            return false;
+        }
+
+        validationErrors.Clear();
+        return true;
+    }
+
+    private void ResetFields()
+    {
+        nomeMesa = string.Empty;
+
+        firstCall = false;
+    }
+}
+
+<div class="form">
+    <div class="form-header">
+        <div class="header">
+            <div class="content-header">
+                <div class="icon"><i class="fa-solid fa-building"></i></div>
+                <div class="title-container">
+                    <h4 class="title">@Title</h4>
+                </div>
+            </div>
+            <div class="close" @onclick="CancelAsync"><i class="fa-solid fa-x"></i></div>
+        </div>
+    </div>
+    <form class="form-body">
+        <div class="content-inputs">
+            <div class="inputs">
+                <label>Nome da mesa</label>
+                <input @ref="InputFocus" @bind="nomeMesa" @bind:event="oninput" />
+                <span class="error">@validationErrors.GetValueOrDefault("NomeMesa")?.Replace("NomeMesa", "Nome da Mesa")</span>
+            </div>
+        </div>
+    </form>
+    <div class="form-footer">
+        <button type="button" @onclick="CancelAsync" class="cancel rz-ripple" disabled="@IsLoading"><span>Cancelar</span></button>
+        <button type="button" @onclick="SubmitAsync" class="confirm rz-ripple button-green" disabled="@IsLoading">
+            @if (IsLoading)
+            {
+                <SpinnerLoader PrimaryColor="#FFFFFF" SecondaryColor="#118AB2" Size="20" />
+            }
+            else
+            {
+                <span>Salvar</span>
+            }
+        </button>
+    </div>
+</div>
+
+<script type="text/javascript">
+    document.querySelector('form').addEventListener('submit', function(event) {
+        event.preventDefault();
+    });
+
+    window.tryFocusElementDirect = async function (element) {
+        if (element && document.activeElement !== element) {
+            element.focus();
+            return document.activeElement === element;
+        }
+
+        return document.activeElement === element;
+    };
+</script>

@@ -1,0 +1,271 @@
+.promocoes-section {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 20px;
+    margin: 20px 0;
+    border: 1px solid #e9ecef;
+}
+
+.section-header h4 {
+    color: #118AB2;
+    margin-bottom: 8px;
+    font-weight: 600;
+}
+
+.section-description {
+    color: #6c757d;
+    font-size: 0.9rem;
+    margin-bottom: 15px;
+}
+
+.promocoes-configuradas {
+    background: white;
+    border-radius: 6px;
+    padding: 15px;
+    border: 1px solid #dee2e6;
+}
+
+.promocoes-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.promocao-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #e3f2fd;
+    padding: 10px 15px;
+    border-radius: 6px;
+    border-left: 4px solid #118AB2;
+}
+
+.promocao-info {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+}
+
+.promocao-info .dia {
+    font-weight: 600;
+    color: #118AB2;
+    min-width: 80px;
+}
+
+.promocao-info .horario {
+    color: #495057;
+    font-family: 'Courier New', monospace;
+    background: #f8f9fa;
+    padding: 2px 8px;
+    border-radius: 4px;
+    min-width: 100px;
+    text-align: center;
+}
+
+.promocao-info .preco {
+    font-weight: 600;
+    color: #28a745;
+    font-size: 1.1rem;
+}
+
+.btn-remove {
+    background: #EF476F;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+    .btn-remove:hover {
+        background: #EF476F;
+    }
+
+.nova-promocao-form, .configuracao-rapida {
+    background: white;
+    border-radius: 6px;
+    padding: 15px;
+    border: 1px solid #dee2e6;
+    margin-top: 15px;
+}
+
+.nova-promocao-form h5, .configuracao-rapida h5 {
+    color: #495057;
+    margin-bottom: 15px;
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.form-control {
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    padding: 8px 12px;
+    font-size: 0.9rem;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.form-control:focus {
+    border-color: #118AB2;
+    box-shadow: 0 0 0 0.2rem rgba(17, 138, 178, 0.25);
+    outline: none;
+}
+
+.btn {
+    padding: 8px 16px;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.btn-success {
+    background-color: #28a745;
+    border-color: #28a745;
+    color: white;
+}
+
+.btn-success:hover {
+    background-color: #218838;
+    border-color: #1e7e34;
+}
+
+.btn-outline-primary {
+    color: #118AB2;
+    border-color: #118AB2;
+    background: white;
+}
+
+.btn-outline-primary:hover {
+    background-color: #118AB2;
+    color: white;
+}
+
+.btn-outline-success {
+    color: #28a745;
+    border-color: #28a745;
+    background: white;
+}
+
+.btn-outline-success:hover {
+    background-color: #28a745;
+    color: white;
+}
+
+.btn-group {
+    display: flex;
+    gap: 8px;
+}
+
+.error-message {
+    margin-top: 10px;
+    padding: 8px 12px;
+    background: #f8d7da;
+    border: 1px solid #f5c6cb;
+    border-radius: 4px;
+}
+
+.error {
+    color: #721c24;
+    font-size: 0.875rem;
+}
+
+.inputs {
+    margin-bottom: 15px;
+}
+
+.inputs label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 500;
+    color: #495057;
+    font-size: 0.9rem;
+}
+
+.checkbox-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+}
+
+.custom-checkbox {
+    position: absolute;
+    opacity: 0;
+    cursor: pointer;
+    height: 0;
+    width: 0;
+}
+
+.checkmark {
+    width: 18px;
+    height: 18px;
+    border: 2px solid #118AB2;
+    border-radius: 3px;
+    display: inline-block;
+    position: relative;
+    background-color: #fff;
+    transition: background-color 0.2s ease;
+}
+
+.checkmark:hover {
+    background-color: #f8f9fa;
+}
+
+.custom-checkbox:checked + .checkmark {
+    background-color: #118AB2;
+    border-color: #118AB2;
+}
+
+.custom-checkbox:checked + .checkmark:hover {
+    background-color: #0f7a9a;
+}
+
+.custom-checkbox:checked + .checkmark::after {
+    content: '✓';
+    position: absolute;
+    left: 2px;
+    top: -2px;
+    color: #fff;
+    font-weight: bold;
+    font-size: 14px;
+}
+
+.check {
+    margin: 0;
+    font-weight: 500;
+    color: #495057;
+}
+
+@media (max-width: 768px) {
+    .promocao-info {
+        flex-direction: column;
+        gap: 8px;
+        align-items: flex-start;
+    }
+    
+    .promocao-info .dia,
+    .promocao-info .horario {
+        min-width: auto;
+    }
+    
+    .btn-group {
+        flex-direction: column;
+    }
+    
+    .promocao-item {
+        flex-direction: column;
+        gap: 10px;
+        align-items: flex-start;
+    }
+}

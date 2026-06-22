@@ -1,0 +1,37 @@
+﻿@rendermode InteractiveServer
+@inject IJSRuntime JS
+@inject NavigationService Nav
+
+
+<div class="teste-agora-principal">
+    <div class="teste-agora-content">
+        <img src="Images/estrelas.png" alt="Imagem de estrelas" class="imageStars" id="imageStars">
+
+        <div class="mainText">
+            <h1>Teste agora</h1>
+            <div class="secondaryText">
+                <p>Se ainda está com alguma dúvida</p>
+                <p>Teste nosso produto agora mesmo!</p>
+                <p>A demonstração é gratuita.</p>
+            </div>
+        </div>
+
+        <div class="teste-agora-button" @onclick="AbrirLogin">
+            <img src="Images/foguete.png" class="imageStars">
+            <img src="Images/traco.png" class="imageStars">
+
+            <div class="textBox">
+                <h3>EXPERIMENTE</h3>
+                <h3>10 DIAS GRÁTIS</h3>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+@code {
+    async Task AbrirLogin()
+    {
+        await Nav.RedirectForLogin();
+    }
+}

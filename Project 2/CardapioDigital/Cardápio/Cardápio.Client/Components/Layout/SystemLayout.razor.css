@@ -1,0 +1,269 @@
+﻿.loader-initial {
+	width: 100%;
+	height: 100vh;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+}
+
+.sidebar {
+	position: fixed;
+	max-width: 10rem;
+	width: 100%;
+	height: 100vh;
+	background: linear-gradient(135deg,#6622CC 75%, #2AABE2);
+	display: flex;
+	justify-content: space-between;
+	flex-direction: column;
+	align-items: center;
+	padding: 1.5rem .6rem;
+	transition: max-width 0.3s ease-in-out;
+	z-index: 20000;
+}
+
+.exit-icon {
+	transform: rotate(180deg);
+}
+
+.sidebar.collapsed {
+	max-width: 3.5rem;
+}
+
+.container {
+	width: 100%;
+	height: 100%;
+	display: flex;
+	justify-content: space-between;
+	flex-direction: column;
+	align-items: center;
+	gap: 1.10rem;
+}
+
+.links-content {
+	width: 100%;
+	display: flex;
+	justify-content: space-between;
+	flex-direction: column;
+	align-items: center;
+	gap: 1.10rem;
+}
+
+.title-aside, .title-page p {
+	color: white;
+	font-size: 1rem;
+	font-weight: 400;
+	transition: opacity 0.1s ease-in-out, transform 0.1s ease-in-out;
+	letter-spacing: 1px;
+}
+
+.title {
+	display: flex;
+	align-items: center;
+	gap: 0.8rem;
+}
+
+.title i {
+	text-align: center;
+	color: white;
+	font-size: 1.10rem;
+	font-weight: 400;
+	transition: opacity 0.1s ease-in-out, transform 0.1s ease-in-out;
+}
+
+.sidebar.collapsed .title-aside,
+.sidebar.collapsed .title-page p {
+	opacity: 0;
+	pointer-events: none;
+	position: absolute;
+}
+
+.separator {
+	background-color: #3D3D3D;
+	width: 95%;
+	height: 1px;
+	margin: 0 auto;
+}
+
+.title-link {
+	display: flex;
+	align-items: center;
+	gap: 0.8rem;
+}
+
+.links {
+	display: flex;
+	flex-direction: column;
+	gap: .6rem;
+}
+
+.title-page {
+	width: 100%;
+	cursor: pointer;
+	transition-duration: 0.2s;
+	padding: 0.8rem 1rem;
+	border-radius: 0.2rem;
+}
+
+.sidebar.collapsed .title-link i {
+	margin-right: 0;
+}
+
+.title-page:hover {
+	background-color: #0a252e;
+}
+
+a.active .title-page {
+	background-color: white;
+}
+
+a.active .title-page p,
+a.active .title-page i {
+	color: #073B4C;
+}
+
+.title-page p {
+	color: white;
+	font-weight: 500;
+	font-size: 0.8rem;
+	letter-spacing: .4px;
+}
+
+.title-page i {
+	color: white;
+	font-size: 1.25rem;
+}
+
+.title-link i {
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	text-align: center;
+	line-height: 1;
+}
+
+.toggle-button {
+	background-color: #FFD166;
+	color: white;
+	border: none;
+	padding: 0.5rem .72rem;
+	cursor: pointer;
+	position: absolute;
+	top: 33px;
+	left: 100%;
+	transform: translate(-50%, -50%);
+	border-radius: 100%;
+	transition: left 0.3s ease-in-out;
+}
+
+.toggle-button i {
+	position: relative;
+	transform: rotate(180deg);
+	transition-duration: .3s;
+	color: #272A2D;
+	height: 13px;
+	width: 9px;
+}
+
+.sidebar.collapsed .toggle-button {
+	left: 100%;
+}
+
+.sidebar.collapsed .toggle-button i {
+	transform: rotate(0deg);
+}
+
+main {
+	padding-bottom: 1rem;
+	transition-duration: .4s;
+	height: auto;
+	min-height: 100vh;
+	padding-right: 2.3rem;
+	background-color: white;
+}
+
+.sidebar.collapsed + main {
+	margin-left: 5.5rem !important;
+}
+
+.icon-div {
+	width: 20px;
+	position: relative;
+	text-align: center;
+}
+
+.navbar-header {
+	position: fixed;
+	top: 0;
+	left: 0;
+	right: 0;
+	z-index: 1000;
+	display: none;
+	justify-content: center;
+	padding: .5rem 1rem;
+	box-shadow: 10px 10px 10px #00000009;
+	background-color: #fff;
+}
+
+@media screen and (max-width: 800px) {
+	.navbar-header {
+		display: flex;
+	}
+
+	main {
+		padding-right: 0;
+		padding-left: 1rem !important;
+		margin-left: 0rem !important;
+		padding-top: 4rem;
+	}
+
+	.sidebar.collapsed + main {
+		margin-left: 0rem !important;
+	}
+
+	.toggle-button {
+		display: none;
+	}
+
+	.sidebar {
+		position: fixed;
+		max-width: 10rem;
+		width: 100%;
+		height: 100vh;
+		background-color: #073B4C;
+		display: flex;
+		justify-content: space-between;
+		flex-direction: column;
+		align-items: center;
+		z-index: 10001;
+		transition: max-width 0.3s ease-in-out, opacity 0.3s ease-out, visibility 0.1s ease-out;
+	}
+
+	.sidebar.collapsed {
+		visibility: hidden;
+		opacity: 0;
+		max-width: 0rem;
+	}
+
+	.title {
+		display: none;
+	}
+}
+
+.navbar {
+	position: relative;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	width: 100%;
+}
+
+.navbar h4 {
+	flex: 1;
+	text-align: center;
+	margin: 0;
+}
+
+.navbar i {
+	font-size: 28px;
+	cursor: pointer;
+}

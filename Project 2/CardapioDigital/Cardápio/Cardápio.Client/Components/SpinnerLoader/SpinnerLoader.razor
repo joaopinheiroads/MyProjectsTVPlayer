@@ -1,0 +1,18 @@
+﻿<div class="spinner" style="--spinner-primary: @PrimaryColor; --spinner-secondary: @SecondaryColor; --spinner-size: @SizePx;">
+    <div class="spinner-border">
+
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public string PrimaryColor { get; set; } = "#333333";
+
+    [Parameter]
+    public string SecondaryColor { get; set; } = "#FFFFFF";
+
+    [Parameter]
+    public int Size { get; set; } = 20;
+
+    private string SizePx => $"{Size}px";
+}

@@ -1,0 +1,5926 @@
+@font-face {
+    font-family: 'Open Sans';
+    src: url('../fonts/OpenSans-Regular.ttf') format('truetype');
+    font-weight: 400;
+    font-style: normal
+}
+
+body {
+    font-family: 'Open Sans', sans-serif;
+    font-weight: 500 !important
+}
+
+* {
+    padding: 0;
+    margin: 0;
+    box-sizing: border-box
+}
+
+#quick-start-container{
+    display: none;
+}
+html,
+body {
+    overflow: hidden;
+    height: 100%;
+    width: 100%;
+    background: linear-gradient(to top, #363636, #1c1c1c);
+    color: #fff;
+    display: flex;
+}
+
+.vento-text, .umidade-text {
+    font-weight: 600 !important
+}
+.tempo-container {
+    width: 100%;
+    height: 100%;
+    margin: auto;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    gap: 3rem;
+    padding: 0 3rem
+}
+
+.tempo-details {
+    display: flex;
+    flex-direction: column;
+    gap: 3rem
+}
+
+.tempo-details,
+.tempo-content {
+    width: 100%
+}
+
+.tempo-content {
+    padding: 0 1rem;
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center
+}
+
+.tempo-details .header .lugar-nome {
+    font-size: 3vw;
+    font-size: clamp(1.2rem, 3vw, 2rem)
+}
+
+.atual {
+    width: 100%;
+    display: flex;
+    gap: 2rem
+}
+
+.atual .status {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: .5rem
+}
+
+.atual .status .icon {
+    font-size: 8vw;
+    font-size: clamp(2rem, 8vw, 5rem)
+}
+
+.tempo-content .tipo-status {
+    font-size: 2.5vw;
+    font-size: clamp(1rem, 2.5vw, 1.5rem)
+}
+
+.atual .valor .temperatura-principal {
+    display: flex;
+    align-items: center;
+    gap: .5rem
+}
+
+.umidade-text,
+.vento-text,
+.atual .valor .dia span {
+    font-size: 2vw;
+    font-size: clamp(.8rem, 2vw, 1rem)
+}
+
+.atual .valor .divide {
+    font-size: 3vw;
+    font-size: clamp(1.5rem, 3vw, 2rem)
+}
+
+.atual .valor .min {
+    display: flex;
+    gap: .2rem;
+    align-items: baseline
+}
+
+.atual .valor .max .number,
+.atual .valor .min .number {
+    font-size: 3vw;
+    font-size: clamp(1.5rem, 3vw, 2rem)
+}
+
+.atual .valor .max {
+    display: flex;
+    gap: .2rem;
+    align-items: normal
+}
+
+.atual .valor .max i {
+    padding-top: .5rem
+}
+
+.temperatura-principal .type-temp {
+    font-size: 4vw;
+    font-size: clamp(1.8rem, 4vw, 2.2rem)
+}
+
+.tempo-details .detalhes {
+    display: flex;
+    flex-direction: column;
+    
+}
+
+.tempo-details .detalhes .vento-content,
+.tempo-details .detalhes .umidade-content {
+    padding-top: .5rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem
+}
+
+.tempo-details .detalhes .vento-content .vento-icon,
+.tempo-details .detalhes .umidade-content .umidade-icon {
+    font-size: 2.5vw;
+    font-size: clamp(1rem, 2.5vw, 1.5rem)
+}
+
+.max,
+.min {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: baseline
+}
+
+.tempo-details .detalhes .vento-content .max .max-text,
+.tempo-details .detalhes .vento-content .min .min-text,
+.tempo-details .detalhes .umidade-content .max .max-text,
+.tempo-details .detalhes .umidade-content .min .min-text {
+    font-size: 2vw;
+    font-size: clamp(.8rem, 2vw, 1rem);
+    
+}
+
+.tempo-details .detalhes .vento-content .max .value,
+.tempo-details .detalhes .vento-content .min .value,
+.tempo-details .detalhes .umidade-content .max .value,
+.tempo-details .detalhes .umidade-content .min .value {
+    font-size: 2.5vw;
+    font-size: clamp(1rem, 2.5vw, 1.2rem)
+}
+
+.tempo-details .detalhes .vento-content .max .medida,
+.tempo-details .detalhes .vento-content .min .medida,
+.tempo-details .detalhes .umidade-content .max .medida,
+.tempo-details .detalhes .umidade-content .min .medida {
+    font-size: 2.5vw;
+    font-size: clamp(1rem, 2.5vw, 1.2rem)
+}
+
+.tempo-details .detalhes .umidade-content {
+    display: flex;
+    align-items: center;
+    gap: 1rem
+}
+
+.dias {
+    width: 100%;
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    background-color: rgba(84, 134, 186, .5);
+    padding: 3rem 1rem;
+    border-radius: 4px;
+    box-shadow: 10px 10px 10px rgba(0, 0, 0, .055)
+}
+
+.dias .temperatura-secondary {
+    display: flex;
+    align-items: center;
+    gap: .5rem
+}
+
+.day-temp {
+    display: flex;
+    flex-direction: column;
+    align-items: center
+}
+
+.day {
+    font-size: 2.5vw;
+    font-size: clamp(1rem, 2.5vw, 1.2rem)
+}
+
+.day-temp .status {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-top: 1rem
+}
+
+.day-temp .status i {
+    font-size: 4vw;
+    font-size: clamp(1.5rem, 4vw, 2rem)
+}
+
+.day-temp .temperatura-secondary .min i,
+.day-temp .temperatura-secondary .max i {
+    font-size: 1.5vw;
+    font-size: clamp(.6rem, 1.5vw, 1rem)
+}
+
+.day-temp .min {
+    display: flex;
+    align-items: baseline
+}
+
+.day-temp .max .number,
+.day-temp .min .number {
+    font-size: 2.5vw;
+    font-size: clamp(1rem, 2.5vw, 1.2rem)
+}
+
+.day-temp .max {
+    display: flex
+}
+
+.day-temp .max i {
+    padding-top: .5vw
+}
+
+.day-temp .type-temp {
+    font-size: 3vw;
+    font-size: clamp(1rem, 3vw, 1.3rem)
+}
+
+.dias .detalhes .vento-content,
+.dias .detalhes .umidade-content {
+    display: flex;
+    align-items: center;
+    gap: .5rem
+}
+
+.dias .detalhes .vento-content .vento-icon,
+.dias .detalhes .umidade-content .umidade-icon {
+    font-size: 2.5vw;
+    font-size: clamp(.9rem, 2.5vw, 1.2rem)
+}
+
+.dias .detalhes .vento-content .max .max-text,
+.dias .detalhes .vento-content .min .min-text,
+.dias .detalhes .umidade-content .max .max-text,
+.dias .detalhes .umidade-content .min .min-text {
+    font-size: 2vw;
+    font-size: clamp(.8rem, 2vw, .8rem);
+    padding-right: .5rem
+}
+
+.dias .detalhes .vento-content .max .value,
+.dias .detalhes .vento-content .min .value,
+.dias .detalhes .umidade-content .max .value,
+.dias .detalhes .umidade-content .min .value {
+    font-size: 2.5vw;
+    font-size: clamp(.9rem, 2.5vw, .9rem)
+}
+
+.dias .detalhes .vento-content .max .medida,
+.dias .detalhes .vento-content .min .medida,
+.dias .detalhes .umidade-content .max .medida,
+.dias .detalhes .umidade-content .min .medida {
+    font-size: 2.5vw;
+    font-size: clamp(.9rem, 2.5vw, .9rem)
+}
+
+.dias .detalhes {
+    display: flex;
+    flex-direction: column;
+    margin-top: .5rem;
+    gap: .5rem
+}
+
+.dias .divide-item {
+    height: 1px;
+    background-color: #fff;
+    width: 100%;
+    opacity: .2
+}
+
+.controls {
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    display: flex;
+    gap: 10px
+}
+
+ @media (min-width: 300px) and (max-width: 1200px) and (min-height: 150px) and (max-height: 650px){
+
+     .detalhes {
+        display: flex !important;
+        width: 40%;
+        height: 100%;
+        justify-content: center;
+        gap: 0 !important
+    }
+
+    .tempo-container {
+        padding: 0 6rem;
+        max-width: none;
+        border-radius: 20px;
+        width: 95%;
+        height: 90%;
+        align-items: center;
+        padding: 0
+    }
+
+    .tempo-content {
+        height: 100%;
+        width: 100%;
+        padding: 0;
+        justify-content: space-around;
+    }
+
+    html,
+    body {
+        align-content: center
+    }
+
+    .status {
+        width: 50%;
+        height: 50%
+    }
+
+    .tempo-details {
+        gap: 0
+    }
+
+    .atual {
+        gap: 2vw;
+        height: 100%;
+        width: 50%;
+        align-items: center;
+        flex-direction: column;
+        justify-content: center !important;
+        
+    }
+
+    .header {
+        height: 20%;
+        width: 100%;
+        text-align: start;
+        margin-top: 1% !important;
+        justify-content: center;
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        text-align: center
+    }
+
+    .lugar-nome {
+        font-size: 3vw !important;
+        font-size: clamp(.1rem, 3vw, 8rem) !important;
+        margin-top: 1% !important
+    }
+
+    .status span {
+        font-size: 2.5vw !important;
+        font-size: clamp(.1rem, 2.5vw, 8rem) !important;
+        line-height: 1
+    }
+
+    .valor {
+        text-align: center
+    }
+
+    .temperatura-principal {
+        width: 100%;
+        justify-content: center;
+        height: 60%;
+        align-items: baseline !important;
+        align-content: center;
+        flex-wrap: wrap;
+        margin: 10px 0px;
+    }
+
+    .dia {
+        height: 40%;
+        justify-content: center;
+        display: flex;
+        align-items: center
+    }
+
+    .min .number,
+    .max .number,
+    .divide {
+        font-size: 3vw !important;
+        font-size: clamp(.1rem, 3vw, 8rem) !important
+    }
+
+    .temperatura-principal .divide {
+        font-size: 3vw !important;
+        font-size: clamp(.2rem, 3vw, 7rem) !important
+    }
+
+    .min .medida {
+        font-size: 4vw !important;
+        font-size: clamp(.3rem, 4vw, 6rem) !important
+    }
+
+    .max .fa-solid,
+    .min .fa-solid {
+        font-size: 1vw !important;
+        font-size: clamp(.2rem, 1vw, 5rem) !important
+    }
+
+    .type-temp {
+        font-size: 3vw !important;
+        font-size: clamp(.1rem, 3vw, 8rem) !important
+    }
+
+    
+    .atual .valor .max i {
+        margin-top: 15% !important
+    }
+
+    .atual .status {
+        text-align: center;
+        gap: 0
+    }
+
+    .atual .valor .dia span {
+        font-size: 2.5vw !important;
+        font-size: clamp(.5rem, 2.5vw, 8rem) !important
+    }
+
+    .vento-content {
+        width: 100%;
+        justify-content: center;
+        flex-wrap: wrap;
+        height: 90%
+    }
+
+    .vento-container {
+        text-align: center
+    }
+
+    .umidade-content {
+        justify-content: center
+    }
+
+    .vento,
+    .umidade {
+        height: 30%;
+        align-content: center;
+        margin: 20px 0px;
+    }
+
+    .umidade-container,
+    .vento-container {
+        justify-items: center;
+        justify-content: center;
+        display: flex;
+        flex-direction: column;
+        text-align: center
+    }
+
+    .vento-container .fa-solid,
+    .umidade-container .fa-solid {
+        font-size: 2vw !important;
+        font-size: clamp(.1rem, 2vw, 6rem) !important
+    }
+
+    .vento-text,
+    .umidade-text,
+    .tipo-status {
+        font-size: 3vw !important;
+        font-size: clamp(.1rem, 3vw, 8rem) !important
+    }
+
+    .detalhes {
+        height: 100%;
+        justify-content: space-around;
+        
+    }
+
+    .min .medida,
+    .max .medida {
+        font-size: 3vw !important;
+        font-size: clamp(.1rem, 3vw, 8rem) !important
+    }
+
+    .tempo-details .detalhes .vento-content,
+    .tempo-details .detalhes .umidade-content {
+      
+        flex-wrap: nowrap;
+    }
+
+     .max-text, .min-text {
+       margin: 10px 10px;
+   }
+
+    .min .min-text,
+    .max .max-text,
+    .min .value,
+    .max .value {
+        font-size: 3vw !important;
+        font-size: clamp(.1rem, 3vw, 8rem) !important
+    }
+
+    .tempo-details .detalhes .vento-content,
+    .tempo-details .detalhes .umidade-content {
+        padding-top: 0;
+        gap: 0 !important;
+    }
+
+   
+    .valor {
+        justify-content: center;
+        height: 30%
+    }
+
+    .wi {
+        font-size: 7vw !important;
+        font-size: clamp(.1rem, 7vw, 14rem) !important;
+        margin: 20px;
+    }
+
+    .icon-text-umidade,
+    .icon-text-vento {
+        width: 100%;
+        align-items: center;
+        display: flex;
+        justify-content: center
+    }
+      .atual .status, .atual .valor {
+      padding-top: 0 !important;
+      margin-top: 5px;
+}
+    .atual .valor{
+    margin-top: 15px;
+    }
+}  
+
+ @media (min-width: 150px) and (max-width: 650px) and (min-height: 300px) and (max-height: 1200px){
+ .detalhes {
+        display: flex !important;
+        width: 50%
+    }
+
+    .tempo-container {
+        max-width: none;
+        padding: 0 !important;
+        width: 85% !important;
+        height: 80% !important;
+        border-radius: 20px
+    }
+
+    html,
+    body {
+        align-content: center
+    }
+
+    .tempo-container {
+        width: 90%;
+        height: 90%;
+        border-radius: 20px
+    }
+
+    .atual .status,
+    .atual .valor {
+        width: 100%;
+        text-align: center;
+        padding-top: 2vh
+    }
+
+    .tempo-details {
+        gap: 4vh;
+        height: 70%;
+    }
+
+    .atual {
+        gap: 2vw;
+        height: 100%;
+        width: 40%;
+        align-items: center;
+        flex-direction: column
+    }
+
+    .tempo-details .header .lugar-nome {
+        font-size: 3vw ;
+        font-size: clamp(.3rem, 3vw, 8rem) 
+    }
+
+    .header {
+        height: 20%;
+        flex-wrap: wrap;
+        display: fleX;
+        text-align: center
+    }
+
+    .lugar-nome {
+        font-size: 4vw !important;
+        font-size: clamp(.1rem, 4vw, 6rem) !important
+    }
+
+    .status span {
+        font-size: 3vw !important;
+        line-height: 1
+    }
+
+    .dia {
+        height: 40%;
+        justify-content: center;
+        align-items: end;
+        display: flex
+    }
+
+    .valor {
+        text-align: center
+    }
+
+    .temperatura-principal {
+        width: 100%;
+        justify-content: center;
+        height: 60%;
+         margin: 0 !important;
+    
+    }
+
+    .min .number,
+    .max .number,
+    .divide {
+        font-size: 3vw !important;
+        font-size: clamp(.1rem, 3vw, 10rem) !important
+    }
+
+    .temperatura-principal .divide {
+        font-size: 3vw;
+        font-size: clamp(.2rem, 3vw, 8rem) 
+    }
+
+    .min .medida {
+        font-size: 4vw !important;
+        font-size: clamp(.3rem, 4vw, 6rem) !important
+    }
+
+    .max .fa-solid,
+    .min .fa-solid {
+        font-size: 1vw !important;
+        font-size: clamp(.2rem, 1vw, 5rem) !important
+    }
+
+    .type-temp {
+        font-size: 3vw !important;
+        font-size: clamp(.1rem, 3vw, 8rem) !important
+    }
+
+    .atual,
+    .valor,
+    .temperatura-principal {
+        gap: 1vw !important;
+        gap: clamp(.1rem, 1vw, 3rem) !important
+    }
+
+    .atual .valor .max i {
+        padding-top: 15% !important
+    }
+
+    .atual .status {
+        height: 40%;
+        justify-content: center;
+        gap: 0
+    }
+
+    .atual .valor .dia span {
+        font-size: 3vw !important;
+        font-size: clamp(.1rem, 3vw, 6rem) !important
+    }
+
+    .umidade {
+        align-items: center
+    }
+
+    .vento-content {
+        width: 100%;
+        justify-content: center;
+        flex-wrap: wrap
+    }
+
+    .vento-container {
+        text-align: center
+    }
+
+    .umidade-content {
+        justify-content: center
+    }
+
+    .umidade-container,
+    .vento-container {
+        display: flex;
+        flex-direction: column;
+        text-align: center;
+        align-items: center
+    }
+
+    .vento-container {
+        justify-content: end
+    }
+
+    .umidade-container {
+        justify-content: start
+    }
+
+    .icon-text-umidade {
+        align-items: center;
+        display: flex
+    }
+
+    .icon-text-vento {
+        align-items: center;
+        display: flex
+    }
+
+    .umidade-container .icon-text-umidade .fa-solid {
+        font-size: 2vw !important
+    }
+
+    .vento-container .icon-text-vento .fa-solid {
+        font-size: 2vw !important;
+        font-size: clamp(.2rem, 2vw, 6rem) !important
+    }
+
+    .vento-text,
+    .umidade-text,
+    .tipo-status {
+        font-size: 2.5vw !important;
+        font-size: clamp(.1rem, 2.5vw, 8rem) !important
+    }
+
+    .detalhes {
+        gap: 1vh !important;
+        height: 100%;
+        justify-content: center
+    }
+
+    .min .medida,
+    .max .medida {
+        font-size: 2.5vw !important;
+        font-size: clamp(.1rem, 2.5vw, 8rem) !important
+    }
+
+    .tempo-details .detalhes .vento-content,
+    .tempo-details .detalhes .umidade-content {
+        gap: 2vw !important;
+        gap: clamp(.1rem, 2vw, 5rem) !important
+    }
+
+    .min .min-text,
+    .max .max-text,
+    .min .value,
+    .max .value {
+        font-size: 2.5vw !important;
+        font-size: clamp(.1rem, 2.5vw, 8rem) !important;
+         margin: 0 !important;
+    
+    }
+
+    .tempo-details .detalhes .vento-content,
+    .tempo-details .detalhes .umidade-content {
+        padding-top: 0
+    }
+
+    .vento {
+        justify-content: center;
+        display: flex
+    }
+
+    .valor {
+        justify-content: center;
+        height: 40%
+    }
+
+    .wi {
+        font-size: 8vw !important;
+        font-size: clamp(.1rem, 8vw, 30rem) !important
+    }
+    .vento, .umidade{
+        margin: 0 !important ;
+    }
+     .temperatura-principal{
+        margin: 0 !important;
+    }
+    .vento, .umidade{
+        margin: 0 !important ;
+    }
+
+    .max-text, .min-text {
+      margin: 5px 5px !important;
+    }
+
+    .wi {
+        margin: 0 !important;
+    }
+
+     .temperatura-principal{
+        margin: 0 !important;
+    }
+    .vento, .umidade{
+        margin: 0 !important ;
+    }
+
+    .max-text, .min-text {
+      margin: 5px 5px !important;
+    }
+
+    .wi {
+        margin: 0 !important;
+    }
+
+    .atual .valor {
+        margin-top: 0 !important;
+    }
+
+    .vento-content .min, .vento-content .max, .umidade-content .min, .umidade-content .max {
+    gap: 5%;
+}
+}
+ 
+
+
+@media (min-width: 700px) and (max-width: 1280px) and (min-height: 450px) and (max-height: 850px) {
+
+    .detalhes {
+        display: flex !important;
+        width: 40%;
+        height: 100%;
+        justify-content: center;
+        gap: 0 !important
+    }
+
+    .tempo-container {
+        padding: 0 6rem;
+        max-width: none;
+        border-radius: 20px;
+        width: 90%;
+        height: 90%;
+        align-items: center;
+        padding: 0
+    }
+
+    .tempo-content {
+        height: 100%;
+        width: 100%;
+        padding: 0;
+        justify-content: space-around;
+    }
+
+    html,
+    body {
+        align-content: center
+    }
+
+    .status {
+        width: 50%;
+        height: 50%
+    }
+
+    .tempo-details {
+        gap: 0
+    }
+
+    .atual {
+        gap: 2vw;
+        height: 100%;
+        width: 50%;
+        align-items: center;
+        flex-direction: column;
+        justify-content: center !important;
+        
+    }
+
+    .header {
+        height: 20%;
+        width: 100%;
+        text-align: start;
+        margin-top: 1% !important;
+        justify-content: center;
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        text-align: center
+    }
+
+    .lugar-nome {
+        font-size: 3vw !important;
+        font-size: clamp(.1rem, 3vw, 8rem) !important;
+        margin-top: 1% !important
+    }
+
+    .status span {
+        font-size: 2.5vw !important;
+        font-size: clamp(.1rem, 2.5vw, 8rem) !important;
+        line-height: 1
+    }
+
+    .valor {
+        text-align: center
+    }
+
+    .temperatura-principal {
+        width: 100%;
+        justify-content: center;
+        height: 60%;
+        align-items: baseline !important;
+        align-content: center;
+        flex-wrap: wrap;
+        margin: 10px 0px;
+    }
+
+    .dia {
+        height: 40%;
+        justify-content: center;
+        display: flex;
+        align-items: center
+    }
+
+    .min .number,
+    .max .number,
+    .divide {
+        font-size: 3vw !important;
+        font-size: clamp(.1rem, 3vw, 8rem) !important
+    }
+
+    .temperatura-principal .divide {
+        font-size: 3vw !important;
+        font-size: clamp(.2rem, 3vw, 7rem) !important
+    }
+
+    .min .medida {
+        font-size: 4vw !important;
+        font-size: clamp(.3rem, 4vw, 6rem) !important
+    }
+
+    .max .fa-solid,
+    .min .fa-solid {
+        font-size: 1vw !important;
+        font-size: clamp(.2rem, 1vw, 5rem) !important
+    }
+
+    .type-temp {
+        font-size: 3vw !important;
+        font-size: clamp(.1rem, 3vw, 8rem) !important
+    }
+
+    
+    .atual .valor .max i {
+        margin-top: 15% !important
+    }
+
+    .atual .status {
+        text-align: center;
+        gap: 0
+    }
+
+    .atual .valor .dia span {
+        font-size: 2.5vw !important;
+        font-size: clamp(.5rem, 2.5vw, 8rem) !important
+    }
+
+    .vento-content {
+        width: 100%;
+        justify-content: center;
+        flex-wrap: wrap;
+        height: 90%
+    }
+
+    .vento-container {
+        text-align: center
+    }
+
+    .umidade-content {
+        justify-content: center
+    }
+
+    .vento,
+    .umidade {
+        height: 30%;
+        align-content: center;
+        margin: 20px 0px;
+    }
+
+    .umidade-container,
+    .vento-container {
+        justify-items: center;
+        justify-content: center;
+        display: flex;
+        flex-direction: column;
+        text-align: center
+    }
+
+    .vento-container .fa-solid,
+    .umidade-container .fa-solid {
+        font-size: 2vw !important;
+        font-size: clamp(.1rem, 2vw, 6rem) !important
+    }
+
+    .vento-text,
+    .umidade-text,
+    .tipo-status {
+        font-size: 3vw !important;
+        font-size: clamp(.1rem, 3vw, 8rem) !important
+    }
+
+    .detalhes {
+        height: 100%;
+        justify-content: space-around;
+        
+    }
+
+    .min .medida,
+    .max .medida {
+        font-size: 3vw !important;
+        font-size: clamp(.1rem, 3vw, 8rem) !important
+    }
+
+    .tempo-details .detalhes .vento-content,
+    .tempo-details .detalhes .umidade-content {
+      
+        flex-wrap: nowrap;
+    }
+
+     .max-text, .min-text {
+       margin: 10px 10px;
+   }
+
+    .min .min-text,
+    .max .max-text,
+    .min .value,
+    .max .value {
+        font-size: 3vw !important;
+        font-size: clamp(.1rem, 3vw, 8rem) !important
+    }
+
+    .tempo-details .detalhes .vento-content,
+    .tempo-details .detalhes .umidade-content {
+        padding-top: 0;
+        gap: 0 !important;
+    }
+
+   
+    .valor {
+        justify-content: center;
+        height: 30%
+    }
+
+    .wi {
+        font-size: 7vw !important;
+        font-size: clamp(.1rem, 7vw, 14rem) !important;
+        margin: 20px;
+    }
+
+    .icon-text-umidade,
+    .icon-text-vento {
+        width: 100%;
+        align-items: center;
+        display: flex;
+        justify-content: center
+    }
+      .atual .status, .atual .valor {
+      padding-top: 0 !important;
+      margin-top: 15px;
+}
+}
+
+@media (min-width: 450px) and (max-width: 850px) and (min-height: 500px) and (max-height: 1280px){
+ .detalhes {
+        display: flex !important;
+        width: 50%
+    }
+
+    .tempo-container {
+        max-width: none;
+        padding: 0 !important;
+        width: 85%;
+        height: 85% ;
+        border-radius: 20px
+    }
+
+    html,
+    body {
+        align-content: center
+    }
+
+    .tempo-container {
+        width: 90%;
+        height: 90%;
+        border-radius: 20px
+    }
+
+    .atual .status,
+    .atual .valor {
+        width: 100%;
+        text-align: center;
+        padding-top: 2vh
+    }
+
+    .tempo-details {
+        gap: 4vh;
+        height: 70%;
+    }
+
+    .atual {
+        gap: 2vw;
+        height: 100%;
+        width: 40%;
+        align-items: center;
+        flex-direction: column
+    }
+
+    .tempo-details .header .lugar-nome {
+        font-size: 3vw ;
+        font-size: clamp(.3rem, 3vw, 8rem) 
+    }
+
+    .header {
+        height: 20%;
+        flex-wrap: wrap;
+        display: fleX;
+        text-align: center
+    }
+
+    .lugar-nome {
+        font-size: 4vw !important;
+        font-size: clamp(.1rem, 4vw, 6rem) !important
+    }
+
+    .status span {
+        font-size: 3vw !important;
+        line-height: 1
+    }
+
+    .dia {
+        height: 40%;
+        justify-content: center;
+        align-items: end;
+        display: flex
+    }
+
+    .valor {
+        text-align: center
+    }
+
+    .temperatura-principal {
+        width: 100%;
+        justify-content: center;
+        height: 60%;
+         margin: 0 !important;
+    
+    }
+
+    .min .number,
+    .max .number,
+    .divide {
+        font-size: 3vw ;
+        font-size: clamp(.1rem, 3vw, 10rem) 
+    }
+
+    .temperatura-principal .divide {
+        font-size: 3vw;
+        font-size: clamp(.2rem, 3vw, 8rem) 
+    }
+
+    .min .medida {
+        font-size: 4vw !important;
+        font-size: clamp(.3rem, 4vw, 6rem) !important
+    }
+
+    .max .fa-solid,
+    .min .fa-solid {
+        font-size: 1vw !important;
+        font-size: clamp(.2rem, 1vw, 5rem) !important
+    }
+
+    .type-temp {
+        font-size: 3vw !important;
+        font-size: clamp(.1rem, 3vw, 8rem) !important
+    }
+
+    .atual,
+    .valor,
+    .temperatura-principal {
+        gap: 1vw !important;
+        gap: clamp(.1rem, 1vw, 3rem) !important
+    }
+
+    .atual .valor .max i {
+        padding-top: 15% !important
+    }
+
+    .atual .status {
+        height: 50%;
+        justify-content: center;
+        gap: 0
+    }
+
+    .atual .valor .dia span {
+        font-size: 3vw !important;
+        font-size: clamp(.1rem, 3vw, 6rem) !important
+    }
+
+    .umidade {
+        align-items: center
+    }
+
+    .vento-content {
+        width: 100%;
+        justify-content: center;
+        flex-wrap: wrap
+    }
+
+    .vento-container {
+        text-align: center
+    }
+
+    .umidade-content {
+        justify-content: center
+    }
+
+    .umidade-container,
+    .vento-container {
+        display: flex;
+        flex-direction: column;
+        text-align: center;
+        align-items: center
+    }
+
+    .vento-container {
+        justify-content: end
+    }
+
+    .umidade-container {
+        justify-content: start
+    }
+
+    .icon-text-umidade {
+        align-items: center;
+        display: flex
+    }
+
+    .icon-text-vento {
+        align-items: center;
+        display: flex
+    }
+
+    .umidade-container .icon-text-umidade .fa-solid {
+        font-size: 2vw !important
+    }
+
+    .vento-container .icon-text-vento .fa-solid {
+        font-size: 2vw !important;
+        font-size: clamp(.2rem, 2vw, 6rem) !important
+    }
+
+    .vento-text,
+    .umidade-text,
+    .tipo-status {
+        font-size: 2.5vw !important;
+        font-size: clamp(.1rem, 2.5vw, 8rem) !important
+    }
+
+    .detalhes {
+        gap: 1vh !important;
+        height: 100%;
+        justify-content: center
+    }
+
+    .min .medida,
+    .max .medida {
+        font-size: 2.5vw !important;
+        font-size: clamp(.1rem, 2.5vw, 8rem) !important
+    }
+
+    .tempo-details .detalhes .vento-content,
+    .tempo-details .detalhes .umidade-content {
+        gap: 2vw !important;
+        gap: clamp(.1rem, 2vw, 5rem) !important
+    }
+
+    .min .min-text,
+    .max .max-text,
+    .min .value,
+    .max .value {
+        font-size: 2.5vw !important;
+        font-size: clamp(.1rem, 2.5vw, 8rem) !important;
+         margin: 0 !important;
+    
+    }
+
+    .tempo-details .detalhes .vento-content,
+    .tempo-details .detalhes .umidade-content {
+        padding-top: 0
+    }
+
+    .vento {
+        justify-content: center;
+        display: flex
+    }
+
+    .valor {
+        justify-content: center;
+        height: 40%
+    }
+
+    .wi {
+        font-size: 8vw !important;
+        font-size: clamp(.1rem, 8vw, 30rem) !important
+    }
+    .vento, .umidade{
+        margin: 0 !important ;
+    }
+     .temperatura-principal{
+        margin: 0 !important;
+    }
+    .vento, .umidade{
+        margin: 0 !important ;
+    }
+
+    .max-text, .min-text {
+      margin: 5px 5px !important;
+    }
+
+    .wi {
+        margin: 0 !important;
+    }
+
+     .temperatura-principal{
+        margin: 0 !important;
+    }
+    .vento, .umidade{
+        margin: 0 !important ;
+    }
+
+    .max-text, .min-text {
+      margin: 5px 5px !important;
+    }
+
+    .wi {
+        margin: 0 !important;
+    }
+
+    .atual .valor {
+        margin-top: 0 !important;
+    }
+
+    .vento-content .min, .vento-content .max, .umidade-content .min, .umidade-content .max {
+    gap: 5%;
+}
+     
+}
+
+@media (min-width: 1281px) and (max-width: 1920px) and (min-height: 721px) and (max-height: 1080px){
+
+
+
+    .detalhes {
+        display: flex !important;
+        width: 40%;
+        height: 100%;
+        justify-content: center;
+        gap: 0 !important
+    }
+
+    .tempo-container {
+        padding: 0 6rem;
+        max-width: none;
+        border-radius: 20px;
+        width: 90%;
+        height: 90%;
+        align-items: center;
+        padding: 0
+    }
+
+    .tempo-content {
+        height: 100%;
+        width: 100%;
+        padding: 0;
+        justify-content: space-around;
+    }
+
+    html,
+    body {
+        align-content: center
+    }
+
+    .status {
+        width: 50%;
+        height: 50%
+    }
+
+    .tempo-details {
+        gap: 0
+    }
+
+    .atual {
+        gap: 2vw;
+        height: 100%;
+        width: 50%;
+        align-items: center;
+        flex-direction: column;
+        justify-content: center !important;
+        
+    }
+
+    .header {
+        height: 20%;
+        width: 100%;
+        text-align: start;
+        margin-top: 1% !important;
+        justify-content: center;
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        text-align: center
+    }
+
+    .lugar-nome {
+        font-size: 3vw !important;
+        font-size: clamp(.1rem, 3vw, 8rem) !important;
+        margin-top: 1% !important
+    }
+
+    .status span {
+        font-size: 2.5vw !important;
+        font-size: clamp(.1rem, 2.5vw, 8rem) !important;
+        line-height: 1
+    }
+
+    .valor {
+        text-align: center
+    }
+
+    .temperatura-principal {
+        width: 100%;
+        justify-content: center;
+        height: 60%;
+        align-items: baseline !important;
+        align-content: center;
+        flex-wrap: wrap;
+        margin: 10px 0px;
+    }
+
+    .dia {
+        height: 40%;
+        justify-content: center;
+        display: flex;
+        align-items: center
+    }
+
+    .min .number,
+    .max .number,
+    .divide {
+        font-size: 3vw !important;
+        font-size: clamp(.1rem, 3vw, 8rem) !important
+    }
+
+    .temperatura-principal .divide {
+        font-size: 2vw !important;
+        font-size: clamp(.2rem, 3vw, 7rem) !important
+    }
+
+    .min .medida {
+        font-size: 4vw !important;
+        font-size: clamp(.3rem, 4vw, 6rem) !important
+    }
+
+    .max .fa-solid,
+    .min .fa-solid {
+        font-size: 1vw !important;
+        font-size: clamp(.2rem, 1vw, 5rem) !important
+    }
+
+    .type-temp {
+        font-size: 3vw !important;
+        font-size: clamp(.1rem, 3vw, 8rem) !important
+    }
+
+    
+    .atual .valor .max i {
+        margin-top: 15% !important
+    }
+
+    .atual .status {
+        text-align: center;
+        gap: 0
+    }
+
+    .atual .valor .dia span {
+        font-size: 2.5vw !important;
+        font-size: clamp(.5rem, 2.5vw, 8rem) !important
+    }
+
+    .vento-content {
+        width: 100%;
+        justify-content: center;
+        flex-wrap: wrap;
+        height: 90%
+    }
+
+    .vento-container {
+        text-align: center
+    }
+
+    .umidade-content {
+        justify-content: center
+    }
+
+    .vento,
+    .umidade {
+        height: 30%;
+        align-content: center;
+        margin: 20px 0px;
+    }
+
+    .umidade-container,
+    .vento-container {
+        justify-items: center;
+        justify-content: center;
+        display: flex;
+        flex-direction: column;
+        text-align: center
+    }
+
+    .vento-container .fa-solid,
+    .umidade-container .fa-solid {
+        font-size: 2vw !important;
+        font-size: clamp(.1rem, 2vw, 6rem) !important
+    }
+
+    .vento-text,
+    .umidade-text,
+    .tipo-status {
+        font-size: 3vw !important;
+        font-size: clamp(.1rem, 3vw, 8rem) !important
+    }
+
+    .detalhes {
+        height: 100%;
+        justify-content: space-around;
+        
+    }
+
+    .min .medida,
+    .max .medida {
+        font-size: 3vw !important;
+        font-size: clamp(.1rem, 3vw, 8rem) !important
+    }
+
+    .tempo-details .detalhes .vento-content,
+    .tempo-details .detalhes .umidade-content {
+      
+        flex-wrap: nowrap;
+    }
+
+     .max-text, .min-text {
+       margin: 10px 10px;
+   }
+
+    .min .min-text,
+    .max .max-text,
+    .min .value,
+    .max .value {
+        font-size: 3vw !important;
+        font-size: clamp(.1rem, 3vw, 8rem) !important
+    }
+
+    .tempo-details .detalhes .vento-content,
+    .tempo-details .detalhes .umidade-content {
+        padding-top: 0;
+        gap: 0 !important;
+    }
+
+   
+    .valor {
+        justify-content: center;
+        height: 30%
+    }
+
+    .wi {
+        font-size: 7vw !important;
+        font-size: clamp(.1rem, 7vw, 14rem) !important;
+        margin: 20px;
+    }
+
+    .icon-text-umidade,
+    .icon-text-vento {
+        width: 100%;
+        align-items: center;
+        display: flex;
+        justify-content: center
+    }
+      .atual .status, .atual .valor {
+      padding-top: 0 !important;
+      margin-top: 15px;
+}
+}
+@media (min-width: 851px) and (max-width: 1080px) and (min-height: 1281px) and (max-height: 1920px) {
+  .detalhes {
+        display: flex !important;
+        gap: 4vh !important;
+        gap: clamp(1vh, 4vh, 8vh) !important;
+        height: 50%;
+        justify-content: space-around;
+        width: 100%
+    }
+
+    .tempo-content {
+        width: 100%;
+        justify-content: center;
+        height: 90%
+    }
+
+    html,
+    body {
+        align-content: center
+    }
+
+    .tempo-container {
+        padding: 0;
+        width: 90%;
+        height: 90%;
+        border-radius: 20px
+    }
+
+    .tempo-details .detalhes .vento-content,
+    .tempo-details .detalhes .umidade-content {
+        gap: 0
+    }
+
+    .atual {
+        display: flex;
+        height: 50%;
+        flex-direction: column
+    }
+
+    .valor {
+        width: 100%;
+        align-items: center;
+        justify-content: center;
+        display: flex;
+        flex-direction: column;
+        height: 30%
+    }
+
+    .status {
+        width: 100%;
+        height: 50%
+    }
+
+    .tempo-details,
+    .tempo-content {
+        align-items: center;
+        text-align: center;
+        flex-direction: column;
+        gap: 0;
+        height: 100%;
+    }
+
+    .tempo-details .detalhes .vento-content .max .max-text,
+    .tempo-details .detalhes .vento-content .min .min-text,
+    .tempo-details .detalhes .umidade-content .max .max-text,
+    .tempo-details .detalhes .umidade-content .min .min-text {
+        padding-right: .5vw !important;
+        padding-right: clamp(.2rem, .5vw, 1vw) !important
+    }
+
+    .header {
+        height: 20%;
+        width: 100%;
+        margin-top: 1vh
+    }
+
+    .lugar-nome {
+        font-size: 4vh !important;
+        font-size: clamp(.1rem, 4vh, 8vw) !important
+    }
+
+    .icon {
+        height: 70%;
+        width: 100%
+    }
+
+    .tipo-status {
+        height: 30%
+    }
+
+    .wi {
+        font-size: 10vh !important;
+        font-size: clamp(.1rem, 10vh, 30rem) !important
+    }
+
+    .status span {
+        font-size: 4vh !important;
+        font-size: clamp(.5rem, 4vh, 8rem) !important
+    }
+
+    .atual .valor .dia span {
+        font-size: 4vh !important;
+        font-size: clamp(.1rem, 4vh, 10rem) !important
+    }
+
+    .valor .dia {
+        text-align: center;
+        height: 40%;
+        justify-content: center;
+        display: flex
+    }
+
+    .temperatura-principal {
+        width: 100%;
+        justify-content: center;
+        height: 60%
+    }
+
+    .min .number,
+    .max .number,
+    .divide {
+        font-size: 4vh !important;
+        font-size: clamp(.4rem, 4vh, 10rem) !important
+    }
+
+    .temperatura-principal .divide {
+        font-size: 7vw !important;
+        font-size: clamp(.1rem, 7vw, 8rem) !important
+    }
+
+    .min .medida {
+        font-size: 6vw !important;
+        font-size: clamp(.5rem, 6vh, 10rem) !important
+    }
+
+    .max .fa-solid,
+    .min .fa-solid {
+        font-size: 2vh !important;
+        font-size: clamp(.2rem, 2vh, 5rem) !important
+    }
+
+    .type-temp {
+        font-size: 7vw !important;
+        font-size: clamp(.4rem, 7vw, 10rem) !important
+    }
+
+    .atual,
+    .valor,
+    .temperatura-principal {
+        gap: 2vh !important;
+        gap: clamp(.1rem, 2vh, 2rem) !important
+    }
+
+    .atual .valor .max i {
+        padding-top: 15% !important
+    }
+
+    .atual .status {
+        gap: 0
+    }
+
+    .umidade-content {
+        justify-content: center
+    }
+
+    .vento-container .fa-solid,
+    .umidade-container .fa-solid {
+        font-size: 4vh !important;
+        font-size: clamp(.1rem, 4vh, 7rem) !important
+    }
+
+    .vento-text,
+    .umidade-text,
+    .tipo-status {
+        font-size: 3vh !important;
+        font-size: clamp(.2rem, 3vh, 8rem) !important
+    }
+
+    .vento-content {
+        width: 100%;
+        justify-content: center;
+        flex-wrap: wrap
+    }
+
+    .min .medida,
+    .max .medida {
+        font-size: 3vh !important;
+        font-size: clamp(.1rem, 3vh, 8rem) !important
+    }
+
+   .max-text, .min-text {
+       margin: 15px;
+   }
+
+    .min .min-text,
+    .max .max-text,
+    .min .value,
+    .max .value {
+        font-size: 3vh !important;
+        font-size: clamp(.2rem, 3vh, 8rem) !important
+    }
+
+    .tempo-details .detalhes .vento-content,
+    .tempo-details .detalhes .umidade-content {
+        padding-top: 0
+    }
+
+    .icon-text-umidade,
+    .icon-text-vento {
+        width: 100%;
+        align-items: center;
+        display: flex;
+        justify-content: center
+    }
+}
+
+@media (min-width: 1920px) and (max-width: 3840px) and (min-height: 1080px) and (max-height: 2160px){
+.detalhes {
+        display: flex !important;
+        width: 40%;
+        height: 100%;
+        justify-content: center;
+        gap: 0 !important
+    }
+
+    .tempo-container {
+        padding: 0 6rem;
+        max-width: none;
+        border-radius: 20px;
+        width: 90%;
+        height: 90%;
+        align-items: center;
+        padding: 0
+    }
+
+    .tempo-content {
+        height: 100%;
+        width: 100%;
+        padding: 0;
+        justify-content: space-around;
+    }
+
+    html,
+    body {
+        align-content: center
+    }
+
+    .status {
+        width: 50%;
+        height: 50%
+    }
+
+    .tempo-details {
+        gap: 0
+    }
+
+    .atual {
+        gap: 2vw;
+        height: 100%;
+        width: 50%;
+        align-items: center;
+        flex-direction: column;
+        justify-content: center !important;
+        
+    }
+
+    .header {
+        height: 20%;
+        width: 100%;
+        text-align: start;
+        margin-top: 1% !important;
+        justify-content: center;
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        text-align: center
+    }
+
+    .lugar-nome {
+        font-size: 3vw !important;
+        font-size: clamp(.1rem, 3vw, 8rem) !important;
+        margin-top: 1% !important
+    }
+
+    .status span {
+        font-size: 2.5vw !important;
+        font-size: clamp(.1rem, 2.5vw, 8rem) !important;
+        line-height: 1
+    }
+
+    .valor {
+        text-align: center
+    }
+
+    .temperatura-principal {
+        width: 100%;
+        justify-content: center;
+        height: 60%;
+        align-items: baseline !important;
+        align-content: center;
+        flex-wrap: wrap;
+        margin: 10px 0px;
+    }
+
+    .dia {
+        height: 40%;
+        justify-content: center;
+        display: flex;
+        align-items: center
+    }
+
+    .min .number,
+    .max .number,
+    .divide {
+        font-size: 3vw !important;
+        font-size: clamp(.1rem, 3vw, 8rem) !important
+    }
+
+    .temperatura-principal .divide {
+        font-size: 3vw !important;
+        font-size: clamp(.2rem, 3vw, 7rem) !important
+    }
+
+    .min .medida {
+        font-size: 4vw !important;
+        font-size: clamp(.3rem, 4vw, 6rem) !important
+    }
+
+    .max .fa-solid,
+    .min .fa-solid {
+        font-size: 1vw !important;
+        font-size: clamp(.2rem, 1vw, 5rem) !important
+    }
+
+    .type-temp {
+        font-size: 3vw !important;
+        font-size: clamp(.1rem, 3vw, 8rem) !important
+    }
+
+    
+    .atual .valor .max i {
+        margin-top: 15% !important
+    }
+
+    .atual .status {
+        text-align: center;
+        gap: 0
+    }
+
+    .atual .valor .dia span {
+        font-size: 2.5vw !important;
+        font-size: clamp(.5rem, 2.5vw, 8rem) !important
+    }
+
+    .vento-content {
+        width: 100%;
+        justify-content: center;
+        flex-wrap: wrap;
+        height: 90%
+    }
+
+    .vento-container {
+        text-align: center
+    }
+
+    .umidade-content {
+        justify-content: center
+    }
+
+    .vento,
+    .umidade {
+        height: 30%;
+        align-content: center;
+        margin: 20px 0px;
+    }
+
+    .umidade-container,
+    .vento-container {
+        justify-items: center;
+        justify-content: center;
+        display: flex;
+        flex-direction: column;
+        text-align: center
+    }
+
+    .vento-container .fa-solid,
+    .umidade-container .fa-solid {
+        font-size: 2vw !important;
+        font-size: clamp(.1rem, 2vw, 6rem) !important
+    }
+
+    .vento-text,
+    .umidade-text,
+    .tipo-status {
+        font-size: 3vw !important;
+        font-size: clamp(.1rem, 3vw, 8rem) !important
+    }
+
+    .detalhes {
+        height: 100%;
+        justify-content: space-around;
+        
+    }
+
+    .min .medida,
+    .max .medida {
+        font-size: 3vw !important;
+        font-size: clamp(.1rem, 3vw, 8rem) !important
+    }
+
+    .tempo-details .detalhes .vento-content,
+    .tempo-details .detalhes .umidade-content {
+      
+        flex-wrap: nowrap;
+    }
+
+     .max-text, .min-text {
+       margin: 15px 15px;
+   }
+
+    .min .min-text,
+    .max .max-text,
+    .min .value,
+    .max .value {
+        font-size: 3vw !important;
+        font-size: clamp(.1rem, 3vw, 8rem) !important
+    }
+
+    .tempo-details .detalhes .vento-content,
+    .tempo-details .detalhes .umidade-content {
+        padding-top: 0;
+        gap: 0 !important;
+    }
+
+   
+    .valor {
+        justify-content: center;
+        height: 30%
+    }
+
+    .wi {
+        font-size: 7vw !important;
+        font-size: clamp(.1rem, 7vw, 14rem) !important;
+        margin: 20px;
+    }
+
+    .icon-text-umidade,
+    .icon-text-vento {
+        width: 100%;
+        align-items: center;
+        display: flex;
+        justify-content: center
+    }
+      .atual .status, .atual .valor {
+      padding-top: 0 !important;
+      margin-top: 15px;
+}
+}
+
+@media (min-width: 1080px) and (max-width: 2160px) and (min-height: 1920px) and (max-height: 3840px){
+.detalhes {
+        display: flex !important;
+        gap: 4vh !important;
+        gap: clamp(1vh, 4vh, 8vh) !important;
+        height: 50%;
+        justify-content: space-around;
+        width: 100%
+    }
+
+    .tempo-content {
+        width: 100%;
+        justify-content: center;
+        height: 90%
+    }
+
+    html,
+    body {
+        align-content: center
+    }
+
+    .tempo-container {
+        padding: 0;
+        width: 90%;
+        height: 90%;
+        border-radius: 20px
+    }
+
+    .tempo-details .detalhes .vento-content,
+    .tempo-details .detalhes .umidade-content {
+        gap: 0
+    }
+
+    .atual {
+        display: flex;
+        height: 50%;
+        flex-direction: column
+    }
+
+    .valor {
+        width: 100%;
+        align-items: center;
+        justify-content: center;
+        display: flex;
+        flex-direction: column;
+        height: 30%
+    }
+
+    .status {
+        width: 100%;
+        height: 50%
+    }
+
+    .tempo-details,
+    .tempo-content {
+        align-items: center;
+        text-align: center;
+        flex-direction: column;
+        gap: 0;
+        height: 100%;
+    }
+
+    .tempo-details .detalhes .vento-content .max .max-text,
+    .tempo-details .detalhes .vento-content .min .min-text,
+    .tempo-details .detalhes .umidade-content .max .max-text,
+    .tempo-details .detalhes .umidade-content .min .min-text {
+        padding-right: .5vw !important;
+        padding-right: clamp(.2rem, .5vw, 1vw) !important
+    }
+
+    .header {
+        height: 20%;
+        width: 100%;
+        margin-top: 1vh
+    }
+
+    .lugar-nome {
+        font-size: 4vh !important;
+        font-size: clamp(.1rem, 4vh, 8vw) !important
+    }
+
+    .icon {
+        height: 70%;
+        width: 100%
+    }
+
+    .tipo-status {
+        height: 30%
+    }
+
+    .wi {
+        font-size: 10vh !important;
+        font-size: clamp(.1rem, 10vh, 30rem) !important
+    }
+
+    .status span {
+        font-size: 4vh !important;
+        font-size: clamp(.5rem, 4vh, 8rem) !important
+    }
+
+    .atual .valor .dia span {
+        font-size: 4vh !important;
+        font-size: clamp(.1rem, 4vh, 10rem) !important
+    }
+
+    .valor .dia {
+        text-align: center;
+        height: 40%;
+        justify-content: center;
+        display: flex
+    }
+
+    .temperatura-principal {
+        width: 100%;
+        justify-content: center;
+        height: 60%
+    }
+
+    .min .number,
+    .max .number,
+    .divide {
+        font-size: 4vh !important;
+        font-size: clamp(.4rem, 4vh, 10rem) !important
+    }
+
+    .temperatura-principal .divide {
+        font-size: 4vh!important;
+        font-size: clamp(.1rem, 4vh, 8rem) !important
+    }
+
+    .min .medida {
+        font-size: 6vw !important;
+        font-size: clamp(.5rem, 6vh, 10rem) !important
+    }
+
+    .max .fa-solid,
+    .min .fa-solid {
+        font-size: 2vh !important;
+        font-size: clamp(.2rem, 2vh, 5rem) !important
+    }
+
+    .type-temp {
+        font-size: 4vh !important;
+        font-size: clamp(.4rem, 4vh, 10rem) !important
+    }
+
+    .atual,
+    .valor,
+    .temperatura-principal {
+        gap: 2vh !important;
+        gap: clamp(.1rem, 2vh, 2rem) !important
+    }
+
+    .atual .valor .max i {
+        padding-top: 15% !important
+    }
+
+    .atual .status {
+        gap: 0
+    }
+
+    .umidade-content {
+        justify-content: center
+    }
+
+    .vento-container .fa-solid,
+    .umidade-container .fa-solid {
+        font-size: 4vh !important;
+        font-size: clamp(.1rem, 4vh, 7rem) !important
+    }
+
+    .vento-text,
+    .umidade-text,
+    .tipo-status {
+        font-size: 3vh !important;
+        font-size: clamp(.2rem, 3vh, 8rem) !important
+    }
+
+    .vento-content {
+        width: 100%;
+        justify-content: center;
+        flex-wrap: wrap
+    }
+
+    .min .medida,
+    .max .medida {
+        font-size: 3vh !important;
+        font-size: clamp(.1rem, 3vh, 8rem) !important
+    }
+
+   .max-text, .min-text {
+       margin: 15px;
+   }
+
+    .min .min-text,
+    .max .max-text,
+    .min .value,
+    .max .value {
+        font-size: 3vh !important;
+        font-size: clamp(.2rem, 3vh, 8rem) !important
+    }
+
+    .tempo-details .detalhes .vento-content,
+    .tempo-details .detalhes .umidade-content {
+        padding-top: 0
+    }
+
+    .icon-text-umidade,
+    .icon-text-vento {
+        width: 100%;
+        align-items: center;
+        display: flex;
+        justify-content: center
+    }
+} 
+
+
+
+  @media(aspect-ratio:1) {
+
+    .detalhes {
+        display: none !important
+    }
+
+    .tempo-content {
+        width: 100%;
+        justify-content: center
+    }
+
+    .tempo-container {
+        padding: 0;
+        height: 90%;
+        width: 90%;
+        border-radius: 20px
+    }
+
+    html,
+    body {
+        align-content: center
+    }
+
+    .tempo-details .detalhes .vento-content,
+    .tempo-details .detalhes .umidade-content {
+        gap: 0
+    }
+
+    .atual {
+        display: inline
+    }
+
+    .valor {
+        width: 100%;
+        align-items: center
+    }
+
+    .status {
+        width: 100%
+    }
+
+    .tempo-details,
+    .tempo-content {
+        align-items: center;
+        text-align: center;
+        flex-direction: column;
+        gap: 0
+    }
+
+    .tempo-details .detalhes .vento-content .max .max-text,
+    .tempo-details .detalhes .vento-content .min .min-text,
+    .tempo-details .detalhes .umidade-content .max .max-text,
+    .tempo-details .detalhes .umidade-content .min .min-text {
+        padding-right: .5vw !important;
+        padding-right: clamp(.2rem, .5vw, 1vw) !important
+    }
+
+    .header {
+        height: 10%;
+        width: 100%
+    }
+
+    .lugar-nome {
+        font-size: 6vw !important;
+        font-size: clamp(.2rem, 6vw, 10rem) !important;
+        line-height: 1
+    }
+
+    .icon {
+        height: 30%;
+        width: 100%
+    }
+
+    .wi {
+        font-size: 20vh !important;
+        font-size: 20vh !important;
+        font-size: clamp(.5rem, 20vh, 40rem) !important
+    }
+
+    .status span {
+        font-size: 6vw !important;
+        font-size: clamp(.1rem, 6vw, 6rem) !important
+    }
+
+    .atual .valor .dia span {
+        font-size: 6vw !important;
+        font-size: clamp(.1rem, 6vw, 6rem) !important
+    }
+
+    .valor .dia {
+        text-align: center
+    }
+
+    .temperatura-principal {
+        width: 100%;
+        justify-content: center;
+        height: 20%;
+        padding-top: 2vh;
+        padding-top: clamp(.1rem, 2vh, 4rem) !important
+    }
+
+    .min .number,
+    .max .number,
+    .divide {
+        font-size: 10vw !important;
+        font-size: clamp(.4rem, 10vw, 10rem) !important
+    }
+
+    .temperatura-principal .divide {
+        font-size: 8vw !important;
+        font-size: clamp(.1rem, 8vw, 6rem) !important
+    }
+
+    .min .medida {
+        font-size: 12vw !important;
+        font-size: clamp(.5rem, 12vw, 2rem) !important
+    }
+
+    .max .fa-solid,
+    .min .fa-solid {
+        font-size: 7vw !important;
+        font-size: clamp(.2rem, 7vw, 5rem) !important
+    }
+
+    .type-temp {
+        font-size: 10vw;
+        font-size: clamp(.1rem, 10vw, 10rem) !important
+    }
+
+    .atual,
+    .valor,
+    .temperatura-principal {
+        gap: 2vw !important;
+        gap: clamp(.1rem, 2vw, 2rem) !important
+    }
+
+    .atual .valor .max i {
+        padding-top: 2vh !important;
+        padding-top: clamp(1vh, 2vh, 3vh) !important
+    }
+
+    .atual .status {
+        gap: 0
+    }
+
+    .umidade-content {
+        justify-content: center
+    }
+
+    .vento-container .fa-solid,
+    .umidade-container .fa-solid {
+        font-size: 5vw !important;
+        font-size: clamp(.1rem, 5vw, 2rem) !important
+    }
+
+    .vento-text,
+    .umidade-text,
+    .tipo-status {
+        font-size: 12vw !important;
+        font-size: clamp(.1rem, 12vw, 2rem) !important
+    }
+
+    .vento-content {
+        width: 100%;
+        justify-content: center;
+        flex-wrap: wrap
+    }
+
+    .min .medida,
+    .max .medida {
+        font-size: 7vw !important;
+        font-size: clamp(.1rem, 7vw, 5rem) !important
+    }
+
+    .tempo-details .detalhes .vento-content,
+    .tempo-details .detalhes .umidade-content {
+        gap: 1vw !important;
+        gap: clamp(.1rem, 1vw, 2rem) !important
+    }
+
+    .min .min-text,
+    .max .max-text,
+    .min .value,
+    .max .value {
+        font-size: 10vw !important;
+        font-size: clamp(.1rem, 10vw, 5rem) !important
+    }
+}
+
+@media(min-aspect-ratio:0) and (max-aspect-ratio:.09099) {
+    .detalhes {
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+        align-items: center;
+        justify-content: space-around;
+        height: 50%
+    }
+
+    .tempo-content {
+        width: 100%;
+        justify-content: center;
+        padding: 0 !important
+    }
+
+    html,
+    body {
+        align-content: center
+    }
+
+    .tempo-container {
+        padding: 0;
+        width: 90%;
+        height: 90%;
+        border-radius: 10px
+    }
+
+    .tempo-details .detalhes .vento-content,
+    .tempo-details .detalhes .umidade-content {
+        gap: 0
+    }
+
+    .atual {
+        display: flex;
+        flex-direction: column;
+        height: 40%;
+        justify-content: center
+    }
+
+    .valor {
+        width: 100%;
+        align-items: center;
+        height: 30%
+    }
+
+    .status {
+        width: 100%;
+        height: 40%;
+        justify-content: center
+    }
+
+    .tempo-details,
+    .tempo-content {
+        align-items: center;
+        text-align: center;
+        flex-direction: column;
+        gap: 0;
+        height: 100% !important
+    }
+
+    .tempo-details .detalhes .vento-content .max .max-text,
+    .tempo-details .detalhes .vento-content .min .min-text,
+    .tempo-details .detalhes .umidade-content .max .max-text,
+    .tempo-details .detalhes .umidade-content .min .min-text {
+        padding-right: .5vw !important;
+        padding-right: clamp(.5rem, .5vw, 1vw) !important
+    }
+
+    .header {
+        height: 20%;
+        width: 100%;
+        justify-content: center;
+        display: flex;
+        align-items: flex-end
+    }
+
+    .lugar-nome {
+        font-size: 14vw !important;
+        font-size: clamp(.8rem, 14vw, 5rem) !important
+    }
+
+    .icon {
+        height: 40%;
+        width: 100%
+    }
+
+    .wi {
+        font-size: 60vw !important;
+        font-size: clamp(2rem, 60vw, 20rem) !important
+    }
+
+    .status span {
+        font-size: 15vw !important;
+        font-size: clamp(.5rem, 15vw, 8rem) !important
+    }
+
+    .atual .valor .dia span {
+        font-size: 15vw !important;
+        font-size: clamp(.1rem, 15vw, 8rem) !important
+    }
+
+    .valor .dia {
+        text-align: center;
+        height: 50%;
+        justify-content: center;
+        display: flex;
+        align-items: flex-start
+    }
+
+    .temperatura-principal {
+        width: 100%;
+        justify-content: center;
+        font-size: 20vw
+    }
+
+    .min .number,
+    .max .number,
+    .divide {
+        font-size: 17vw !important;
+        font-size: clamp(.6rem, 17vw, 8rem) !important
+    }
+
+    .temperatura-principal .divide {
+        font-size: 12vw !important;
+        font-size: clamp(.5rem, 12vw, 5rem) !important
+    }
+
+    .min .medida {
+        font-size: 16vw !important;
+        font-size: clamp(.5rem, 16vw, 2rem) !important
+    }
+
+    .max .fa-solid,
+    .min .fa-solid {
+        font-size: 6vw !important;
+        font-size: clamp(.4rem, 6vw, 4rem) !important
+    }
+
+    .type-temp {
+        font-size: 17vw !important;
+        font-size: clamp(.8rem, 17vw, 7rem) !important
+    }
+
+    .atual,
+    .valor,
+    .temperatura-principal {
+        gap: 2vw !important;
+        gap: clamp(.1rem, 2vw, 2rem) !important
+    }
+
+    .atual .valor .max i {
+        padding-top: 15% !important
+    }
+
+    .umidade {
+        padding-top: 12vw !important;
+        padding-top: clamp(.5rem, 12vw, 2rem) !important
+    }
+
+    .umidade-content {
+        justify-content: center;
+        flex-wrap: wrap
+    }
+
+    .vento-container .fa-solid,
+    .umidade-container .fa-solid {
+        font-size: 8vw !important;
+        font-size: clamp(.8rem, 8vw, 4rem) !important
+    }
+
+    .vento-text,
+    .umidade-text,
+    .tipo-status {
+        font-size: 17vw !important;
+        font-size: clamp(.5rem, 17vw, 6rem) !important
+    }
+
+    .vento-content {
+        width: 100%;
+        justify-content: center;
+        flex-wrap: wrap
+    }
+
+    .min .medida,
+    .max .medida {
+        font-size: 17vw !important;
+        font-size: clamp(.1rem, 17vw, 5rem) !important
+    }
+
+    .tempo-details .detalhes .vento-content,
+    .tempo-details .detalhes .umidade-content {
+        gap: 1vw !important;
+        gap: clamp(.1rem, 1vw, 2rem) !important
+    }
+
+    .min .min-text,
+    .max .max-text,
+    .min .value,
+    .max .value {
+        font-size: 17vw !important;
+        font-size: clamp(.5rem, 17vw, 4rem) !important
+    }
+
+    .icon-text-umidade,
+    .icon-text-vento {
+        align-items: center;
+        display: flex;
+        flex-direction: column
+    }
+
+    .dias {
+        display: none !important
+    }
+}
+
+@media(min-aspect-ratio:.091) and (max-aspect-ratio:.15) {
+    .detalhes {
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+        align-items: center;
+        justify-content: space-evenly;
+        height: 50%
+    }
+
+    .tempo-content {
+        width: 100%;
+        justify-content: center;
+        padding: 0 !important
+    }
+
+    html,
+    body {
+        align-content: center
+    }
+
+    .tempo-container {
+        padding: 0;
+        width: 90%;
+        height: 90%;
+        border-radius: 10px
+    }
+
+    .tempo-details .detalhes .vento-content,
+    .tempo-details .detalhes .umidade-content {
+        gap: 0
+    }
+
+    .atual {
+        display: flex;
+        flex-direction: column;
+        height: 40%;
+        justify-content: center
+    }
+
+    .valor {
+        width: 100%;
+        align-items: center;
+        height: 30%
+    }
+
+    .status {
+        width: 100%;
+        height: 40%;
+        justify-content: center
+    }
+
+    .tempo-details,
+    .tempo-content {
+        align-items: center;
+        text-align: center;
+        flex-direction: column;
+        gap: 0;
+        height: 100% !important
+    }
+
+    .tempo-details .detalhes .vento-content .max .max-text,
+    .tempo-details .detalhes .vento-content .min .min-text,
+    .tempo-details .detalhes .umidade-content .max .max-text,
+    .tempo-details .detalhes .umidade-content .min .min-text {
+        padding-right: 10vw !important;
+        padding-right: clamp(.1rem, 10vw, 5rem) !important
+    }
+
+    .header {
+        height: 20%;
+        width: 100%;
+        justify-content: center;
+        display: flex;
+        align-items: flex-end
+    }
+
+    .lugar-nome {
+        font-size: 14vw !important;
+        font-size: clamp(.4rem, 14vw, 5rem) !important
+    }
+
+    .icon {
+        height: 40%;
+        width: 100%
+    }
+
+    .wi {
+        font-size: 60vw !important;
+        font-size: clamp(2rem, 60vw, 20rem) !important
+    }
+
+    .status span {
+        font-size: 12vw !important;
+        font-size: clamp(.5rem, 12vw, 8rem) !important;
+        line-height: 1
+    }
+
+    .atual .valor .dia span {
+        font-size: 12vw !important;
+        font-size: clamp(.5rem, 12vw, 4rem) !important
+    }
+
+    .valor .dia {
+        text-align: center;
+        height: 50%;
+        justify-content: center;
+        display: flex;
+        align-items: end
+    }
+
+    .temperatura-principal {
+        width: 100%;
+        justify-content: center;
+        font-size: 20vw
+    }
+
+    .min .number,
+    .max .number,
+    .divide {
+        font-size: 15vw !important;
+        font-size: clamp(.6rem, 15vw, 8rem) !important
+    }
+
+    .temperatura-principal .divide {
+        font-size: 14vw !important;
+        font-size: clamp(.6rem, 14vw, 5rem) !important
+    }
+
+    .min .medida {
+        font-size: 16vw !important;
+        font-size: clamp(.5rem, 16vw, 2rem) !important
+    }
+
+    .max .fa-solid,
+    .min .fa-solid {
+        font-size: 6vw !important;
+        font-size: clamp(.4rem, 6vw, 4rem) !important
+    }
+
+    .type-temp {
+        font-size: 15vw !important;
+        font-size: clamp(.6rem, 15vw, 7rem) !important
+    }
+
+    .atual,
+    .valor,
+    .temperatura-principal {
+        gap: 2vw !important;
+        gap: clamp(.1rem, 2vw, 2rem) !important
+    }
+
+    .atual .valor .max i {
+        padding-top: 15% !important
+    }
+
+    .umidade {
+        padding-top: 12vw !important;
+        padding-top: clamp(.6rem, 12vw, 2rem) !important
+    }
+
+    .umidade-content {
+        justify-content: center;
+        flex-wrap: wrap
+    }
+
+    .vento-container .fa-solid,
+    .umidade-container .fa-solid {
+        font-size: 8vw !important;
+        font-size: clamp(.8rem, 8vw, 4rem) !important
+    }
+
+    .vento-text,
+    .umidade-text,
+    .tipo-status {
+        font-size: 12vw !important;
+        font-size: clamp(.5rem, 12vw, 6rem) !important
+    }
+
+    .vento-content {
+        width: 100%;
+        justify-content: center;
+        flex-wrap: wrap
+    }
+
+    .min .medida,
+    .max .medida {
+        font-size: 12vw !important;
+        font-size: clamp(.5rem, 12vw, 5rem) !important
+    }
+
+    .tempo-details .detalhes .vento-content,
+    .tempo-details .detalhes .umidade-content {
+        gap: 1vw !important;
+        gap: clamp(.1rem, 1vw, 2rem) !important
+    }
+
+    .min .min-text,
+    .max .max-text,
+    .min .value,
+    .max .value {
+        font-size: 12vw !important;
+        font-size: clamp(.5rem, 12vw, 5rem) !important
+    }
+
+    .icon-text-umidade,
+    .icon-text-vento {
+        align-items: center;
+        display: flex;
+        flex-direction: column
+    }
+    .atual .valor .min, atual .valor .max {
+
+        gap: 0 !important;
+    }
+}
+
+@media(min-aspect-ratio:.151) and (max-aspect-ratio:.25999) {
+    .detalhes {
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+        align-items: center;
+        justify-content: space-around;
+        height: 50%
+    }
+
+    .tempo-content {
+        width: 100%;
+        height: 100%;
+        padding: 0 !important
+    }
+
+    html,
+    body {
+        align-content: center
+    }
+
+    .tempo-container {
+        padding: 0;
+        width: 90%;
+        height: 90%;
+        border-radius: 20px
+    }
+
+    .tempo-details .detalhes .vento-content,
+    .tempo-details .detalhes .umidade-content {
+        gap: 0
+    }
+
+    .atual {
+        display: flex;
+        flex-direction: column;
+        height: 50%
+    }
+
+    .valor {
+        width: 100%;
+        align-items: center;
+        height: 20%;
+        justify-content: center;
+        display: flex;
+        flex-direction: column
+    }
+
+    .status {
+        width: 100%;
+        height: 50%;
+        justify-content: center
+    }
+
+    .tempo-details {
+        height: 100%;
+        justify-content: center
+    }
+
+    .tempo-details,
+    .tempo-content {
+        align-items: center;
+        text-align: center;
+        flex-direction: column;
+        gap: 0
+    }
+
+    .tempo-details .detalhes .vento-content .max .max-text,
+    .tempo-details .detalhes .vento-content .min .min-text,
+    .tempo-details .detalhes .umidade-content .max .max-text,
+    .tempo-details .detalhes .umidade-content .min .min-text {
+        padding-right: .2rem !important;
+        padding-right: clamp(.1rem, .2rem, 1rem) !important
+    }
+
+    .header {
+        height: 30%;
+        width: 100%;
+        justify-content: center;
+        display: flex;
+        align-items: center
+    }
+
+    .lugar-nome {
+        font-size: 10vw !important;
+        font-size: clamp(.6rem, 10vw, 5rem) !important
+    }
+
+    .icon {
+        height: 40%;
+        width: 100%
+    }
+
+    .wi {
+        font-size: 50vw !important;
+        font-size: clamp(2rem, 50vw, 20rem) !important
+    }
+
+    .status span {
+        font-size: 10vw !important;
+        font-size: clamp(.5rem, 10vw, 8rem) !important;
+        line-height: 1
+    }
+
+    .atual .valor .dia span {
+        font-size: 10vw !important;
+        font-size: clamp(.1rem, 10vw, 6rem) !important
+    }
+
+    .valor .dia {
+        text-align: center
+    }
+
+    .temperatura-principal {
+        width: 100%;
+        justify-content: center;
+        font-size: 20vw
+    }
+
+    .min .number,
+    .max .number,
+    .divide {
+        font-size: 14vw !important;
+        font-size: clamp(.6rem, 14vw, 8rem) !important
+    }
+
+    .temperatura-principal .divide {
+        font-size: 12vw !important;
+        font-size: clamp(.5rem, 12vw, 5rem) !important
+    }
+
+    .min .medida {
+        font-size: 12vw !important;
+        font-size: clamp(.5rem, 12vw, 2rem) !important
+    }
+
+    .max .fa-solid,
+    .min .fa-solid {
+        font-size: 7vw !important;
+        font-size: clamp(.1rem, 7vw, 4rem) !important
+    }
+
+    .type-temp {
+        font-size: 14vw !important;
+        font-size: clamp(.2rem, 14vw, 7rem) !important
+    }
+
+    .atual,
+    .valor,
+    .temperatura-principal {
+        gap: 2vw !important;
+        gap: clamp(.1rem, 2vw, 2rem) !important
+    }
+
+    .atual .valor .max i {
+        padding-top: 15% !important
+    }
+
+    .umidade {
+        padding-top: 12vw !important;
+        padding-top: clamp(.5rem, 12vw, 2rem) !important
+    }
+
+    .umidade-content {
+        justify-content: center;
+        flex-wrap: wrap
+    }
+
+    .vento-container .fa-solid,
+    .umidade-container .fa-solid {
+        font-size: 8vw !important;
+        font-size: clamp(.2rem, 8vw, 4rem) !important
+    }
+
+    .vento-text,
+    .umidade-text,
+    .tipo-status {
+        font-size: 12vw !important;
+        font-size: clamp(.1em, 12vw, 6rem) !important
+    }
+
+    .vento-content {
+        width: 100%;
+        justify-content: center;
+        flex-wrap: wrap
+    }
+
+    .min .medida,
+    .max .medida {
+        font-size: 10vw !important;
+        font-size: clamp(.1rem, 10vw, 6rem) !important
+    }
+
+    .tempo-details .detalhes .vento-content,
+    .tempo-details .detalhes .umidade-content {
+        gap: 5vw !important;
+        gap: clamp(.1rem, 5vw, 2rem) !important
+    }
+
+    .min .min-text,
+    .max .max-text,
+    .min .value,
+    .max .value {
+        font-size: 10vw !important;
+        font-size: clamp(.1rem, 10vw, 6rem) !important
+    }
+
+    .icon-text-umidade,
+    .icon-text-vento {
+        align-items: center;
+        display: flex;
+        flex-direction: column
+    }
+    .max-text, .min-text {
+        margin: 0 !important;
+    }
+}
+
+@media(min-aspect-ratio:.251) and (max-aspect-ratio:.50999) {
+    .detalhes {
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+        align-items: center;
+        padding-top: 2vh !important;
+        padding-top: clamp(.5vh, 2vh, 4rem) !important;
+        height: 50%;
+        align-content: center
+    }
+
+    .tempo-details .detalhes {
+        gap: 2vh !important;
+        gap: clamp(.5rem, 2vh, 3vh) !important;
+        justify-content: space-around
+    }
+
+    .tempo-content {
+        width: 100%;
+        justify-content: center;
+        padding: 0
+    }
+
+    html,
+    body {
+        align-content: center
+    }
+
+    .tempo-container {
+        padding: 0;
+        width: 90%;
+        height: 90%;
+        border-radius: 20px
+    }
+
+    .vento-content {
+        justify-content: center
+    }
+
+    .atual {
+        height: 50%;
+        width: 100%;
+        justify-content: center;
+        display: flex;
+        flex-direction: column
+    }
+
+    .valor {
+        width: 100%;
+        align-items: center;
+        height: 30%;
+        justify-content: center;
+        display: flex;
+        flex-direction: column
+    }
+
+    .status {
+        width: 100%;
+        gap: 0 !important
+    }
+
+    .atual .valor .dia span {
+        font-size: 8vw !important;
+        font-size: clamp(.5rem, 8vw, 6rem) !important
+    }
+
+    .valor .dia {
+        text-align: center;
+        height: 40%;
+        justify-content: center;
+        display: flex;
+        align-items: center
+    }
+
+    .tempo-details,
+    .tempo-content {
+        align-items: center;
+        text-align: center;
+        flex-direction: column;
+        gap: 0;
+        height: 100%
+    }
+
+    .header {
+        height: 20% !important;
+        width: 100%;
+        justify-content: center;
+        display: flex;
+        align-items: center
+    }
+
+    .lugar-nome {
+        font-size: 3.5vh !important;
+        font-size: clamp(.1rem, 3.5vh, 10rem) !important
+    }
+
+    .icon {
+        height: 40%;
+        width: 100%
+    }
+
+    .wi {
+        font-size: 12vh !important;
+        font-size: clamp(1rem, 12vh, 35rem) !important
+    }
+
+    .status span {
+        font-size: 8vw !important;
+        font-size: clamp(.5rem, 8vw, 8rem) !important
+    }
+
+    .atual .valor .max .number,
+    .atual .valor .min .number {
+        font-size: 12vw !important;
+        font-size: clamp(.8rem, 12vw, 12rem) !important
+    }
+
+    .temperatura-principal {
+        width: 100%;
+        justify-content: center;
+        height: 60%
+    }
+
+    .temperatura-principal .type-temp {
+        font-size: 12vw !important;
+        font-size: clamp(.8rem, 12vw, 12rem) !important
+    }
+
+    .min .medida {
+        font-size: 10vw !important;
+        font-size: clamp(.1rem, 10vw, 2rem) !important
+    }
+
+    .atual,
+    .valor,
+    .temperatura-principal {
+        gap: 2vw !important;
+        gap: clamp(.1rem, 2vw, 2rem) !important
+    }
+
+    .atual .valor .divide {
+        font-size: 12vw !important;
+        font-size: clamp(.3rem, 12vw, 6rem) !important
+    }
+
+    .max .fa-solid,
+    .min .fa-solid {
+        font-size: 4vw !important;
+        font-size: clamp(.1rem, 4vw, 5rem) !important
+    }
+
+    .atual .valor .max i {
+        padding-top: 15% !important
+    }
+
+    .umidade-container {
+        justify-items: center
+    }
+
+    .tempo-details .detalhes .vento-content,
+    .tempo-details .detalhes .umidade-content {
+        padding-top: 0
+    }
+
+    .tipo-status {
+        font-size: 6vw !important;
+        font-size: clamp(1rem, 6vw, 8rem) !important
+    }
+
+    .vento-text,
+    .umidade-text {
+        font-size: 8vw !important;
+        font-size: clamp(.5rem, 8vw, 8rem) !important;
+        
+    }
+
+    .min .min-text,
+    .max .max-text,
+    .min .value,
+    .max .value {
+        font-size: 8vw !important;
+        font-size: clamp(.5rem, 8vw, 8rem) !important
+    }
+
+    .min .medida,
+    .max .medida {
+        font-size: 8vw !important;
+        font-size: clamp(.5rem, 8vw, 8rem) !important
+    }
+
+    .umidade-container .fa-solid,
+    .vento-container .fa-solid {
+        font-size: 5vw !important;
+        font-size: clamp(.4rem, 5vw, 3rem) !important
+    }
+
+    .tempo-details .detalhes .vento-content,
+    .tempo-details .detalhes .umidade-content {
+        font-size: 2rem !important;
+        gap: clamp(.3rem, 2rem, 4rem) !important
+    }
+
+    .vento-container .fa-solid,
+    .umidade-container .fa-solid {
+        font-size: 8vw !important;
+        font-size: clamp(.1rem, 8vw, 7rem) !important
+    }
+
+    .tempo-details .detalhes .vento-content,
+    .tempo-details .detalhes .umidade-content {
+        gap: 5vw !important;
+        gap: clamp(.1rem, 5vw, 4rem) !important;
+        flex-wrap: wrap;
+        justify-content: center
+    }
+
+    .tempo-details .detalhes .vento-content .max .max-text,
+    .tempo-details .detalhes .vento-content .min .min-text,
+    .tempo-details .detalhes .umidade-content .max .max-text,
+    .tempo-details .detalhes .umidade-content .min .min-text {
+        padding-right: .5rem !important;
+        padding-right: clamp(.1rem, .5rem, 1rem) !important
+    }
+
+    .umidade,
+    .vento {
+        height: 30%;
+        align-content: center;
+        display: flex;
+        align-items: center;
+        word-break: auto-phrase
+    }
+
+    .icon-text-umidade,
+    .icon-text-vento {
+        align-items: center;
+        display: flex;
+        flex-direction: column
+    }
+
+    .status {
+        height: 50% !important;
+    }
+    .max-text, .min-text {
+      margin: 0 !important;
+    }
+}
+
+ @media(min-aspect-ratio:.51) and (max-aspect-ratio:.75999) {
+    .detalhes {
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+        align-items: center;
+        padding-top: 6vh !important;
+        padding-top: clamp(.5vh, 6vh, 4rem) !important;
+        height: 50%;
+        align-content: center
+    }
+
+    .tempo-details .detalhes {
+        gap: 2vh !important;
+        gap: clamp(.5rem, 2vh, 3vh) !important;
+        justify-content: space-around
+    }
+
+    html,
+    body {
+        align-content: center
+    }
+
+    .tempo-container {
+        padding: 0;
+        width: 90%;
+        height: 90%;
+        border-radius: 20px
+    }
+
+    .tempo-container {
+        padding: 0
+    }
+
+    .vento-content {
+        justify-content: center
+    }
+
+    .atual {
+        display: table-column;
+        height: 50%;
+        width: 100%
+    }
+
+    .valor {
+        width: 100%;
+        align-items: center;
+        height: 30%;
+        justify-content: center;
+        display: flex;
+        flex-direction: column
+    }
+
+    .status {
+        width: 100%;
+        gap: 0 !important
+    }
+
+    .tempo-content {
+        padding: 2rem 1rem
+    }
+
+    .atual .valor .dia span {
+        font-size: 5vw !important;
+        font-size: clamp(.5rem, 5vw, 6rem) !important
+    }
+
+    .valor .dia {
+        text-align: center;
+        height: 40%;
+        justify-content: center;
+        display: flex;
+        align-items: center
+    }
+
+    .tempo-details,
+    .tempo-content {
+        align-items: center;
+        text-align: center;
+        flex-direction: column;
+        gap: 0;
+        height: 100%
+    }
+
+    .header {
+        height: 20% !important;
+        width: 100%;
+        justify-content: center;
+        display: flex;
+        align-items: center
+    }
+
+    .status {
+        height: 50%;
+        justify-content: center
+    }
+
+    .lugar-nome {
+        font-size: 4vh !important;
+        font-size: clamp(.1rem, 4vh, 10rem) !important
+    }
+
+    .icon {
+        height: 60%;
+        width: 100%
+    }
+
+    .wi {
+        font-size: 10vh !important;
+        font-size: clamp(1rem, 10vh, 35rem) !important
+    }
+
+    .status span {
+        font-size: 6vw !important;
+        font-size: clamp(.5rem, 6vw, 8rem) !important;
+        height: 40%
+    }
+
+    .atual .valor .max .number,
+    .atual .valor .min .number {
+        font-size: 8vw !important;
+        font-size: clamp(.8rem, 8vw, 10rem) !important
+    }
+
+    .temperatura-principal {
+        width: 100%;
+        justify-content: center;
+        font-size: 20vw;
+        height: 60% !important
+    }
+
+    .temperatura-principal .type-temp {
+        font-size: 8vw !important;
+        font-size: clamp(.1rem, 8vw, 10rem) !important
+    }
+
+    .min .medida {
+        font-size: 6vw !important;
+        font-size: clamp(.1rem, 6vw, 2rem) !important
+    }
+
+    .atual,
+    .valor,
+    .temperatura-principal {
+        gap: 2vw !important;
+        gap: clamp(.1rem, 2vw, 2rem) !important
+    }
+
+    .atual .valor .divide {
+        font-size: 8vw !important;
+        font-size: clamp(.3rem, 8vw, 8rem) !important
+    }
+
+    .max .fa-solid,
+    .min .fa-solid {
+        font-size: 4vw !important;
+        font-size: clamp(.1rem, 4vw, 5rem) !important
+    }
+
+    .atual .valor .max i {
+        padding-top: 15% !important
+    }
+
+    .umidade-container {
+        justify-items: center
+    }
+
+    .tempo-details .detalhes .vento-content,
+    .tempo-details .detalhes .umidade-content {
+        padding-top: 0
+    }
+
+    .tipo-status {
+        font-size: 5vw !important;
+        font-size: clamp(1rem, 5vw, 8rem) !important
+    }
+
+    .vento-text,
+    .umidade-text {
+        font-size: 5vw !important;
+        font-size: clamp(.3rem, 5vw, 9rem) !important
+    }
+
+    .min .min-text,
+    .max .max-text,
+    .min .value,
+    .max .value {
+        font-size: 5vw !important;
+        font-size: clamp(.5rem, 5vw, 8rem) !important
+    }
+
+    .min .medida,
+    .max .medida {
+        font-size: 5vw !important;
+        font-size: clamp(.5rem, 5vw, 8rem) !important
+    }
+
+    .umidade-container .fa-solid,
+    .vento-container .fa-solid {
+        font-size: 5vw !important;
+        font-size: clamp(.4rem, 5vw, 5rem) !important
+    }
+
+    .tempo-details .detalhes .vento-content,
+    .tempo-details .detalhes .umidade-content {
+        font-size: 2rem !important;
+        gap: clamp(.3rem, 2rem, 4rem) !important
+    }
+
+    .vento-container .fa-solid,
+    .umidade-container .fa-solid {
+        font-size: 5vw !important;
+        font-size: clamp(.1rem, 5vw, 7rem) !important
+    }
+
+    .tempo-details .detalhes .vento-content,
+    .tempo-details .detalhes .umidade-content {
+        gap: 4vw !important;
+        gap: clamp(.1rem, 4vw, 4rem) !important
+    }
+
+    .vento-container,
+    .umidade-container {
+        height: 100%;
+        justify-content: center;
+        display: flex;
+        flex-direction: column
+    }
+
+    .umidade,
+    .vento {
+        height: 50%;
+        align-content: center
+    }
+
+    .icon-text-umidade,
+    .icon-text-vento {
+        align-items: center;
+        display: flex;
+        flex-direction: column
+    }
+
+    
+
+    .max-text, .min-text {
+      margin: 0 !important;
+    }
+    .max-text, .min-text {
+      margin: 5px 5px !important;
+    }
+
+    .wi {
+        margin: 0 !important;
+    }
+
+     .temperatura-principal{
+        margin: 0 !important;
+    }
+    .vento, .umidade{
+        margin: 0 !important ;
+    }
+
+    .max-text, .min-text {
+      margin: 0 !important;
+    }
+
+    .wi {
+        margin: 0 !important;
+    }
+
+    .atual .valor {
+        margin-top: 5% !important;
+    }
+} 
+ 
+@media(min-aspect-ratio:.76) and (max-aspect-ratio:.999) {
+    .detalhes {
+        display: flex !important;
+       
+    }
+
+    .tempo-content {
+        width: 100%;
+        justify-content: center;
+        height: 100%
+    }
+
+    html,
+    body {
+        align-content: center
+    }
+
+    .tempo-container {
+        padding: 0;
+        width: 90%;
+        height: 95%;
+        border-radius: 20px
+    }
+
+    .tempo-details .detalhes .vento-content,
+    .tempo-details .detalhes .umidade-content {
+        gap: 0
+    }
+
+    .atual {
+        display: flex;
+        flex-direction: column;
+        height: 50%;
+    }
+
+    .valor {
+        width: 100%;
+        align-items: center;
+        display: flex;
+        flex-direction: column
+    }
+
+    .status {
+        width: 100%
+    }
+
+    .tempo-details,
+    .tempo-content {
+        align-items: center;
+        text-align: center;
+        flex-direction: column;
+        gap: 0;
+        height: 100%
+    }
+
+    
+
+    .header {
+        height: 20%;
+        width: 100%;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .lugar-nome {
+        font-size: 6vw !important;
+        font-size: clamp(.4rem, 6vw, 8vw) !important
+    }
+
+    .icon {
+        height: 30%;
+        width: 100%
+    }
+
+    .wi {
+        font-size: 12vh !important;
+        font-size: clamp(.5rem, 13vh, 30rem) !important
+    }
+
+    .status span {
+        font-size: 5vw !important;
+        font-size: clamp(.5rem, 5vw, 8rem) !important
+    }
+
+    .atual .valor .dia span {
+        font-size: 5vw !important;
+        font-size: clamp(.1rem, 5vw, 6rem) !important
+    }
+
+    .valor .dia {
+        text-align: center;
+        height: 40%;
+        align-items: center;
+    }
+
+    .temperatura-principal {
+        width: 100%;
+        justify-content: center;
+        
+        height: 60%
+    }
+
+    .min .number,
+    .max .number,
+    .divide {
+        font-size: 7vw !important;
+        font-size: clamp(.4rem, 7vw, 8rem) !important
+    }
+
+    .temperatura-principal .divide {
+        font-size: 7vw !important;
+        font-size: clamp(.5rem, 7vw, 8rem) !important
+    }
+
+    .min .medida {
+        font-size: 4vw !important;
+        font-size: clamp(.5rem, 4vw, 8rem) !important
+    }
+
+    .max .fa-solid,
+    .min .fa-solid {
+        font-size: 3vw !important;
+        font-size: clamp(.1rem, 3vw, 4rem) !important
+    }
+
+    .type-temp {
+        font-size: 7vw !important;
+        font-size: clamp(.1rem, 7vw, 8rem) !important
+    }
+
+    .atual,
+    .valor,
+    .temperatura-principal {
+        gap: 2vw !important;
+        gap: clamp(.1rem, 2vw, 2rem) !important;
+        width: 100%;
+    }
+
+    .vento-container .fa-solid,
+    .umidade-container .fa-solid {
+        padding-right: 3vw !important;
+        padding-right: clamp(.5rem, 3vw, 4rem) !important
+    }
+
+    .atual .valor .max i {
+        padding-top: 15% !important
+    }
+
+    .atual .status {
+        gap: 0
+    }
+
+    .umidade-content {
+        justify-content: center
+    }
+
+    .vento-container .fa-solid,
+    .umidade-container .fa-solid {
+        font-size: 4vw !important;
+        font-size: clamp(.1rem, 4vw, 5rem) !important
+    }
+
+    .vento-text,
+    .umidade-text,
+    .tipo-status {
+        font-size: 4vw !important;
+        font-size: clamp(.1rem, 4vw, 6rem) !important
+    }
+
+    .vento-content {
+        width: 100%;
+        justify-content: center;
+        flex-wrap: wrap
+    }
+
+    .min .medida,
+    .max .medida {
+        font-size: 4vw !important;
+        font-size: clamp(.1rem, 4vw, 6rem) !important
+    }
+
+    .tempo-details .detalhes .vento-content,
+    .tempo-details .detalhes .umidade-content {
+        gap: 4vw !important;
+        gap: clamp(.1rem, 4vw, 4rem) !important
+    }
+
+    .min .min-text,
+    .max .max-text,
+    .min .value,
+    .max .value {
+        font-size: 4vw !important;
+        font-size: clamp(.1rem, 4vw, 6rem) !important
+    }
+
+    .tempo-details .detalhes .vento-content,
+    .tempo-details .detalhes .umidade-content {
+        padding-top: 0
+    }
+
+    .tempo-details .detalhes {
+        height: 40%;
+        width: 100%;
+        gap: .5rem;
+        justify-content: center
+    }
+
+    .icon-text-umidade,
+    .icon-text-vento {
+        width: 100%;
+        align-items: center;
+        display: flex;
+        justify-content: center
+    }
+    .max-text, .min-text {
+      margin: 5px 5px !important;
+    }
+
+    .wi {
+        margin: 0 !important;
+    }
+
+     .temperatura-principal{
+        margin: 0 !important;
+    }
+    .vento, .umidade{
+        margin: 0 !important ;
+    }
+
+    .max-text, .min-text {
+      margin: 0 !important;
+    }
+
+    .wi {
+        margin: 0 !important;
+    }
+
+    .atual .status, .atual .valor {
+    padding-top: 0 !important;
+}
+}
+
+
+@media(min-aspect-ratio:1.001) and (max-aspect-ratio:1.33) {
+    .detalhes {
+        display: flex !important;
+        gap: 4vh !important;
+        gap: clamp(1vh, 4vh, 8vh) !important;
+        height: 50%;
+        justify-content: center;
+        width: 100%
+    }
+
+    .tempo-content {
+        width: 100%;
+        justify-content: center;
+        height: 90%
+    }
+
+    html,
+    body {
+        align-content: center
+    }
+
+    .tempo-container {
+        padding: 0;
+        width: 90%;
+        height: 90%;
+        border-radius: 20px
+    }
+
+    .tempo-details .detalhes .vento-content,
+    .tempo-details .detalhes .umidade-content {
+        gap: 0
+    }
+
+    .atual {
+        display: flex;
+        height: 50%;
+        flex-direction: column
+    }
+
+    .valor {
+        width: 100%;
+        align-items: center;
+        justify-content: center;
+        display: flex;
+        flex-direction: column;
+        height: 30%
+    }
+
+    .status {
+        width: 100%;
+        height: 50%
+    }
+
+    .tempo-details,
+    .tempo-content {
+        align-items: center;
+        text-align: center;
+        flex-direction: column;
+        gap: 0;
+        height: 100%
+    }
+
+    .tempo-details .detalhes .vento-content .max .max-text,
+    .tempo-details .detalhes .vento-content .min .min-text,
+    .tempo-details .detalhes .umidade-content .max .max-text,
+    .tempo-details .detalhes .umidade-content .min .min-text {
+        padding-right: .5vw !important;
+        padding-right: clamp(.2rem, .5vw, 1vw) !important
+    }
+
+    .header {
+        height: 20%;
+        width: 100%;
+        margin-top: 1vh
+    }
+
+    .lugar-nome {
+        font-size: 5vw !important;
+        font-size: clamp(.1rem, 5vw, 8vw) !important
+    }
+
+    .icon {
+        height: 70%;
+        width: 100%
+    }
+
+    .tipo-status {
+        height: 30%
+    }
+
+    .wi {
+        font-size: 12vh !important;
+        font-size: clamp(.1rem, 12vh, 30rem) !important
+    }
+
+    .status span {
+        font-size: 4vw !important;
+        font-size: clamp(.5rem, 4vw, 8rem) !important
+    }
+
+    .atual .valor .dia span {
+        font-size: 4vh !important;
+        font-size: clamp(.1rem, 4vh, 10rem) !important
+    }
+
+    .valor .dia {
+        text-align: center;
+        height: 40%;
+        justify-content: center;
+        display: flex
+    }
+
+    .temperatura-principal {
+        width: 100%;
+        justify-content: center;
+        height: 60%
+    }
+
+    .min .number,
+    .max .number,
+    .divide {
+        font-size: 4vw !important;
+        font-size: clamp(.4rem, 4vw, 10rem) !important
+    }
+
+    .temperatura-principal .divide {
+        font-size: 4vw !important;
+        font-size: clamp(.1rem, 4vw, 8rem) !important
+    }
+
+    .min .medida {
+        font-size: 4vw !important;
+        font-size: clamp(.5rem, 4vh, 10rem) !important
+    }
+
+    .max .fa-solid,
+    .min .fa-solid {
+        font-size: 2vh !important;
+        font-size: clamp(.2rem, 2vh, 5rem) !important
+    }
+
+    .type-temp {
+        font-size: 4vw !important;
+        font-size: clamp(.4rem, 4vw, 10rem) !important
+    }
+
+    .atual,
+    .valor,
+    .temperatura-principal {
+        gap: 2vh !important;
+        gap: clamp(.1rem, 2vh, 2rem) !important
+    }
+
+    .atual .valor .max i {
+        padding-top: 15% !important
+    }
+
+    .atual .status {
+        gap: 0
+    }
+
+    .umidade-content {
+        justify-content: center
+    }
+
+    .vento-container .fa-solid,
+    .umidade-container .fa-solid {
+        font-size: 4vh !important;
+        font-size: clamp(.1rem, 4vh, 7rem) !important
+    }
+
+    .vento-text,
+    .umidade-text,
+    .tipo-status {
+        font-size: 4vh !important;
+        font-size: clamp(.2rem, 4vh, 8rem) !important
+    }
+
+    .vento-content {
+        width: 100%;
+        justify-content: center;
+        flex-wrap: wrap
+    }
+
+    .min .medida,
+    .max .medida {
+        font-size: 4vh !important;
+        font-size: clamp(.1rem, 4vh, 8rem) !important
+    }
+
+    .tempo-details .detalhes .vento-content,
+    .tempo-details .detalhes .umidade-content {
+        gap: 1vh !important;
+        gap: clamp(.1rem, 1vh, 4rem) !important
+    }
+
+    .tempo-details .detalhes .vento-content,
+    .tempo-details .detalhes .umidade-content {
+        gap: 2vh !important;
+        gap: clamp(.1rem, 2vh, 4rem) !important
+    }
+
+    .min .min-text,
+    .max .max-text,
+    .min .value,
+    .max .value {
+        font-size: 4vh !important;
+        font-size: clamp(.2rem, 4vh, 8rem) !important
+    }
+
+    .tempo-details .detalhes .vento-content,
+    .tempo-details .detalhes .umidade-content {
+        padding-top: 0
+    }
+
+    .icon-text-umidade,
+    .icon-text-vento {
+        width: 100%;
+        align-items: center;
+        display: flex;
+        justify-content: center
+    }
+
+    .max-text, .min-text {
+      margin: 5px 5px !important;
+    }
+
+    .wi {
+        margin: 0 !important;
+    }
+
+     .temperatura-principal{
+        margin: 0 !important;
+    }
+    .vento, .umidade{
+        margin: 0 !important ;
+    }
+
+    .max-text, .min-text {
+      margin: 0px 0px !important;
+    }
+
+    .wi {
+        margin: 0 !important;
+    }
+
+    .atual .valor {
+        margin-top: 0 !important;
+    }
+
+    .atual .status, .atual .valor{
+            margin-top: 0 !important;
+        }
+        .atual{
+            gap: 0.2rem !important;
+        }
+}
+
+
+
+@media(min-aspect-ratio:1.331) and (max-aspect-ratio:1.77) {
+    .detalhes {
+        display: flex !important;
+        width: 50%
+    }
+
+    .tempo-container {
+        max-width: none;
+        padding: 0 !important;
+        width: 85% !important;
+        height: 80% !important;
+        border-radius: 20px
+    }
+
+    html,
+    body {
+        align-content: center
+    }
+
+    .tempo-container {
+        width: 90%;
+        height: 90%;
+        border-radius: 20px
+    }
+
+    .atual .status,
+    .atual .valor {
+        width: 100%;
+        text-align: center;
+        padding-top: 2vh
+    }
+
+    .tempo-details {
+        gap: 4vh;
+        height: 70%;
+    }
+
+    .atual {
+        gap: 2vw;
+        height: 100%;
+        width: 40%;
+        align-items: center;
+        flex-direction: column
+    }
+
+    .tempo-details .header .lugar-nome {
+        font-size: 3vw !important;
+        font-size: clamp(.3rem, 3vw, 8rem) !important
+    }
+
+    .header {
+        height: 20%;
+        flex-wrap: wrap;
+        display: fleX;
+        text-align: center
+    }
+
+    .lugar-nome {
+        font-size: 4vw !important;
+        font-size: clamp(.1rem, 4vw, 6rem) !important
+    }
+
+    .status span {
+        font-size: 3vw !important;
+        line-height: 1
+    }
+
+    .dia {
+        height: 40%;
+        justify-content: center;
+        align-items: end;
+        display: flex
+    }
+
+    .valor {
+        text-align: center
+    }
+
+    .temperatura-principal {
+        width: 100%;
+        justify-content: center;
+        height: 60%;
+         margin: 0 !important;
+    
+    }
+
+    .min .number,
+    .max .number,
+    .divide {
+        font-size: 3vw !important;
+        font-size: clamp(.1rem, 3vw, 10rem) !important
+    }
+
+    .temperatura-principal .divide {
+        font-size: 3vw !important;
+        font-size: clamp(.2rem, 3vw, 8rem) !important
+    }
+
+    .min .medida {
+        font-size: 4vw !important;
+        font-size: clamp(.3rem, 4vw, 6rem) !important
+    }
+
+    .max .fa-solid,
+    .min .fa-solid {
+        font-size: 1vw !important;
+        font-size: clamp(.2rem, 1vw, 5rem) !important
+    }
+
+    .type-temp {
+        font-size: 3vw !important;
+        font-size: clamp(.1rem, 3vw, 8rem) !important
+    }
+
+    .atual,
+    .valor,
+    .temperatura-principal {
+        gap: 1vw !important;
+        gap: clamp(.1rem, 1vw, 3rem) !important
+    }
+
+    .atual .valor .max i {
+        padding-top: 15% !important
+    }
+
+    .atual .status {
+        height: 40%;
+        justify-content: center;
+        gap: 0
+    }
+
+    .atual .valor .dia span {
+        font-size: 3vw !important;
+        font-size: clamp(.1rem, 3vw, 6rem) !important
+    }
+
+    .umidade {
+        align-items: center
+    }
+
+    .vento-content {
+        width: 100%;
+        justify-content: center;
+        flex-wrap: wrap
+    }
+
+    .vento-container {
+        text-align: center
+    }
+
+    .umidade-content {
+        justify-content: center
+    }
+
+    .umidade-container,
+    .vento-container {
+        display: flex;
+        flex-direction: column;
+        text-align: center;
+        align-items: center
+    }
+
+    .vento-container {
+        justify-content: end
+    }
+
+    .umidade-container {
+        justify-content: start
+    }
+
+    .icon-text-umidade {
+        align-items: center;
+        display: flex
+    }
+
+    .icon-text-vento {
+        align-items: center;
+        display: flex
+    }
+
+    .umidade-container .icon-text-umidade .fa-solid {
+        font-size: 2vw !important
+    }
+
+    .vento-container .icon-text-vento .fa-solid {
+        font-size: 2vw !important;
+        font-size: clamp(.2rem, 2vw, 6rem) !important
+    }
+
+    .vento-text,
+    .umidade-text,
+    .tipo-status {
+        font-size: 2.5vw !important;
+        font-size: clamp(.1rem, 2.5vw, 8rem) !important
+    }
+
+    .detalhes {
+        gap: 1vh !important;
+        height: 100%;
+        justify-content: center
+    }
+
+    .min .medida,
+    .max .medida {
+        font-size: 2.5vw !important;
+        font-size: clamp(.1rem, 2.5vw, 8rem) !important
+    }
+
+    .tempo-details .detalhes .vento-content,
+    .tempo-details .detalhes .umidade-content {
+        gap: 2vw !important;
+        gap: clamp(.1rem, 2vw, 5rem) !important
+    }
+
+    .min .min-text,
+    .max .max-text,
+    .min .value,
+    .max .value {
+        font-size: 2.5vw !important;
+        font-size: clamp(.1rem, 2.5vw, 8rem) !important;
+         margin: 0 !important;
+    
+    }
+
+    .tempo-details .detalhes .vento-content,
+    .tempo-details .detalhes .umidade-content {
+        padding-top: 0
+    }
+
+    .vento {
+        justify-content: center;
+        display: flex
+    }
+
+    .valor {
+        justify-content: center;
+        height: 40%
+    }
+
+    .wi {
+        font-size: 8vw !important;
+        font-size: clamp(.1rem, 8vw, 30rem) !important
+    }
+    .vento, .umidade{
+        margin: 0 !important ;
+    }
+     .temperatura-principal{
+        margin: 0 !important;
+    }
+    .vento, .umidade{
+        margin: 0 !important ;
+    }
+
+    .max-text, .min-text {
+      margin: 5px 5px !important;
+    }
+
+    .wi {
+        margin: 0 !important;
+    }
+
+     .temperatura-principal{
+        margin: 0 !important;
+    }
+    .vento, .umidade{
+        margin: 0 !important ;
+    }
+
+    .max-text, .min-text {
+      margin: 5px 5px !important;
+    }
+
+    .wi {
+        margin: 0 !important;
+    }
+
+    .atual .valor {
+        margin-top: 0 !important;
+    }
+
+    .vento-content .min, .vento-content .max, .umidade-content .min, .umidade-content .max {
+    gap: 5%;
+}
+     
+
+    }
+
+@media(min-aspect-ratio:1.771) and (max-aspect-ratio:2.999) {
+    .detalhes {
+        display: flex !important;
+        width: 40%;
+        height: 100%;
+        justify-content: center;
+        gap: 0 !important
+    }
+
+    .tempo-container {
+        padding: 0 6rem;
+        max-width: none;
+        border-radius: 20px;
+        width: 95%;
+        height: 90%;
+        align-items: center;
+        padding: 0
+    }
+
+    .tempo-content {
+        height: 100%;
+        width: 100%;
+        padding: 0;
+        justify-content: space-evenly
+    }
+
+    html,
+    body {
+        align-content: center
+    }
+
+    .status {
+        width: 50%;
+        height: 50%
+    }
+
+    .tempo-details {
+        gap: 0
+    }
+
+    .atual {
+        gap: 2vw;
+        height: 100%;
+        width: 50%;
+        align-items: center;
+        flex-direction: column;
+        justify-content: center !important;
+        
+    }
+
+    .header {
+        height: 20%;
+        width: 100%;
+        text-align: start;
+        margin-top: 1% !important;
+        justify-content: center;
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        text-align: center
+    }
+
+    .lugar-nome {
+        font-size: 3vw !important;
+        font-size: clamp(.1rem, 3vw, 8rem) !important;
+        margin-top: 1% !important
+    }
+
+    .status span {
+        font-size: 2.5vw !important;
+        font-size: clamp(.1rem, 2.5vw, 8rem) !important;
+        line-height: 1
+    }
+
+    .valor {
+        text-align: center
+    }
+
+    .temperatura-principal {
+        width: 100%;
+        justify-content: center;
+        height: 60%;
+        align-items: baseline !important;
+        align-content: center;
+        flex-wrap: wrap
+    }
+
+    .dia {
+        height: 40%;
+        justify-content: center;
+        display: flex;
+        align-items: center
+    }
+
+    .min .number,
+    .max .number,
+    .divide {
+        font-size: 3vw !important;
+        font-size: clamp(.1rem, 3vw, 8rem) !important
+    }
+
+    .temperatura-principal .divide {
+        font-size: 2vw !important;
+        font-size: clamp(.2rem, 3vw, 7rem) !important
+    }
+
+    .min .medida {
+        font-size: 4vw !important;
+        font-size: clamp(.3rem, 4vw, 6rem) !important
+    }
+
+    .max .fa-solid,
+    .min .fa-solid {
+        font-size: 1vw !important;
+        font-size: clamp(.2rem, 1vw, 5rem) !important
+    }
+
+    .type-temp {
+        font-size: 3vw !important;
+        font-size: clamp(.1rem, 3vw, 8rem) !important
+    }
+
+    .atual,
+    .valor,
+    .temperatura-principal {
+        gap: 1vw !important;
+        gap: clamp(.1rem, 2vh, 3rem) !important
+    }
+
+    .atual .valor .max i {
+        padding-top: 15% !important
+    }
+
+    .atual .status {
+        text-align: center;
+        gap: 0
+    }
+
+    .atual .valor .dia span {
+        font-size: 2.5vw !important;
+        font-size: clamp(.5rem, 2.5vw, 8rem) !important
+    }
+
+    .vento-content {
+        width: 100%;
+        justify-content: center;
+        flex-wrap: wrap;
+        height: 90%
+    }
+
+    .vento-container {
+        text-align: center
+    }
+
+    .umidade-content {
+        justify-content: center
+    }
+
+    .vento,
+    .umidade {
+        height: 30%;
+        align-content: center
+    }
+
+    .umidade-container,
+    .vento-container {
+        justify-items: center;
+        justify-content: center;
+        display: flex;
+        flex-direction: column;
+        text-align: center
+    }
+
+    .vento-container .fa-solid,
+    .umidade-container .fa-solid {
+        font-size: 2vw !important;
+        font-size: clamp(.1rem, 2vw, 6rem) !important
+    }
+
+    .vento-text,
+    .umidade-text,
+    .tipo-status {
+        font-size: 3vw !important;
+        font-size: clamp(.1rem, 3vw, 8rem) !important
+    }
+
+    .detalhes {
+        height: 100%;
+        justify-content: space-around;
+        gap: 0 !important
+    }
+
+    .min .medida,
+    .max .medida {
+        font-size: 3vw !important;
+        font-size: clamp(.1rem, 3vw, 8rem) !important
+    }
+
+  
+
+    .min .min-text,
+    .max .max-text,
+    .min .value,
+    .max .value {
+        font-size: 3vw !important;
+        font-size: clamp(.1rem, 3vw, 8rem) !important
+    }
+
+    .tempo-details .detalhes .vento-content,
+    .tempo-details .detalhes .umidade-content {
+        padding-top: 0
+    }
+
+    
+
+    .valor {
+        justify-content: center;
+        height: 30%
+    }
+
+    .wi {
+        font-size: 7vw !important;
+        font-size: clamp(.1rem, 7vw, 14rem) !important;
+        margin: 20px;
+    }
+
+    .icon-text-umidade,
+    .icon-text-vento {
+        width: 100%;
+        align-items: center;
+        display: flex;
+        justify-content: center
+    }
+    .temperatura-principal{
+        margin: 0 !important;
+    }
+    .vento, .umidade{
+        margin: 0 !important ;
+    }
+
+    .max-text, .min-text {
+      margin: 5px 5px !important;
+    }
+
+    .wi {
+        margin: 0 !important;
+    }
+    .tempo-details .detalhes .vento-content, .tempo-details .detalhes .umidade-content {
+
+        gap: 1rem !important;
+     }
+     .vento-content .min, .vento-content .max, .umidade-content .min, .umidade-content .max {
+        gap: 0.5rem !important;
+     }
+}
+
+ 
+@media(min-aspect-ratio:3.001) and (max-aspect-ratio:3.999) {
+    .detalhes {
+        display: flex !important;
+        width: 40%;
+        height: 100%;
+        justify-content: center;
+        gap: 0 !important
+    }
+
+    .tempo-container {
+        padding: 0 6rem;
+        max-width: none;
+        border-radius: 20px;
+        width: 90%;
+        height: 90%;
+        align-items: center;
+        padding: 0
+    }
+
+    .tempo-content {
+        height: 100%;
+        width: 100%;
+        padding: 0;
+        justify-content: space-evenly
+    }
+
+    html,
+    body {
+        align-content: center
+    }
+
+    .status {
+        width: 50%;
+        height: 50%;
+        justify-content: center;
+    }
+
+    .tempo-details {
+        gap: 0
+    }
+
+    .atual {
+        gap: 2vw;
+        height: 100%;
+        width: 50%;
+        align-items: center;
+        flex-direction: column
+    }
+
+    .header {
+        height: 20%;
+        width: 100%;
+        text-align: start;
+        margin-top: 1% !important;
+        justify-content: center;
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        text-align: center
+    }
+
+    .lugar-nome {
+        font-size: 3vw !important;
+        font-size: clamp(.1rem, 3vw, 8rem) !important;
+        margin-top: 1% !important
+    }
+
+    .status span {
+        font-size: 3vw !important;
+        font-size: clamp(.1rem, 3vw, 8rem) !important;
+        line-height: 1
+    }
+
+    .valor {
+        text-align: center
+    }
+
+    .temperatura-principal {
+        width: 100%;
+        justify-content: center;
+        height: 60%;
+        align-items: baseline !important;
+        align-content: center;
+        flex-wrap: wrap
+    }
+
+    .dia {
+        height: 40%;
+        justify-content: center;
+        display: flex;
+        align-items: center
+    }
+
+    .min .number,
+    .max .number,
+    .divide {
+        font-size: 3vw !important;
+        font-size: clamp(.1rem, 3vw, 8rem) !important
+    }
+
+    .temperatura-principal .divide {
+        font-size: 3vw !important;
+        font-size: clamp(.2rem, 3vw, 8rem) !important
+    }
+
+    .min .medida {
+        font-size: 4vw !important;
+        font-size: clamp(.3rem, 4vw, 6rem) !important
+    }
+
+    .max .fa-solid,
+    .min .fa-solid {
+        font-size: 3vw !important;
+        font-size: clamp(.2rem, 3vw, 5rem) !important
+    }
+
+    .type-temp {
+        font-size: 3vw !important;
+        font-size: clamp(.1rem, 3vw, 8rem) !important
+    }
+
+    .atual,
+    .valor,
+    .temperatura-principal {
+        gap: 1vw !important;
+        gap: clamp(.1rem, 2vh, 3rem) !important
+    }
+
+    .atual .valor .max i {
+        padding-top: 15% !important
+    }
+
+    .atual .status {
+        text-align: center;
+        gap: 0
+    }
+
+    .atual .valor .dia span {
+        font-size: 3vw !important;
+        font-size: clamp(.5rem, 3vw, 8rem) !important
+    }
+
+    .vento-content {
+        width: 100%;
+        justify-content: center;
+        flex-wrap: wrap;
+        height: 90%
+    }
+
+    .vento-container {
+        text-align: center
+    }
+
+    .umidade-content {
+        justify-content: center
+    }
+
+    .vento,
+    .umidade {
+        height: 30%;
+        align-content: center
+    }
+
+    .umidade-container,
+    .vento-container {
+        justify-items: center;
+        justify-content: center;
+        display: flex;
+        flex-direction: column;
+        text-align: center
+    }
+
+    .vento-container .fa-solid,
+    .umidade-container .fa-solid {
+        font-size: 2vw !important;
+        font-size: clamp(.1rem, 2vw, 6rem) !important
+    }
+
+    .vento-text,
+    .umidade-text,
+    .tipo-status {
+        font-size: 3vw !important;
+        font-size: clamp(.1rem, 3vw, 8rem) !important
+    }
+
+    .detalhes {
+        height: 100%;
+        justify-content: space-around;
+        gap: 0 !important
+    }
+
+    .min .medida,
+    .max .medida {
+        font-size: 3vw !important;
+        font-size: clamp(.1rem, 3vw, 8rem) !important
+    }
+
+    .tempo-details .detalhes .vento-content,
+    .tempo-details .detalhes .umidade-content {
+        gap: 2vw;
+        gap: clamp(.1rem, 2vw, 5rem) !important
+    }
+
+    .min .min-text,
+    .max .max-text,
+    .min .value,
+    .max .value {
+        font-size: 3vw !important;
+        font-size: clamp(.1rem, 3vw, 8rem) !important
+    }
+
+    .tempo-details .detalhes .vento-content,
+    .tempo-details .detalhes .umidade-content {
+        padding-top: 0
+    }
+
+    .valor {
+        justify-content: center;
+        height: 30%
+    }
+
+    .wi {
+        font-size: 5vw !important;
+        font-size: clamp(.1rem, 5vw, 14rem) !important;
+        margin: 0px;
+    }
+
+    .icon-text-umidade,
+    .icon-text-vento {
+        width: 100%;
+        align-items: center;
+        display: flex;
+        justify-content: center
+    }
+
+        .max-text, .min-text {
+        margin-right: 5% !important;
+        margin: 0 !important;
+        }
+        .vento, .umidade {
+            margin: 0 !important;
+        }
+        .temperatura-principal{
+            margin: 0 !important;
+        }
+        .atual .status, .atual .valor {
+
+            margin-top: 0 !important;
+    }
+    .vento-content .min, .vento-content .max, .umidade-content .min, .umidade-content .max {
+        gap: 5px;
+    }
+
+    .tempo-details .detalhes .vento-content, .tempo-details .detalhes .umidade-content {
+
+        gap: 1rem !important;
+     }
+     .vento-content .min, .vento-content .max, .umidade-content .min, .umidade-content .max {
+        gap: 0.7rem !important;
+     }
+
+
+}
+
+
+
+@media(min-aspect-ratio:4) and (max-aspect-ratio:11.999) {
+    .dias {
+        display: flex
+    }
+
+    .tempo-container {
+        
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        flex-direction: column;
+        gap: 3rem;
+        padding: 0;
+        border-radius: 20px;
+        width: 100%;
+        height: 90%
+    }
+
+    .dia span {
+        display: none
+    }
+
+    .tempo-details {
+        display: flex;
+        flex-direction: column;
+        gap: 0
+    }
+
+    .tempo-details {
+        width: 100%
+    }
+
+    .tempo-content {
+        padding: 0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center
+    }
+
+    html,
+    body {
+        align-content: center
+    }
+
+    .atual {
+        width: 100%;
+        display: flex;
+        gap: 0
+    }
+
+    .atual .status {
+        display: flex;
+        flex-direction: row;
+        gap: 0;
+        width: 33%;
+        text-align: center;
+        justify-content: center
+    }
+
+    .tempo-content .tipo-status {
+        font-size: 2.5vw !important;
+        font-size: clamp(1rem, 2.5vw, 1.5rem) !important
+    }
+
+    .atual .valor .temperatura-principal {
+        display: flex;
+        align-items: center;
+        gap: .5rem
+    }
+
+    .umidade-text,
+    .vento-text {
+        font-size: 2vw !important;
+        font-size: clamp(.3rem, 2vw, 6rem) !important
+    }
+
+    .atual .valor .divide {
+        font-size: 3vw;
+        font-size: clamp(1rem, 3vw, 2rem)
+    }
+
+    .atual .valor .min {
+        display: flex;
+        gap: .2rem;
+        align-items: baseline
+    }
+
+    .atual .valor .max .number,
+    .atual .valor .min .number {
+        font-size: 3vw;
+        font-size: clamp(1rem, 3vw, 2rem)
+    }
+
+    .atual .valor .max {
+        display: flex;
+        gap: .1rem;
+        align-items: normal
+    }
+
+    .atual .valor .max i {
+        padding-top: .5rem
+    }
+
+    .temperatura-principal .type-temp {
+        font-size: 4vw !important;
+        font-size: clamp(1.8rem, 4vw, 2.2rem)
+    }
+
+    .controls {
+        position: fixed;
+        top: 10px;
+        left: 10px;
+        display: flex;
+        gap: 10px
+    }
+
+    .tempo-content {
+        height: 100%;
+        width: 100%
+    }
+
+    .detalhes {
+        display: flex !important;
+        width: 50%;
+        flex-direction: row !important;
+        height: 100%;
+        justify-content: space-evenly !important
+    }
+
+    .vento,
+    .umidade {
+        height: 100%;
+        justify-content: center;
+        display: flex;
+        align-items: center
+    }
+
+    .tempo-details .detalhes .vento-content .max .max-text,
+    .tempo-details .detalhes .vento-content .min .min-text,
+    .tempo-details .detalhes .umidade-content .max .max-text,
+    .tempo-details .detalhes .umidade-content .min .min-text {
+        font-size: 2vw !important;
+        font-size: clamp(.1rem, 2vw, 5rem) !important;
+        padding-right: .5rem !important;
+        padding-right: clamp(.1rem, .5rem, 1rem) !important
+    }
+
+    .lugar-nome {
+        font-size: 2vw !important;
+        font-size: clamp(.1rem, 2vw, 5rem) !important;
+        padding-left: 1rem;
+        line-height: 1.2
+    }
+
+    .atual {
+        width: 50%;
+        align-items: center
+    }
+
+    .header {
+        height: 10%;
+        width: 40%;
+        text-align: center;
+        align-content: center
+    }
+
+    .atual .valor {
+        font-size: 6vw !important;
+        font-size: clamp(1.2rem, 6vw, 1rem) !important;
+        margin-top: 0 !important;
+    }
+
+    .tipo-status {
+        align-items: start;
+        font-size: 1vw !important;
+        font-size: clamp(.1rem, 1vw, 5rem) !important
+    }
+
+    .dia,
+    .temperatura-principal {
+        height: 100%
+    }
+
+    .valor {
+        display: flex;
+        text-align: center;
+        flex-direction: column;
+        justify-content: space-between;
+        width: 33%;
+        align-items: center
+    }
+
+    
+
+    .tempo-details {
+        font-size: .5rem;
+        display: flex;
+        width: 100%;
+        height: 100%;
+        justify-content: center
+    }
+
+    .fa-arrow-up:before {
+        font-size: 3vw !important;
+        font-size: clamp(.4rem, 3vw, 1rem) !important
+    }
+
+    .dia {
+        display: flex
+    }
+
+    .dia span {
+        font-size: 2vw !important;
+        font-size: clamp(.1rem, 2vw, 3rem) !important
+    }
+
+    .status span {
+        display: none
+    }
+
+    .atual .valor .max i {
+        padding-top: 15%
+    }
+
+    .type-temp {
+        font-size: 4vh !important
+    }
+
+    .atual .valor .divide {
+        font-size: 3vw !important;
+        font-size: clamp(1vw, 3vw, 3vw) !important
+    }
+
+    .wi {
+        font-size: 35vw !important;
+        font-size: clamp(1rem, 35vh, 8rem) !important
+    }
+
+    .number,
+    .type-temp,
+    .divide,
+    .temperatura-principal .type-temp {
+        font-size: 2vw !important;
+        font-size: clamp(.1rem, 2.5vw, 12rem) !important
+    }
+
+    .atual .valor .max .number,
+    .atual .valor .min .number {
+        font-size: 2.5vw !important;
+        font-size: clamp(1vh, 2.5vw, 15rem) !important
+    }
+
+    .vento-container .fa-solid,
+    .umidade-container .fa-solid {
+        font-size: 25vh !important;
+        font-size: clamp(.1rem, 2vw, 6rem) !important
+    }
+
+    .tempo-details .detalhes .vento-content,
+    .tempo-details .detalhes .umidade-content {
+        padding-top: 0 !important;
+        padding-left: 5%
+    }
+
+    .vento,
+    .umidade {
+        text-align: center
+    }
+
+    .umidade-container,
+    .vento-container {
+        justify-items: center
+    }
+
+    .max .fa-solid,
+    .min .fa-solid {
+        font-size: 1vw !important;
+        font-size: clamp(.2rem, 1vw, 2rem) !important
+    }
+
+    .fa-arrow-up:before {
+        font-size: 1vw !important;
+        font-size: clamp(.2rem, 1vw, 5rem) !important
+    }
+
+    .min .medida,
+    .max .medida {
+        font-size: 2vw !important;
+        font-size: clamp(.2rem, 2vw, 5rem) !important
+    }
+
+    .min .min-text,
+    .max .max-text,
+    .min .value,
+    .max .value {
+        font-size: 2vw !important;
+        font-size: clamp(.1rem, 2vw, 5rem) !important
+    }
+
+    .tempo-details .detalhes .vento-content,
+    .tempo-details .detalhes .umidade-content {
+        gap: .8rem !important;
+        gap: clamp(.1rem, .8rem, 9rem) !important
+    }
+
+    .atual .valor .temperatura-principal {
+        gap: .1rem !important
+    }
+    .vento, .umidade{
+        margin: 0 !important ;
+    }
+    .temperatura-principal{
+        margin: 0 !important;
+    }
+
+    .max-text, .min-text {
+        margin: 0 !important;
+    }
+    .tempo-details .detalhes .vento-content, .tempo-details .detalhes .umidade-content {
+
+        gap: 1rem !important;
+     }
+     
+     
+}
+
+@media(min-aspect-ratio:12) {
+    .dias {
+        display: flex
+    }
+
+    .tempo-container {
+        width: 100%;
+        height: 100%;
+        
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        flex-direction: column;
+        gap: 3rem;
+        padding: 0 2rem;
+        border-radius: 20px;
+        width: 90%;
+        height: 90%
+    }
+
+    html,
+    body {
+        align-content: center
+    }
+
+    .dia span {
+        display: none
+    }
+
+    .tempo-details {
+        display: flex;
+        flex-direction: column;
+        gap: 0
+    }
+
+    .tempo-details,
+    .tempo-content {
+        width: 100%
+    }
+
+    .tempo-content {
+        padding: 0 1rem;
+        width: 100%;
+        display: flex;
+        justify-content: space-between;
+        align-items: center
+    }
+
+    .atual {
+        width: 100%;
+        display: flex;
+        gap: 0
+    }
+
+    .atual .status {
+        display: flex;
+        flex-direction: row;
+        gap: 0;
+        width: 33%;
+        text-align: center;
+        justify-content: center
+    }
+
+    .tempo-content .tipo-status {
+        font-size: 2.5vw !important;
+        font-size: clamp(1rem, 2.5vw, 1.5rem) !important
+    }
+
+    .atual .valor .temperatura-principal {
+        display: flex;
+        align-items: center;
+        gap: .5rem
+    }
+
+    .umidade-text,
+    .vento-text {
+        font-size: 1.5vw !important;
+        font-size: clamp(.5rem, 1.5vw, 6rem) !important
+    }
+
+    .atual .valor .divide {
+        font-size: 3vw !important;
+        font-size: clamp(1rem, 3vw, 2rem) !important
+    }
+
+    .atual .valor .min {
+        display: flex;
+        gap: .2rem;
+        align-items: baseline
+    }
+
+    .atual .valor .max .number,
+    .atual .valor .min .number {
+        font-size: 3vw !important;
+        font-size: clamp(1.5rem, 3vw, 2rem) !important
+    }
+
+    .atual .valor .max {
+        display: flex;
+        gap: .2rem;
+        align-items: normal
+    }
+
+    .atual .valor .max i {
+        padding-top: .5rem
+    }
+
+    .temperatura-principal .type-temp {
+        font-size: 4vw !important;
+        font-size: clamp(1.8rem, 4vw, 2.2rem) !important
+    }
+
+    .controls {
+        position: fixed;
+        top: 10px;
+        left: 10px;
+        display: flex;
+        gap: 10px
+    }
+
+    .tempo-content {
+        padding: 0;
+        width: 100%
+    }
+
+    .detalhes {
+        display: flex !important;
+        width: 50%;
+        flex-direction: row !important;
+        height: 100%;
+        justify-content: space-evenly !important
+    }
+
+    .vento,
+    .umidade {
+        height: 100%;
+        justify-content: center;
+        display: flex;
+        align-items: center
+    }
+
+    .lugar-nome {
+        font-size: 2vw !important;
+        font-size: clamp(1rem, 2vw, 5rem) !important
+    }
+
+    .atual {
+        width: 50%;
+        align-items: center
+    }
+
+    .header {
+        height: 10%;
+        width: 33%;
+        justify-content: center;
+        text-align: center;
+        flex-wrap: wrap;
+        display: flex
+    }
+
+    .atual .valor {
+        font-size: 6vw !important;
+        font-size: clamp(1.2rem, 6vw, 1rem) !important
+    }
+
+    .tipo-status {
+        align-items: start;
+        font-size: 1vw !important;
+        font-size: clamp(.1rem, 1vw, 5rem) !important
+    }
+
+    .dia,
+    .temperatura-principal {
+        height: 100%
+    }
+
+    .valor {
+        display: flex;
+        text-align: center;
+        flex-direction: row;
+        width: 33%;
+        align-items: center;
+        justify-content: center
+    }
+
+    .tempo-details .detalhes {
+        gap: .5rem !important
+    }
+
+    .tempo-details {
+        font-size: .5rem;
+        display: flex;
+        width: 100%;
+        height: 100%;
+        justify-content: center
+    }
+
+    .fa-arrow-up:before {
+        font-size: 3vw !important;
+        font-size: clamp(.4rem, 3vw, 1rem) !important
+    }
+
+    .dia {
+        display: flex
+    }
+
+    .dia span {
+        font-size: 2vw !important;
+        font-size: clamp(.1rem, 2vw, 3rem) !important
+    }
+
+    .status span {
+        display: none
+    }
+
+    .atual .valor .max i {
+        padding-top: 15%
+    }
+
+    .type-temp {
+        font-size: 6vh !important
+    }
+
+    .temperatura-principal {
+        font-size: 2vw !important
+    }
+
+    .atual .valor .divide {
+        font-size: 2vw !important;
+        font-size: clamp(1vw, 2vw, 3vw) !important
+    }
+
+    .wi {
+        font-size: 60vh !important;
+        font-size: clamp(2rem, 60vh, 10rem) !important
+    }
+
+    .number,
+    .type-temp,
+    .divide,
+    .temperatura-principal .type-temp {
+        font-size: 2vw !important;
+        font-size: clamp(.1rem, 2vw, 4rem) !important
+    }
+
+    .atual .valor .max .number,
+    .atual .valor .min .number {
+        font-size: 2vw !important;
+        font-size: clamp(1vh, 2vw, 15rem) !important
+    }
+
+    .vento-container .fa-solid,
+    .umidade-container .fa-solid {
+        font-size: 25vh !important;
+        font-size: clamp(.1rem, 25vh, 6rem) !important
+    }
+
+    .tempo-details .detalhes .vento-content,
+    .tempo-details .detalhes .umidade-content {
+        padding-top: 0 !important;
+        padding-left: 5%
+    }
+
+    .vento,
+    .umidade {
+        text-align: center
+    }
+
+    .umidade-container,
+    .vento-container {
+        justify-items: center
+    }
+
+    .max .fa-solid,
+    .min .fa-solid {
+        font-size: 1vw !important;
+        font-size: clamp(.2rem, 1vw, 2rem) !important
+    }
+
+    .fa-arrow-up:before {
+        font-size: 1vw !important;
+        font-size: clamp(.2rem, 1vw, 5rem) !important
+    }
+
+    .min .medida,
+    .max .medida {
+        font-size: 22vh !important;
+        font-size: clamp(0.5rem, 22vh, 5rem) !important
+    }
+
+    .min .min-text,
+    .max .max-text,
+    .min .value,
+    .max .value {
+        font-size: 22vh !important;
+        font-size: clamp(0.5rem, 22vh, 5rem) !important;
+        
+    }
+
+    .tempo-details .detalhes .vento-content,
+    .tempo-details .detalhes .umidade-content {
+        gap: .7rem !important;
+        gap: clamp(.1rem, .7rem, 1rem) !important
+    }
+
+    .atual .valor .temperatura-principal {
+        gap: .1rem !important
+    }
+
+
+
+.tempo-details .detalhes .vento-content, .tempo-details .detalhes .umidade-content {
+
+        gap: 1rem !important;
+     }
+     .vento-content .min, .vento-content .max, .umidade-content .min, .umidade-content .max {
+        gap: 0.5rem !important;
+     }
+
+}
+@media(min-aspect-ratio:20) {
+    .dias {
+        display: none
+    }
+
+    .tempo-container {
+        width: 100%;
+        height: 100%;
+        margin: 0 auto;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        flex-direction: column;
+        gap: 3rem;
+        padding: 0 2rem;
+        border-radius: unset !important
+    }
+
+    .tempo-details {
+        display: flex;
+        flex-direction: column;
+        gap: 0
+    }
+
+    .tempo-details,
+    .tempo-content {
+        width: 100%
+    }
+
+    .tempo-content {
+        padding: 0 1rem;
+        width: 100%;
+        display: flex;
+        justify-content: space-between;
+        align-items: center
+    }
+
+    .atual {
+        width: 100%;
+        display: flex;
+        gap: 0
+    }
+
+    .atual .status {
+        display: flex;
+        flex-direction: row;
+        gap: 0;
+        width: 33%;
+        text-align: center
+    }
+
+    .tempo-content .tipo-status {
+        font-size: clamp(1rem, 2.5vw, 1.5rem) !important
+    }
+
+    .atual .valor .temperatura-principal {
+        display: flex;
+        align-items: center;
+        gap: .5rem
+    }
+
+    .umidade-text,
+    .vento-text {
+        font-size: 30vh !important;
+        font-size: clamp(.3rem, 30vh, 6rem) !important
+    }
+
+    .atual .valor .divide {
+        font-size: 2vw !important;
+        font-size: clamp(1rem, 2vw, 4rem) !important
+    }
+
+    .atual .valor .min {
+        display: flex;
+        gap: .2rem;
+        align-items: baseline
+    }
+
+    .atual .valor .max .number,
+    .atual .valor .min .number {
+        font-size: 3vw !important;
+        font-size: clamp(1.5rem, 3vw, 2rem) !important
+    }
+
+    .atual .valor .max {
+        display: flex;
+        gap: .2rem;
+        align-items: normal
+    }
+
+    .atual .valor .max i {
+        padding-top: .5rem
+    }
+
+    .temperatura-principal .type-temp {
+        font-size: 4vw !important;
+        font-size: clamp(1.8rem, 4vw, 2.2rem) !important
+    }
+
+    .controls {
+        position: fixed;
+        top: 10px;
+        left: 10px;
+        display: flex;
+        gap: 10px
+    }
+
+    .tempo-content {
+        padding: 0;
+        width: 100%
+    }
+
+    .detalhes {
+        display: flex !important;
+        width: 50%;
+        flex-direction: row !important;
+        height: 100%;
+        justify-content: space-evenly !important
+    }
+
+    .vento,
+    .umidade {
+        height: 100%;
+        justify-content: center;
+        display: flex;
+        align-items: center
+    }
+
+    .lugar-nome {
+        font-size: 2vw !important;
+        font-size: clamp(1rem, 2vw, 5rem) !important
+    }
+
+    .atual {
+        width: 50%;
+        align-items: center
+    }
+
+    .header {
+        height: 10%;
+        width: 33%
+    }
+
+    .atual .valor {
+        font-size: 6vw !important;
+        font-size: clamp(1.2rem, 6vw, 1rem) !important
+    }
+
+    .tipo-status {
+        align-items: start;
+        font-size: 1vw !important;
+        font-size: clamp(.1rem, 1vw, 5rem) !important
+    }
+
+    .dia,
+    .temperatura-principal {
+        height: 100%
+    }
+
+    .valor {
+        display: flex;
+        text-align: center;
+        flex-direction: row;
+        width: 33%;
+        align-items: center;
+        justify-content: center
+    }
+
+    .tempo-details .detalhes {
+        gap: .5rem !important
+    }
+
+    .tempo-details {
+        font-size: .5rem;
+        display: flex;
+        width: 100%;
+        height: 100%;
+        justify-content: center
+    }
+
+    .fa-arrow-up:before {
+        font-size: 3vw !important;
+        font-size: clamp(.4rem, 3vw, 1rem) !important
+    }
+
+    .dia {
+        display: flex
+    }
+
+    .dia span {
+        font-size: 2vw !important;
+        font-size: clamp(.1rem, 2vw, 3rem) !important
+    }
+
+    .status span {
+        display: none
+    }
+
+    .atual .valor .max i {
+        padding-top: 15%
+    }
+
+    .type-temp {
+        font-size: 4vh !important
+    }
+
+    .temperatura-principal {
+        font-size: 2vw !important
+    }
+
+    .wi {
+        font-size: 60vh !important;
+        font-size: clamp(2rem, 60vh, 10rem) !important
+    }
+
+    .number,
+    .type-temp,
+    .divide,
+    .temperatura-principal .type-temp {
+        font-size: 2vw !important;
+        font-size: clamp(.1rem, 2vw, 15rem) !important
+    }
+
+    .atual .valor .max .number,
+    .atual .valor .min .number {
+        font-size: 2vw !important;
+        font-size: clamp(1vh, 2vw, 15rem) !important
+    }
+
+    .vento-container .fa-solid,
+    .umidade-container .fa-solid {
+        font-size: 30vh !important;
+        font-size: clamp(.5rem, 30vh, 6rem) !important
+    }
+
+    .tempo-details .detalhes .vento-content,
+    .tempo-details .detalhes .umidade-content {
+        padding-top: 0 !important;
+        padding-left: 5%
+    }
+
+    .vento,
+    .umidade {
+        text-align: center
+    }
+
+    .umidade-container,
+    .vento-container {
+        justify-items: center
+    }
+
+    .max .fa-solid,
+    .min .fa-solid {
+        font-size: 20vh !important;
+        font-size: clamp(.2rem, 20vh, 2rem) !important
+    }
+
+    .fa-arrow-up:before {
+        font-size: 20vh !important;
+        font-size: clamp(.2rem, 20vh, 5rem) !important
+    }
+
+    .min .medida,
+    .max .medida {
+        font-size: 30vh !important;
+        font-size: clamp(1rem, 30vh, 5rem) !important
+    }
+
+    .min .min-text,
+    .max .max-text,
+    .min .value,
+    .max .value {
+        font-size: 30vh !important;
+        font-size: clamp(1rem, 30vh, 4rem) !important
+    }
+
+    .tempo-details .detalhes .vento-content,
+    .tempo-details .detalhes .umidade-content {
+        gap: .5rem !important;
+        gap: clamp(.1rem, .5rem, 1rem) !important
+    }
+
+    .atual .valor .temperatura-principal {
+        gap: .1rem !important
+    }
+
+    .detalhes {
+        display: flex !important
+    }
+}
+   

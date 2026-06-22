@@ -1,0 +1,504 @@
+﻿@using System.Collections.ObjectModel;
+@using System.Net.Http.Json;
+@using Cardápio.Client.Components.Modal;
+@using Cardápio.Client.Components.SelectCompany;
+@using Cardápio.Client.Pages.Cardapio;
+@using Product.SubModal;
+
+@inject Cardápio.Client.Infra.Provider.CustomAuthenticationStateProvider Provider;
+@inject SelectCompanyService EmpresaService;
+@inject HttpClient HttpClient
+@inject ModalService ModalServiceAdditional;
+@inject IJSRuntime JSRuntime;
+
+@code {
+    [Parameter] public EventCallback<GrupoAdicionalAddDTO> OnSubmit { get; set; }
+    [Parameter] public ProdutoGetDTO SelectedProduct { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+    [Inject] private ModalService ModalService { get; set; }
+
+    string token;
+    private UsuarioGetDTO usuario;
+    private List<GrupoAdicionalGetDTO> groups = new();
+    private List<GrupoAdicionalGetDTO> selectedGroups = new();
+    private List<int> selectedGroupsID = new();
+    private List<string> priceTypes = new List<string>
+    {
+        "Somatório",
+        "Maior Preço",
+        "Média de Valor"
+    };
+    private bool firstCall = false;
+
+    private string filterText = string.Empty;
+
+    private IEnumerable<GrupoAdicionalGetDTO> FilteredGroups =>
+        string.IsNullOrWhiteSpace(filterText)
+        ? selectedGroups
+        : selectedGroups.Where(group => group.Nome.Contains(filterText, StringComparison.OrdinalIgnoreCase));
+
+    private void OnFilterTextChanged(ChangeEventArgs e)
+    {
+        filterText = e.Value.ToString();
+        StateHasChanged();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            token = await Provider.GetTokenAsync();
+            //await GetUser();
+            usuario = Provider.UsuarioOwner;
+            await JSRuntime.InvokeVoidAsync("initializeDragAndDrop", "groupContainer", DotNetObjectReference.Create(this));
+            await LoadGroupsAsync();
+            await Task.Yield();
+        }
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (!firstCall && SelectedProduct is ProdutoGetDTO product)
+        {
+            if (product != null)
+            {
+                VinculeGroups();
+            }
+
+            firstCall = true;
+        }
+    }
+
+    async Task GetUser()
+    {
+        HttpClient.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+        usuario = await HttpClient.GetFromJsonAsync<UsuarioGetDTO>("/api/authentication/getCompanyID");
+    }
+
+    private string FormatarPreco(decimal? preco) => preco.HasValue ? $"R$ {preco.Value:F2}" : "Preço indisponível";
+
+    private async Task LoadGroupsAsync()
+    {
+        try
+        {
+            HttpClient.DefaultRequestHeaders.Authorization =
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+            var response = await HttpClient.GetFromJsonAsync<IEnumerable<GrupoAdicionalGetDTO>>("/api/additional-group/data/" + ValidateSelectedCompanyID());
+
+            if (response != null)
+            {
+                groups = response.Select(g => { g.IsCollapsed = true; return g; }).ToList();
+
+                ModalServiceAdditional.ObjectList = groups.Cast<object>().ToList();
+            }
+
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Erro ao carregar grupos adicionais: {ex.Message}");
+        }
+    }
+
+    private void VinculeGroups()
+    {
+        if (SelectedProduct is ProdutoGetDTO selectedProduct)
+        {
+            selectedGroups = selectedProduct.ColGrupoAdicional?
+            .Select(g => { g.IsCollapsed = true; return g; })
+            .OrderBy(g => g.Posicao)
+            .ToList() ?? new List<GrupoAdicionalGetDTO>();
+
+        }
+    }
+
+    private void RemoveGroup(GrupoAdicionalGetDTO group)
+    {
+        selectedGroups.Remove(group);
+        StateHasChanged();
+    }
+
+    private void ToggleCollapse(GrupoAdicionalGetDTO selectedGroup)
+    {
+        if (!selectedGroup.IsCollapsed)
+        {
+            selectedGroup.IsCollapsed = true;
+            return;
+        }
+
+        foreach (var group in groups)
+        {
+            group.IsCollapsed = true;
+        }
+
+        selectedGroup.IsCollapsed = false;
+    }
+
+    private int ValidateSelectedCompanyID()
+    {
+        if (EmpresaService.EmpresaSelecionada == 0)
+        {
+            return usuario.EmpresaID ?? 0;
+        }
+
+        return EmpresaService.EmpresaSelecionada;
+    }
+
+    public List<GrupoAdicionalGetDTO> GetGroupForm()
+    {
+        Console.WriteLine($"[AdditionalForm] GetGroupForm chamado - selectedGroups.Count: {selectedGroups.Count}");
+        foreach (var group in selectedGroups)
+        {
+            Console.WriteLine($"[AdditionalForm] Grupo selecionado: ID={group.ID}, Nome={group.Nome}");
+        }
+        return selectedGroups.ToList();
+    }
+
+    private void OpenCreateCategoryModal()
+    {
+        ModalService.OpenModal(
+            "CreateAdditional",
+            onConfirmWithParameter: async (selected) => await OnCreateAdditionalConfirm((int)selected),
+            onCancel: async () => await OnCreateAdditionalCancel()
+        );
+
+        StateHasChanged();
+    }
+
+    private void OpenEditAdditionalConfirm(GrupoAdicionalGetDTO grupo)
+    {
+        ModalService.OpenModal(
+            "EditAdditional",
+            onConfirm: async () => await OnEditAdditionalConfirm(),
+            onCancel: async () => await OnEditAdditionalCancel(),
+            editObject: grupo
+        );
+
+        StateHasChanged();
+    }
+
+    private async Task OnCreateAdditionalConfirm(int selected)
+    {
+        await LoadGroupsAsync();
+        StateHasChanged();
+
+        var groupsById = groups.ToDictionary(g => g.ID);
+
+        if (groupsById.TryGetValue(selected, out var matchingGroup) && !selectedGroups.Contains(matchingGroup))
+        {
+            selectedGroups.Add(matchingGroup);
+            StateHasChanged();
+        }
+
+        ModalService.CloseModal("CreateAdditional");
+    }
+
+
+    private Task OnCreateAdditionalCancel()
+    {
+        ModalService.CloseModal("CreateAdditional");
+        return Task.CompletedTask;
+    }
+
+    private async Task OnEditAdditionalConfirm()
+    {
+        await LoadGroupsAsync();
+
+        foreach (var group in selectedGroups.ToList())
+        {
+            var updatedGroup = groups.FirstOrDefault(g => g.ID == group.ID);
+            if (updatedGroup != null)
+            {
+                var index = selectedGroups.IndexOf(group);
+                selectedGroups[index] = updatedGroup;
+            }
+        }
+
+        ModalService.CloseModal("EditAdditional");
+        StateHasChanged();
+    }
+
+    private Task OnEditAdditionalCancel()
+    {
+        ModalService.CloseModal("EditAdditional");
+        ModalService.CloseModal("ConfirmEditAdditional");
+        return Task.CompletedTask;
+    }
+
+    private void OpenImportAdditionalModal()
+    {
+        ModalService.OpenModal(
+            "ImportGroup",
+            onConfirmWithParameter: async (selectedsGroups) => await OnImportAdditionalConfirm((List<int>)selectedsGroups),
+            onCancel: async () => await OnImportAdditionalCancel()
+        );
+
+        StateHasChanged();
+    }
+
+    private async Task OnImportAdditionalConfirm(List<int> selectedsGroups)
+    {
+        var newGroups = groups
+            .Where(group => selectedsGroups.Contains(group.ID)
+                            && !selectedGroups.Any(selected => selected.ID == group.ID))
+            .ToList();
+
+        selectedGroups.AddRange(newGroups);
+        ModalService.CloseModal("ImportGroup");
+        StateHasChanged();
+    }
+
+    private Task OnImportAdditionalCancel()
+    {
+        ModalService.CloseModal("ImportGroup");
+        return Task.CompletedTask;
+    }
+
+    [JSInvokable("UpdateGroupOrder")]
+    public async void UpdateGroupOrder(List<int> newOrder)
+    {
+        var updatedGroups = newOrder
+            .Select((id, index) =>
+            {
+                var group = selectedGroups.First(g => g.ID == id);
+                group.Posicao = index + 1;
+                return group;
+            })
+            .ToList();
+
+        selectedGroups.Clear();
+
+        await Task.Yield();
+        StateHasChanged();
+
+        selectedGroups = new List<GrupoAdicionalGetDTO>(updatedGroups);
+        StateHasChanged();
+    }
+}
+
+<form class="form-body">
+    <div class="container-groups">
+        <div class="header">
+            <div class="buttons-default">
+                <button type="button" class="import button-cyan" title="Importar grupo" @onclick="OpenImportAdditionalModal">
+                    <i class="fa-solid fa-download"></i> Importar grupo
+                </button>
+            </div>
+            <div class="new-header">
+                <input class="search" type="text" placeholder="Filtrar adicionais..." @oninput="OnFilterTextChanged" />
+                <button type="button" class="new button-green" @onclick="@OpenCreateCategoryModal">
+                    <i class="fa-solid fa-plus"></i> Criar grupo
+                </button>
+            </div>
+        </div>
+
+        <div class="body">
+            <div class="groups" id="groupContainer">
+                @if (selectedGroups.Any())
+                {
+                    if (FilteredGroups.Any())
+                    {
+                        @foreach (var group in FilteredGroups.OrderBy(g => g.Posicao))
+                        {
+                            <div class="group" draggable="true"
+                                 data-id="@group.ID">
+                                <div class="group-header">
+                                    <div type="button" @onclick="() => ToggleCollapse(group)" class="collapsible toggle">
+                                        @if (!group.IsCollapsed)
+                                        {
+                                            <i class="fa-solid fa-caret-up fa-rotate-180"></i>
+                                        }
+                                        else
+                                        {
+                                            <i class="fa-solid fa-caret-up fa-rotate-90"></i>
+                                        }
+                                    </div>
+                                    <div class="group-container">
+                                        <div class="group-content">
+                                            <div class="title">
+                                                <div class="information">
+                                                    <span class="position"></span>
+                                                    <span class="name">Grupo - @group.Nome</span>
+                                                </div>
+                                                <div class="buttons">
+                                                    <button class="edit-button rz-ripple button-blue" type="button" @onclick="() => OpenEditAdditionalConfirm(group)"><i class="fa-regular fa-pen-to-square"></i></button>
+                                                    <button class="trash-button rz-ripple button-pink" type="button" @onclick="() => RemoveGroup(group)" title="Remover grupo"><i class="fa-solid fa-xmark"></i></button>
+                                                </div>
+                                            </div>
+                                            <div class="configuration">
+                                                <div class="min">
+                                                    <label>Min</label>
+                                                    <div class="quantity-control">
+                                                        <div class="count number">@group.Minimo</div>
+                                                    </div>
+                                                </div>
+                                                <div class="max">
+                                                    <label>Máx</label>
+                                                    <div class="quantity-control">
+                                                        <div class="count number">@group.Maximo</div>
+                                                    </div>
+                                                </div>
+                                                <div class="type">
+                                                    <label>Tipo</label>
+                                                    <div class="quantity-control">
+                                                        <div class="count-type number">@group.TipoNome</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                @if (group.IsCollapsed == false)
+                                {
+                                    <div class="group-body">
+                                        @foreach (var product in group.ColGrupoAdicionalItem)
+                                        {
+                                            <div class="product-item">
+                                                <div class="info">
+                                                    <img src="/imagens/ImageAdditional/@(product?.ColGrupoAdicionalItemImagem.Arquivo)" alt="Produto" />
+                                                    <p>@product.Nome</p>
+                                                </div>
+                                                <div class="price">
+                                                    <span class="number">@FormatarPreco(product.Preco)</span>
+                                                </div>
+                                            </div>
+                                        }
+                                    </div>
+                                }
+                            </div>
+                        }
+                    } else
+                    {
+                        <div class="empty">
+                            <i class="fa-solid fa-boxes-stacked"></i>
+                            <p>Nenhum grupo foi encontrado</p>
+                        </div>
+                    }
+                } else
+                {
+                    <div class="empty">
+                        <i class="fa-solid fa-boxes-stacked"></i>
+                        <p>Nenhum grupo adicionado</p>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</form>
+
+<script>
+    function initializeDragAndDrop(containerId, dotNetObject) {
+        let draggedElement = null;
+        let placeholder = null;
+
+        const container = document.getElementById(containerId);
+        if (!container) return;
+
+        function createPlaceholder() {
+            const el = document.createElement('div');
+            el.className = 'placeholder';
+            el.style.height = '60px';
+            el.style.background = '#f0f0f0';
+            el.style.margin = '5px 0';
+            el.style.pointerEvents = 'none';
+            return el;
+        }
+
+        container.addEventListener('dragstart', (e) => {
+            draggedElement = e.target.closest('.group');
+            if (!draggedElement) return;
+
+            draggedElement.classList.add('dragging');
+
+            const clone = draggedElement.cloneNode(true);
+            clone.style.position = 'fixed';
+            clone.style.opacity = '0.5';
+            clone.style.pointerEvents = 'none';
+            clone.style.zIndex = '1000';
+            document.body.appendChild(clone);
+
+            e.dataTransfer.setDragImage(clone, 0, 0);
+            setTimeout(() => clone.remove(), 0);
+        });
+
+        container.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            if (!draggedElement) return;
+
+            if (!placeholder) {
+                placeholder = createPlaceholder();
+                container.appendChild(placeholder);
+            }
+
+            const mouseY = e.clientY;
+            const children = Array.from(container.children).filter(child =>
+                child.classList.contains('group') && !child.classList.contains('placeholder')
+            );
+
+            let closest = null;
+            let closestOffset = Number.NEGATIVE_INFINITY;
+
+            children.forEach(child => {
+                const box = child.getBoundingClientRect();
+                const offset = mouseY - box.top - box.height / 2;
+
+                if (offset < 0 && offset > closestOffset) {
+                    closestOffset = offset;
+                    closest = child;
+                }
+            });
+
+            if (closest) {
+                container.insertBefore(placeholder, closest);
+            } else {
+                container.appendChild(placeholder);
+            }
+        });
+
+        container.addEventListener('dragend', () => {
+            if (placeholder) {
+                placeholder.remove();
+                placeholder = null;
+            }
+            if (draggedElement) {
+                draggedElement.classList.remove('dragging');
+                draggedElement = null;
+            }
+
+        });
+
+        container.addEventListener('drop', (e) => {
+            e.preventDefault();
+            if (!draggedElement || !placeholder) return;
+
+            container.insertBefore(draggedElement, placeholder);
+
+            placeholder.remove();
+            placeholder = null;
+
+            const newOrder = Array.from(container.children)
+                .filter(child => child.classList.contains('group'))
+                .map(el => parseInt(el.dataset.id));
+
+            dotNetObject.invokeMethodAsync('UpdateGroupOrder', newOrder);
+        });
+    }
+</script>
+
+<style>
+    .dragging {
+        opacity: 0.5;
+        transform: scale(0.98);
+        transition: all 0.2s ease;
+    }
+
+    .placeholder {
+        min-height: 30px;
+        border: 2px dashed #ccc;
+        border-radius: 4px;
+    }
+</style>

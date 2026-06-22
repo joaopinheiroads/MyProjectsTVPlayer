@@ -1,0 +1,18 @@
+﻿.tooltip-icon {
+	width: 15px;
+	height: 15px;
+	background-color: #118AB2;
+	color: white;
+	border-radius: 100%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	cursor: pointer;
+	text-align: center;
+}
+
+.tooltip-icon i {
+	font-size: 11px;
+	color: white;
+	width: 3.5px;
+}

@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>ChatIA</RootNamespace>
+    <AssemblyName>ChatIA</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Anthropic" Version="12.29.1" />
+    <PackageReference Include="Microsoft.Data.SqlClient" Version="7.0.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- base de conhecimento de fallback (usada só se o banco estiver vazio/indisponível) -->
+    <None Remove="base-conhecimento.md" />
+    <Content Include="base-conhecimento.md" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>

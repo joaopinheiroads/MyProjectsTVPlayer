@@ -1,0 +1,71 @@
+﻿@typeparam T
+
+@inject IJSRuntime JSRuntime;
+
+@code {
+    [Parameter] public EventCallback<T> OnSubmit { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+    [Parameter] public bool IsLoading { get; set; }
+    [Parameter] public EventCallback? ComponentIsLoaded { get; set; }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JSRuntime.InvokeVoidAsync("handleEscKey", DotNetObjectReference.Create(this));
+
+            if (ComponentIsLoaded is EventCallback isLoaded)
+            {
+                await isLoaded.InvokeAsync();
+            }
+        }
+    }
+
+    private async Task SubmitAsync()
+    {
+        await OnSubmit.InvokeAsync();
+    }
+
+    private async Task CancelAsync()
+    {
+        await OnCancel.InvokeAsync();
+    }
+
+    [JSInvokable("HandleEscapeKey")]
+    public async Task HandleEscapeKey()
+    {
+        await CancelAsync();
+    }
+}
+
+<div class="form-delete">
+    <div class="form-header">
+        <div class="header">
+            <div class="content-header">
+                <div class="icon"><i class="fa-solid fa-arrow-rotate-left"></i></div>
+                <div class="title-container">
+                    <h4 class="title">Retornar grupo</h4>
+                </div>
+            </div>
+            <div class="close" @onclick="CancelAsync"><i class="fa-solid fa-x"></i></div>
+        </div>
+    </div>
+    <p class="text">Tem certeza que deseja retornar o grupo? Isto retornará o conteúdo principal (Empresa e Usuario) como Ativo.</p>
+    <div class="form-footer">
+        <button type="button" @onclick="CancelAsync" class="cancel rz-ripple" disabled="@IsLoading"><span>Cancelar</span></button>
+        <button type="button" @onclick="SubmitAsync" class="confirm rz-ripple button-pink">
+            @if (IsLoading)
+            {
+                <SpinnerLoader PrimaryColor="#FFFFFF" SecondaryColor="#EF476F" Size="20" />
+            }
+            else
+            {
+                <span>Confirmar</span>
+            }
+        </button>
+    </div>
+</div>
+
+@code {
+
+}

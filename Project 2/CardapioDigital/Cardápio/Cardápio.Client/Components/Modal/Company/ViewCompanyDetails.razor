@@ -1,0 +1,128 @@
+﻿@using Microsoft.JSInterop
+
+@typeparam SelectedDTO
+
+@inject IJSRuntime JSRuntime
+
+@code {
+    [Parameter] public EventCallback OnCancel { get; set; }
+    [Parameter] public SelectedDTO? companySelected { get; set; }
+    [Parameter] public EventCallback? ComponentIsLoaded { get; set; }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JSRuntime.InvokeVoidAsync("handleEscKey", DotNetObjectReference.Create(this));
+
+            if (ComponentIsLoaded is EventCallback isLoaded)
+            {
+                await isLoaded.InvokeAsync();
+            }
+        }
+    }
+
+    private async Task CancelAsync()
+    {
+        await OnCancel.InvokeAsync();
+    }
+
+    [JSInvokable("HandleEscapeKey")]
+    public async Task HandleEscapeKey()
+    {
+        await CancelAsync();
+    }
+}
+
+@if (companySelected is Cardápio.Client.Dto.EmpresaGetDTO company)
+{
+    <div class="company">
+        <div class="header">
+            <div class="close"><i @onclick="CancelAsync" class="fa-solid fa-x"></i></div>
+        </div>
+        <div class="container-company">
+            <div class="details">
+                <div class="banner-section">
+                    @if(company.ImageBanner != null && company.ImageBanner.Length > 0)
+                    {
+                        <div class="image" style="background-image: url('/imagens/banner/@company.ImageBanner');"></div>
+                    }
+                </div>
+                <div class="content-section">
+                    <div class="logo">
+                        @if (company.ImageLogo != null && company.ImageLogo.Length > 0)
+                        {
+                            <div class="image" style="background-image: url('/imagens/logo/@company.ImageLogo');"></div>
+                        }
+                    </div>
+                    <div class="info">
+                        <h3>@company.Nome</h3>
+                    </div>
+                    <div class="fields">
+                        <div class="field">
+                            <span>Razão social</span>
+                            <p>@company.RazaoSocial</p>
+                        </div>
+                        <div class="field">
+                            <span>CEP</span>
+                            <p class="number">@company.CEP</p>
+                        </div>
+                        <div class="field">
+                            <span>Telefone</span>
+                            <p class="number" id="telefone">@company.Telefone</p>
+                        </div>
+
+                        <div class="field">
+                            <span>Estado</span>
+                            <p>@company.Estado.EstNome</p>
+                        </div>
+                        <div class="field">
+                            <span>CNPJ</span>
+                            <p class="number" id="cnpj">@company.CNPJ</p>
+                        </div>
+                        <div class="field">
+                            <span>Cidade</span>
+                            <p>@company.Cidade.CidNome</p>
+                        </div>
+                        <div class="field">
+                            <span>Celular</span>
+                            <p class="number" id="celular">@company.Celular</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<script>
+    function formatarCNPJ(cnpj) {
+        cnpj = cnpj.replace(/\D/g, '');
+        if (cnpj.length === 14) {
+            return cnpj.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5");
+        }
+        return cnpj;
+    }
+
+    function formatarTelefone(telefone) {
+        telefone = telefone.replace(/\D/g, '');
+        if (telefone.length === 10) {
+            return telefone.replace(/^(\d{2})(\d{4})(\d{4})$/, "($1) $2-$3");
+        }
+        return telefone;
+    }
+
+    function formatarCelular(celular) {
+        celular = celular.replace(/\D/g, '');
+        if (celular.length === 11) {
+            return celular.replace(/^(\d{2})(\d{5})(\d{4})$/, "($1) $2-$3");
+        }
+        return celular; 
+    }
+
+    window.onload = function () {
+        document.getElementById('cnpj').innerText = formatarCNPJ(document.getElementById('cnpj').innerText);
+        document.getElementById('telefone').innerText = formatarTelefone(document.getElementById('telefone').innerText);
+        document.getElementById('celular').innerText = formatarCelular(document.getElementById('celular').innerText);
+    }
+</script>

@@ -1,0 +1,394 @@
+@using Cardápio.Client.Dto;
+@using System.ComponentModel.DataAnnotations
+
+<div class="promocoes-section">
+    <div class="section-header">
+        <h4>⏰ Promoções por Dia e Horário</h4>
+        <p class="section-description">Configure diferentes preços promocionais para cada dia da semana e horário específico</p>
+    </div>
+
+    <!-- Toggle para habilitar promoções -->
+    <div class="inputs mb-3">
+        <label class="checkbox-container">
+            <input class="custom-checkbox" type="checkbox" @bind="PromocoesHabilitadas">
+            <span class="checkmark"></span>
+            <span class="check">Habilitar promoções por horário</span>
+        </label>
+        @if (!PromocoesHabilitadas && !promocoes.Any())
+        {
+            <p class="text-muted mt-2" style="font-size: 14px;">
+                <i class="fa-solid fa-info-circle"></i> 
+                Marque a opção acima para configurar promoções especiais por dia e horário
+            </p>
+        }
+    </div>
+
+    @if (PromocoesHabilitadas)
+    {
+        <!-- Lista de promoções configuradas -->
+        @if (promocoes.Any())
+        {
+            <div class="promocoes-configuradas mb-3">
+                <h5>Promoções Configuradas:</h5>
+                <div class="promocoes-list">
+                    @foreach (var promocao in promocoes.OrderBy(p => ObterOrdemDiaSemana(p.DiaSemana)))
+                    {
+                        <div class="promocao-item">
+                            <div class="promocao-info">
+                                <span class="dia">@promocao.DiaSemana</span>
+                                <span class="horario">@promocao.HoraInicio - @promocao.HoraFim</span>
+                                <span class="preco">R$ @promocao.PrecoPromocional.ToString("F2")</span>
+                            </div>
+                            <button class="btn-remove" @onclick="() => RemoverPromocao(promocao)" type="button">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+
+        <!-- Formulário para adicionar nova promoção -->
+        <div class="nova-promocao-form">
+            <h5>Adicionar Nova Promoção:</h5>
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="inputs">
+                        <label>Dia da Semana</label>
+                        <select @bind="novaPromocao.DiaSemana" class="form-control">
+                            <option value="">Selecione...</option>
+                            <option value="Segunda">Segunda-feira</option>
+                            <option value="Terça">Terça-feira</option>
+                            <option value="Quarta">Quarta-feira</option>
+                            <option value="Quinta">Quinta-feira</option>
+                            <option value="Sexta">Sexta-feira</option>
+                            <option value="Sábado">Sábado</option>
+                            <option value="Domingo">Domingo</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="inputs">
+                        <label>Hora Início</label>
+                        <input type="time" value="@novaPromocaoHoraInicio" @oninput="OnNovaPromocaoHoraInicioChanged" class="form-control" />
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="inputs">
+                        <label>Hora Fim</label>
+                        <input type="time" value="@novaPromocaoHoraFim" @oninput="OnNovaPromocaoHoraFimChanged" class="form-control" />
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="inputs">
+                        <label>Preço Promocional</label>
+                        <input type="number" step="0.01" min="0" @bind="novaPromocao.PrecoPromocional" class="form-control" placeholder="0.00" />
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="inputs">
+                        <label>&nbsp;</label>
+                        <button class="btn btn-success" @onclick="AdicionarPromocao" type="button">
+                            <i class="fa-solid fa-plus"></i> Adicionar
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            @if (!string.IsNullOrEmpty(erroPromocao))
+            {
+                <div class="error-message">
+                    <span class="error">@erroPromocao</span>
+                </div>
+            }
+        </div>
+
+        <!-- Configuração rápida para todos os dias -->
+        <div class="configuracao-rapida mt-3">
+            <h5>Configuração Rápida:</h5>
+            <div class="row">
+                <div class="col-md-2">
+                    <div class="inputs">
+                        <label>Hora Início</label>
+                                                            <input type="time" id="rapidaHoraInicio" class="form-control time-input" value="@configRapidaHoraInicio" @oninput="OnConfigRapidaHoraInicioChanged" required>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="inputs">
+                        <label>Hora Fim</label>
+                                                            <input type="time" id="rapidaHoraFim" class="form-control time-input" value="@configRapidaHoraFim" @oninput="OnConfigRapidaHoraFimChanged" required>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="inputs">
+                        <label>Preço Promocional</label>
+                        <input type="number" step="0.01" min="0" @bind="configRapida.PrecoPromocional" class="form-control" placeholder="0.00" />
+                    </div>
+                </div>
+                <div class="col-md-5">
+                    <div class="inputs">
+                        <label>&nbsp;</label>
+                        <div class="btn-group">
+                            <button class="btn btn-outline-primary" @onclick="() => AplicarTodosDias(false)" type="button">
+                                Segunda a Sexta
+                            </button>
+                            <button class="btn btn-outline-primary" @onclick="() => AplicarTodosDias(true)" type="button">
+                                Fim de Semana
+                            </button>
+                            <button class="btn btn-outline-success" @onclick="() => AplicarTodosDias(null)" type="button">
+                                Todos os Dias
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public List<ProdutoPromocaoHorarioAddDTO> Promocoes { get; set; } = new();
+    [Parameter] public EventCallback<List<ProdutoPromocaoHorarioAddDTO>> PromocoesChanged { get; set; }
+
+    private bool promocoesHabilitadas = false;
+    
+    // Propriedade com setter personalizado para controlar o toggle
+    private bool PromocoesHabilitadas
+    {
+        get => promocoesHabilitadas;
+        set
+        {
+            if (promocoesHabilitadas != value)
+            {
+                promocoesHabilitadas = value;
+                if (!promocoesHabilitadas)
+                {
+                    promocoes.Clear();
+                    _ = PromocoesChanged.InvokeAsync(promocoes);
+                }
+                StateHasChanged();
+            }
+        }
+    }
+    private List<ProdutoPromocaoHorarioAddDTO> promocoes = new();
+    private ProdutoPromocaoHorarioAddDTO novaPromocao = new();
+    private ConfiguracaoRapidaDTO configRapida = new();
+    private string erroPromocao = string.Empty;
+    
+    // Propriedades auxiliares para bind dos inputs time
+    private string novaPromocaoHoraInicio = "";
+    private string novaPromocaoHoraFim = "";
+    private string configRapidaHoraInicio = "";
+    private string configRapidaHoraFim = "";
+
+    protected override void OnInitialized()
+    {
+        promocoes = Promocoes ?? new List<ProdutoPromocaoHorarioAddDTO>();
+        // ✅ CORREÇÃO: Habilitar se há promoções existentes
+        promocoesHabilitadas = promocoes.Any();
+        novaPromocao = new ProdutoPromocaoHorarioAddDTO();
+        configRapida = new ConfiguracaoRapidaDTO();
+        
+        // Força atualização da UI se há promoções pré-existentes
+        StateHasChanged();
+    }
+
+    protected override void OnParametersSet()
+    {
+       
+        
+        // Atualizar promoções quando os parâmetros mudam
+        if (Promocoes != null && Promocoes.Any())
+        {
+            promocoes = new List<ProdutoPromocaoHorarioAddDTO>(Promocoes);
+            // ✅ CORREÇÃO: Habilitar se há promoções existentes OU manter estado atual
+            promocoesHabilitadas = true; // Sempre habilitar se há promoções
+            StateHasChanged();
+        }
+        else if (Promocoes != null && !Promocoes.Any())
+        {
+            Console.WriteLine($"[ProductPromocaoForm] 📋 Parâmetro tem lista vazia, mantendo lista atual");
+            // Não sobrescrever se o parâmetro está vazio mas temos promoções locais
+            if (promocoes == null || !promocoes.Any())
+            {
+                promocoes = new List<ProdutoPromocaoHorarioAddDTO>();
+            }
+        }
+        else
+        {
+            Console.WriteLine($"[ProductPromocaoForm] ⚠️ Parâmetro Promocoes é null, mantendo estado atual");
+        }
+        
+        Console.WriteLine($"[ProductPromocaoForm] 📊 Estado final - promocoes.Count: {promocoes?.Count ?? -1}, habilitadas: {promocoesHabilitadas}");
+    }
+
+    // Métodos auxiliares para binding
+    private void OnNovaPromocaoHoraInicioChanged(ChangeEventArgs e)
+    {
+        novaPromocaoHoraInicio = e.Value?.ToString() ?? "";
+    }
+
+    private void OnNovaPromocaoHoraFimChanged(ChangeEventArgs e)
+    {
+        novaPromocaoHoraFim = e.Value?.ToString() ?? "";
+    }
+
+    private void OnConfigRapidaHoraInicioChanged(ChangeEventArgs e)
+    {
+        configRapidaHoraInicio = e.Value?.ToString() ?? "";
+    }
+
+    private void OnConfigRapidaHoraFimChanged(ChangeEventArgs e)
+    {
+        configRapidaHoraFim = e.Value?.ToString() ?? "";
+    }
+
+    private async Task AdicionarPromocao()
+    {
+        erroPromocao = string.Empty;
+
+        // Validações
+        if (string.IsNullOrEmpty(novaPromocao.DiaSemana))
+        {
+            erroPromocao = "Selecione um dia da semana";
+            return;
+        }
+
+        if (string.IsNullOrEmpty(novaPromocaoHoraInicio) || string.IsNullOrEmpty(novaPromocaoHoraFim))
+        {
+            erroPromocao = "Defina o horário de início e fim";
+            return;
+        }
+
+        if (novaPromocao.PrecoPromocional <= 0)
+        {
+            erroPromocao = "O preço promocional deve ser maior que zero";
+            return;
+        }
+
+        // Atualizar o objeto com os valores dos inputs
+        novaPromocao.HoraInicio = novaPromocaoHoraInicio;
+        novaPromocao.HoraFim = novaPromocaoHoraFim;
+
+        // Verificar conflitos de horário
+        if (VerificarConflito(novaPromocao))
+        {
+            erroPromocao = "Já existe uma promoção configurada para este dia e horário";
+            return;
+        }
+
+        // Adicionar promoção
+        var novaPromocaoItem = new ProdutoPromocaoHorarioAddDTO
+        {
+            DiaSemana = novaPromocao.DiaSemana,
+            HoraInicio = novaPromocao.HoraInicio,
+            HoraFim = novaPromocao.HoraFim,
+            PrecoPromocional = novaPromocao.PrecoPromocional
+        };
+        
+        promocoes.Add(novaPromocaoItem);
+        
+        foreach (var p in promocoes)
+        {
+            Console.WriteLine($"[ProductPromocaoForm] - {p.DiaSemana} {p.HoraInicio}-{p.HoraFim} R$ {p.PrecoPromocional:F2}");
+        }
+
+        // Limpar formulário
+        novaPromocao = new ProdutoPromocaoHorarioAddDTO();
+        novaPromocaoHoraInicio = "";
+        novaPromocaoHoraFim = "";
+
+        await PromocoesChanged.InvokeAsync(promocoes);
+        StateHasChanged();
+    }
+
+    private async Task RemoverPromocao(ProdutoPromocaoHorarioAddDTO promocao)
+    {
+        
+        promocoes.Remove(promocao);
+        
+        
+        await PromocoesChanged.InvokeAsync(promocoes);
+        StateHasChanged();
+    }
+
+    private async Task AplicarTodosDias(bool? tipoAplicacao)
+    {
+        if (string.IsNullOrEmpty(configRapidaHoraInicio) || 
+            string.IsNullOrEmpty(configRapidaHoraFim) || 
+            configRapida.PrecoPromocional <= 0)
+        {
+            erroPromocao = "Preencha todos os campos da configuração rápida";
+            return;
+        }
+
+        var diasParaAplicar = new List<string>();
+
+        if (tipoAplicacao == false) // Segunda a Sexta
+        {
+            diasParaAplicar = new List<string> { "Segunda", "Terça", "Quarta", "Quinta", "Sexta" };
+        }
+        else if (tipoAplicacao == true) // Fim de semana
+        {
+            diasParaAplicar = new List<string> { "Sábado", "Domingo" };
+        }
+        else // Todos os dias
+        {
+            diasParaAplicar = new List<string> { "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo" };
+        }
+
+        foreach (var dia in diasParaAplicar)
+        {
+            // Remover promoções existentes do mesmo dia e horário
+            promocoes.RemoveAll(p => p.DiaSemana == dia && 
+                                    p.HoraInicio == configRapidaHoraInicio && 
+                                    p.HoraFim == configRapidaHoraFim);
+
+            // Adicionar nova promoção
+            promocoes.Add(new ProdutoPromocaoHorarioAddDTO
+            {
+                DiaSemana = dia,
+                HoraInicio = configRapidaHoraInicio,
+                HoraFim = configRapidaHoraFim,
+                PrecoPromocional = configRapida.PrecoPromocional
+            });
+        }
+
+        erroPromocao = string.Empty;
+        await PromocoesChanged.InvokeAsync(promocoes);
+        StateHasChanged();
+    }
+
+    private bool VerificarConflito(ProdutoPromocaoHorarioAddDTO novaPromocao)
+    {
+        if (string.IsNullOrEmpty(novaPromocao.HoraInicio) || string.IsNullOrEmpty(novaPromocao.HoraFim))
+            return false;
+
+        return promocoes.Any(p => 
+            p.DiaSemana == novaPromocao.DiaSemana &&
+            !string.IsNullOrEmpty(p.HoraInicio) && !string.IsNullOrEmpty(p.HoraFim) &&
+            ((string.Compare(p.HoraInicio, novaPromocao.HoraInicio) <= 0 && string.Compare(p.HoraFim, novaPromocao.HoraInicio) > 0) ||
+             (string.Compare(p.HoraInicio, novaPromocao.HoraFim) < 0 && string.Compare(p.HoraFim, novaPromocao.HoraFim) >= 0) ||
+             (string.Compare(novaPromocao.HoraInicio, p.HoraInicio) <= 0 && string.Compare(novaPromocao.HoraFim, p.HoraFim) >= 0)));
+    }
+
+    private int ObterOrdemDiaSemana(string diaSemana)
+    {
+        return diaSemana switch
+        {
+            "Segunda" => 1,
+            "Terça" => 2,
+            "Quarta" => 3,
+            "Quinta" => 4,
+            "Sexta" => 5,
+            "Sábado" => 6,
+            "Domingo" => 7,
+            _ => 8
+        };
+    }
+
+    public class ConfiguracaoRapidaDTO
+    {
+        public decimal PrecoPromocional { get; set; }
+    }
+}

@@ -1,0 +1,189 @@
+@using Cardápio.Client.Dto
+@using Microsoft.JSInterop
+@using Cardápio.Client.Components.Modal.Product.Forms
+@inject IJSRuntime JSRuntime
+
+<div class="promocao-tab">
+    <div class="promocao-header">
+        <h3>
+            <i class="fa-solid fa-percentage"></i>
+            Configurações de Promoção
+        </h3>
+        <p class="promocao-description">
+            Configure promoções especiais com horários específicos por dia da semana, similar ao sistema de horários do produto.
+        </p>
+    </div>
+
+    <div class="promocao-content">
+        <!-- COMPONENTE DE PROMOÇÕES POR HORÁRIO -->
+        <ProductPromocaoForm Promocoes="@promocoesPorHorario" PromocoesChanged="@OnPromocoesChanged" />
+    </div>
+</div>
+
+@code {
+    [Parameter] public ProdutoGetDTO? SelectedProduct { get; set; }
+
+    // Nova propriedade para promoções por horário
+    private List<ProdutoPromocaoHorarioAddDTO> promocoesPorHorario = new();
+
+    protected override void OnInitialized()
+    {
+        // Garantir que a lista sempre exista
+        if (promocoesPorHorario == null)
+        {
+            promocoesPorHorario = new List<ProdutoPromocaoHorarioAddDTO>();
+        }
+        base.OnInitialized();
+    }
+
+    private bool _parametersInitialized = false;
+    private int? _currentProductId = null;
+
+    protected override Task OnParametersSetAsync()
+    {
+        
+        // Verificar se é um produto diferente
+        bool isProdutoDiferente = SelectedProduct?.ID != _currentProductId;
+        
+        // Só inicializar quando for um produto diferente ou primeira vez
+        if (!_parametersInitialized || isProdutoDiferente)
+        {
+            if (SelectedProduct != null)
+            {
+                // Carregar promoções por horário existentes se houver
+                if (SelectedProduct.PromocoesPorHorario != null && SelectedProduct.PromocoesPorHorario.Any())
+                {
+                    promocoesPorHorario = SelectedProduct.PromocoesPorHorario.Select(p => new ProdutoPromocaoHorarioAddDTO
+                    {
+                        DiaSemana = p.DiaSemana,
+                        HoraInicio = p.HoraInicio,
+                        HoraFim = p.HoraFim,
+                        PrecoPromocional = p.PrecoPromocional
+                    }).ToList();
+                }
+                else
+                {
+                    Console.WriteLine($"[PromocaoTab] Nenhuma promoção existente encontrada");
+                    promocoesPorHorario = new List<ProdutoPromocaoHorarioAddDTO>();
+                }
+                
+                _currentProductId = SelectedProduct.ID;
+            }
+            else
+            {
+                promocoesPorHorario = new List<ProdutoPromocaoHorarioAddDTO>();
+                _currentProductId = null;
+            }
+            
+            _parametersInitialized = true;
+            Console.WriteLine($"[PromocaoTab] 🔄 Parâmetros inicializados - Total promoções: {promocoesPorHorario.Count}");
+        }
+        else
+        {
+            Console.WriteLine($"[PromocaoTab] ⏭️ Pular inicialização - já configurado com {promocoesPorHorario.Count} promoções");
+        }
+        
+        return Task.CompletedTask;
+    }
+
+    private Task OnPromocoesChanged(List<ProdutoPromocaoHorarioAddDTO> novasPromocoes)
+    {
+        
+        if (novasPromocoes != null)
+        {
+            foreach (var promo in novasPromocoes)
+            {
+                Console.WriteLine($"[PromocaoTab] - Recebida: {promo.DiaSemana} {promo.HoraInicio}-{promo.HoraFim} R$ {promo.PrecoPromocional:F2}");
+            }
+        }
+        
+        promocoesPorHorario = novasPromocoes ?? new List<ProdutoPromocaoHorarioAddDTO>();
+        StateHasChanged();
+        
+        return Task.CompletedTask;
+    }
+
+    public PromocaoData GetPromocaoData()
+    {
+        
+        // Garantir que a lista não seja null
+        if (promocoesPorHorario == null)
+        {
+            promocoesPorHorario = new List<ProdutoPromocaoHorarioAddDTO>();
+        }
+        
+        
+        if (promocoesPorHorario.Any())
+        {
+            Console.WriteLine($"[PromocaoTab] ✅ Promoções encontradas:");
+            for (int i = 0; i < promocoesPorHorario.Count; i++)
+            {
+                var promo = promocoesPorHorario[i];
+            }
+        }
+        else
+        {
+            Console.WriteLine($"[PromocaoTab] ❌ Nenhuma promoção configurada");
+        }
+        
+        // Criar uma nova lista para evitar problemas de referência
+        var listaPromocoes = new List<ProdutoPromocaoHorarioAddDTO>(promocoesPorHorario);
+        
+        var resultado = new PromocaoData
+        {
+            IsPromocao = listaPromocoes.Any(),
+            PrecoPromocional = string.Empty, // Não usado mais
+            InicioPromocao = DateTime.Now,
+            FimPromocao = null,
+            PromocoesPorHorario = listaPromocoes
+        };
+        
+        
+        for (int i = 0; i < resultado.PromocoesPorHorario.Count; i++)
+        {
+            var promo = resultado.PromocoesPorHorario[i];
+        }
+        
+        return resultado;
+    }
+
+    // Método público para adicionar promoção de teste
+    public void AdicionarPromocaoTeste()
+    {
+        Console.WriteLine($"[PromocaoTab] Adicionando promoção de teste");
+        
+        if (promocoesPorHorario == null)
+        {
+            promocoesPorHorario = new List<ProdutoPromocaoHorarioAddDTO>();
+        }
+        
+        var promocaoTeste = new ProdutoPromocaoHorarioAddDTO
+        {
+            DiaSemana = "Segunda",
+            HoraInicio = "12:00",
+            HoraFim = "14:00",
+            PrecoPromocional = 15.99m
+        };
+        
+        promocoesPorHorario.Add(promocaoTeste);
+    }
+
+    public void ResetState()
+    {
+        _parametersInitialized = false;
+        _currentProductId = null;
+        promocoesPorHorario.Clear();
+        StateHasChanged();
+    }
+}
+
+@code {
+    public class PromocaoData
+    {
+        public bool IsPromocao { get; set; }
+        public string PrecoPromocional { get; set; } = string.Empty;
+        public DateTime InicioPromocao { get; set; }
+        public DateTime? FimPromocao { get; set; }
+        public List<ProdutoPromocaoHorarioAddDTO> PromocoesPorHorario { get; set; } = new();
+    }
+}

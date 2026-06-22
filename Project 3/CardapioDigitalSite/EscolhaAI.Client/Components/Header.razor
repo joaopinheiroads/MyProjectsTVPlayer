@@ -1,0 +1,60 @@
+﻿@rendermode InteractiveServer
+@using EscolhaAI.Client.Services
+@inject NavigationService Nav
+<div class="container">
+    <header class="d-flex flex-wrap align-items-center justify-content-center justify-content-md-between py-3 mb-4 border-bottom">
+        <div class="logo-img-div" @onclick="AbrirLogin">
+                <img src="/images/logoHeader2.png" alt="Escolha.ai.logo" class="logo-header" />
+        </div>
+        
+        <ul class="nav col-12 col-lg-auto my-2 justify-content-center my-md-0 text-small">
+            <li>
+                <a href="#" class="nav-link text-secondary" @onclick="AbrirCardapio">
+                    <img src="Images/cardapio.png" alt="Descrição da imagem" class="image-access-system">
+                    <h3>Cardápio modelo</h3>
+                </a>
+            </li>
+            <li>
+                <a href="#" class="nav-link text-secondary" @onclick="AbrirCardapioTwoo">
+                    <img src="Images/cardapio.png" alt="Descrição da imagem" class="image-access-system">
+                    <h3>Cardápio modelo</h3>
+                </a>
+            </li>
+           
+           
+           
+        </ul>
+       
+
+      
+
+        <div class="col-md-3 text-end">
+            <div class="btn btn-outline-primary me-2 botton-login" @onclick="AbrirLogin">
+                <img src="Images/icon-acessar-sistema.png" alt="Descrição da imagem" class="image-access-system">
+               @*  <a href="https://www.escolha.ai" target="_parent">ACESSAR SISTEMA</a> *@
+               <a>ACESSAR SISTEMA</a>
+            </div>
+          </div>
+    </header>
+</div>
+
+
+   
+
+ @code {
+        async Task AbrirLogin()
+        {
+            await Nav.RedirectForLogin();
+        }
+
+        async Task AbrirCardapio()
+        {
+            await Nav.RedirectForCardapio();
+        }
+
+
+        async Task AbrirCardapioTwoo()
+        {
+            await Nav.RedirectForCardapioTwoo();
+        }
+}

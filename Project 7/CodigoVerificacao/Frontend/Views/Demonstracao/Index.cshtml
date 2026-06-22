@@ -1,0 +1,947 @@
+﻿@inject CustomLocalizer<ResourceCommon> localizerCommon
+@inject CustomLocalizer<ResourceDemonstracao> localizer
+@model TVPlayerSite.Models.CRM.TabCliente
+@section SectionContentHeader {
+    <script src='https://www.google.com/recaptcha/api.js'></script>
+    <script type="text/javascript">
+        document.location.hash = 'iu6n952c4d8x5h';
+    </script>
+}
+@section SectionContentFooter {
+    <environment include="Development">
+        <link href="~/css/demonstracao.css" rel="stylesheet" asp-append-version=true />
+        <script src="~/lib/jquery-mask-plugin/jquery.mask.min.js"></script>
+    </environment>
+    <environment exclude="Development">
+        <link href="~/css/demonstracao.min.css" rel="stylesheet" asp-append-version=true />
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.mask/1.14.16/jquery.mask.js" integrity="sha256-yE5LLp5HSQ/z+hJeCqkz9hdjNkk1jaiGG0tDCraumnA=" crossorigin="anonymous"></script>
+    </environment>
+    <script type="text/javascript"> function ReturnActionBuscaCep() { return '@Url.Action("buscacep")'; } function ReturnActionGetEstado() { return '@Url.Action("GetEstado")'; } function ReturnActionGetCidade() { return '@Url.Action("GetCidade")'; } function ReturnActionGetCidadesPorEstado() { return '@Url.Action("GetCidadesPorEstado")'; } function ReturnActionVerifyCaptcha() { return '@Url.Action("Verify")'; }</script>
+    <script src="~/js/buscacep.js" asp-append-version="true"></script>
+    <script src="~/js/botaoenviarbuscaceprecaptcha.min.js"></script>
+    <!-- Meta Pixel Code -->
+    <script>
+        !function (f, b, e, v, n, t, s) {
+            if (f.fbq) return; n = f.fbq = function () {
+                n.callMethod ?
+                    n.callMethod.apply(n, arguments) : n.queue.push(arguments)
+            };
+            if (!f._fbq) f._fbq = n; n.push = n; n.loaded = !0; n.version = '2.0';
+            n.queue = []; t = b.createElement(e); t.async = !0;
+            t.src = v; s = b.getElementsByTagName(e)[0];
+            s.parentNode.insertBefore(t, s)
+        }(window, document, 'script',
+            'https://connect.facebook.net/en_US/fbevents.js');
+        fbq('init', '2195813507510672');
+        fbq('track', 'PageView');
+    </script>
+    <noscript>
+        <img height="1" width="1" style="display:none"
+             src="https://www.facebook.com/tr?id=2195813507510672&ev=PageView&noscript=1" />
+    </noscript>
+    <!-- End Meta Pixel Code -->
+    <!-- Google Tag Manager -->
+    <script>
+    (function (w, d, s, l, i) {
+            w[l] = w[l] || []; w[l].push({
+                'gtm.start':
+                    new Date().getTime(), event: 'gtm.js'
+            }); var f = d.getElementsByTagName(s)[0],
+                j = d.createElement(s), dl = l != 'dataLayer' ? '&l=' + l : ''; j.async = true; j.src =
+                    'https://www.googletagmanager.com/gtm.js?id=' + i + dl; f.parentNode.insertBefore(j, f);
+        })(window, document, 'script', 'dataLayer', 'GTM-MV47X6M4');</script>
+    <!-- End Google Tag Manager -->
+    <!-- Google Tag Manager (noscript) -->
+    <noscript>
+        <iframe src="https://www.googletagmanager.com/ns.html?id=GTM-MV47X6M4"
+                height="0" width="0" style="display:none;visibility:hidden"></iframe>
+    </noscript>
+    <!-- End Google Tag Manager (noscript) -->
+    <script type="text/javascript">
+        function mostrarAlerta(titulo, mensagem, callback) {
+            // Criar modal de alerta
+            const modalAlerta = document.createElement('div');
+            modalAlerta.className = 'modal-alerta';
+            modalAlerta.style.display = 'flex';
+            modalAlerta.innerHTML = `
+                <div class="modal-content-alerta">
+                    <div class="icon-alerta">⚠️</div>
+                    <h3>${titulo}</h3>
+                    <p>${mensagem}</p>
+                    <button onclick="fecharAlerta()" class="btn-ok">OK</button>
+                </div>
+            `;
+            
+            document.body.appendChild(modalAlerta);
+            
+            // Definir ação global para fechar
+            window.fecharAlerta = function() {
+                document.body.removeChild(modalAlerta);
+                if (callback) callback();
+            };
+        }
+
+        $(document).ready(function() {
+            // Remover o event listener do arquivo externo que mostra loading imediatamente
+            $('#botaoEnviar').off('click');
+            
+            // Interceptar o clique do botão para validar ANTES do loading
+            $('#botaoEnviar').on('click', function(e) {
+                e.preventDefault();
+                e.stopImmediatePropagation();
+                
+                // Validar formulário primeiro
+                if (!validarFormularioCompleto()) {
+                    return false;
+                }
+                
+                // Se válido, enviar o formulário
+                enviarFormularioAjax();
+                return false;
+            });
+            
+            // Validação do formulário antes do envio (para casos de Enter)
+            $('form').on('submit', function(e) {
+                // Sempre prevenir o envio padrão primeiro
+                e.preventDefault();
+                
+                // Se o modal de verificação estiver visível, não processar o submit
+                if ($('#modalVerificacao').is(':visible')) {
+                    console.log('[FORM] Modal de verificação visível - ignorando submit do formulário');
+                    return false;
+                }
+                
+                // Função para validar todos os campos
+                if (!validarFormularioCompleto()) {
+                    return false;
+                }
+                
+                // Se chegou aqui, todos os campos estão válidos
+                enviarFormularioAjax();
+                return false;
+            });
+        });
+
+        function validarFormularioCompleto() {
+            var erros = [];
+            
+            // Validar Nome
+            var nome = $('#CliNome').val().trim();
+            if (nome.length < 2) {
+                erros.push('• Nome deve ter pelo menos 2 caracteres');
+            }
+            
+            // Validar Empresa
+            var empresa = $('#CliEmpresa').val().trim();
+            if (empresa.length < 2) {
+                erros.push('• Empresa deve ter pelo menos 2 caracteres');
+            }
+            
+            // Validar CEP (opcional se Estado e Cidade estiverem preenchidos)
+            var cep = $('#txtCEP').val().replace(/\D/g, '');
+            var estado = $('#cbxEstado').val();
+            var cidade = $('#cbxCidade').val();
+            
+            // CEP é obrigatório apenas se Estado e Cidade NÃO estiverem preenchidos
+            // OU se o usuário começou a digitar o CEP mas não completou
+            if (cep.length > 0 && cep.length !== 8) {
+                erros.push('• CEP deve conter 8 dígitos completos ou deixe em branco');
+            }
+            
+            // Se não tem CEP, Estado e Cidade são obrigatórios
+            if (cep.length === 0) {
+                // Validar Estado
+                if (!estado || estado === '' || estado === '0') {
+                    erros.push('• Selecione um estado ou informe o CEP');
+                }
+                
+                // Validar Cidade
+                if (!cidade || cidade === '' || cidade === '0') {
+                    erros.push('• Selecione uma cidade ou informe o CEP');
+                }
+            }
+            
+            // Validar Celular
+            var celular = $('#CliTelefoneCelular').val().replace(/\D/g, '');
+            if (celular.length < 10) {
+                erros.push('• Celular deve ter pelo menos 10 dígitos para receber o código WhatsApp');
+            }
+            
+            // Validar Email
+            var email = $('#CliEmail').val().trim();
+            var temArroba = email.includes('@@');
+            var temPonto = email.includes('.');
+            if (!email || !temArroba || !temPonto || email.length < 5) {
+                erros.push('• Email deve ter um formato válido');
+            }
+            
+            // Validar ReCaptcha
+            var recaptchaResponse = grecaptcha.getResponse();
+            if (!recaptchaResponse || recaptchaResponse.length === 0) {
+                erros.push('• Complete a verificação reCAPTCHA');
+            }
+            
+            // Se houver erros, mostrar e focar no primeiro campo com erro
+            if (erros.length > 0) {
+                mostrarAlerta(
+                    'Campos Obrigatórios',
+                    'Por favor, preencha todos os campos obrigatórios:<br><br>' + erros.join('<br>'),
+                    function() {
+                        // Focar no primeiro campo com erro
+                        if (nome.length < 2) {
+                            $('#CliNome').focus();
+                        } else if (empresa.length < 2) {
+                            $('#CliEmpresa').focus();
+                        } else if (cep.length > 0 && cep.length !== 8) {
+                            $('#txtCEP').focus();
+                        } else if (cep.length === 0 && (!estado || estado === '' || estado === '0')) {
+                            $('#cbxEstado').focus();
+                        } else if (cep.length === 0 && (!cidade || cidade === '' || cidade === '0')) {
+                            $('#cbxCidade').focus();
+                        } else if (celular.length < 10) {
+                            $('#CliTelefoneCelular').focus();
+                        } else if (!email || !email.includes('@@') || !email.includes('.') || email.length < 5) {
+                            $('#CliEmail').focus();
+                        }
+                    }
+                );
+                return false;
+            }
+            
+            return true;
+        }
+
+        // Variáveis globais do modal
+        let tempoRestanteModal = 300; // 5 minutos
+        let intervaloCronometroModal;
+        let timestampInicialModal;
+
+        function enviarFormularioAjax() {
+            // Mostrar loading
+            $('#loadingSaving').fadeIn();
+            
+            // Coletar dados do formulário
+            var formData = new FormData($('form')[0]);
+            
+            // Adicionar indicador AJAX como fallback
+            formData.append('ajax', 'true');
+            
+            $.ajax({
+                url: '@Url.Action("Index")',
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                dataType: 'json', // Forçar interpretação como JSON
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json'
+                },
+                success: function(response) {
+                    $('#loadingSaving').fadeOut();
+                    
+                    console.log('[FORM] Resposta do servidor:', response);
+                    
+                    // Verificar se a resposta é JSON válida
+                    if (typeof response === 'object' && response !== null) {
+                        if (response.sucesso) {
+                            // Abrir modal de verificação
+                            abrirModalVerificacao(response.nomeCliente, $('#CliTelefoneCelular').val());
+                            
+                            // Log de debug se disponível
+                            if (response.debug) {
+                                console.log('[DEBUG] Info do servidor:', response.debug);
+                            }
+                            
+                            // Mostrar status do WhatsApp
+                            if (!response.whatsappSucesso && response.whatsappErro) {
+                                $('#erroVerificacao').show();
+                                $('#mensagemErro').text('Aviso: ' + ' Tente usar o envio por email.');
+                            }
+                        } else {
+                            // Mostrar erros de validação
+                            if (response.erros && response.erros.length > 0) {
+                                mostrarAlerta('Erro de Validação', response.erros.join('<br>'));
+                            } else {
+                                mostrarAlerta('Erro', response.erro || 'Erro interno. Tente novamente.');
+                            }
+                        }
+                    } else {
+                        // Se recebeu HTML em vez de JSON, significa que algo deu errado
+                        console.error('[FORM] Resposta não é JSON válida:', response);
+                        mostrarAlerta('Erro de Sistema', 'Resposta inesperada do servidor. Tente novamente.');
+                    }
+                },
+                error: function(xhr, status, error) {
+                    $('#loadingSaving').fadeOut();
+                    console.error('Erro AJAX:', error);
+                    mostrarAlerta('Erro de Conexão', 'Não foi possível conectar ao servidor. Tente novamente.');
+                }
+            });
+        }
+
+        function abrirModalVerificacao(nomeCliente, telefone) {
+            // Preencher informações do modal
+            $('#nomeClienteModal').text(nomeCliente);
+            $('#telefoneModal').text(telefone);
+            
+            // Resetar estado
+            $('#erroVerificacao').hide();
+            $('#sucessoVerificacao').hide();
+            $('#codigoInputModal').val('').prop('disabled', false);
+            $('#btnVerificarModal').prop('disabled', false);
+            
+            // Resetar e habilitar botão reenviar
+            const btnReenviar = document.getElementById('btnReenviarCodigo');
+            if (btnReenviar) {
+                console.log('Habilitando botão reenviar no modal...');
+                btnReenviar.disabled = false;
+                btnReenviar.classList.remove('btn-reenviar-disabled', 'btn-reenviar-cooldown');
+                btnReenviar.innerHTML = 'Reenviar Código';
+                
+                // Adicionar event listener adicional para garantir que o clique funcione
+                btnReenviar.onclick = null; // Remove onclick se existir
+                btnReenviar.removeEventListener('click', reenviarCodigo);
+                
+                btnReenviar.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    // Verificar se o botão não está desabilitado
+                    if (btnReenviar.disabled || btnReenviar.classList.contains('btn-reenviar-disabled')) {
+                        return;
+                    }
+                    
+                    reenviarCodigo();
+                });
+                
+                console.log('Botão reenviar habilitado. Classes:', btnReenviar.className);
+            } else {
+                console.error('Botão reenviar não encontrado!');
+            }
+            
+            // Inicializar cronômetro
+            timestampInicialModal = new Date();
+            tempoRestanteModal = 300;
+            atualizarCronometroModal();
+            intervaloCronometroModal = setInterval(atualizarCronometroModal, 1000);
+            
+            // Mostrar modal
+            $('#modalVerificacao').fadeIn(300);
+            
+            // Focar no input
+            setTimeout(() => {
+                $('#codigoInputModal').focus();
+            }, 400);
+            
+            // Configurar comportamento do input
+            configurarInputCodigo();
+        }
+
+        function atualizarCronometroModal() {
+            const minutos = Math.floor(tempoRestanteModal / 60);
+            const segundos = tempoRestanteModal % 60;
+            
+            const cronometroEl = document.getElementById('cronometroModal');
+            cronometroEl.textContent = 
+                String(minutos).padStart(2, '0') + ':' + String(segundos).padStart(2, '0');
+            
+            // Aplicar classes CSS baseadas no tempo
+            cronometroEl.classList.remove('warning', 'danger');
+            if (tempoRestanteModal <= 0) {
+                cronometroEl.classList.add('danger');
+                cronometroEl.textContent = 'EXPIRADO';
+                
+                // Mostrar mensagem de código expirado
+                $('#erroVerificacao').show();
+                $('#mensagemErro').text('Código expirado. Você será redirecionado a página anterior e .');
+                
+                // Habilitar botão de reenvio quando expirar, mas manter verificação ativa
+                const btnReenviar = document.getElementById('btnReenviarCodigo');
+                if (btnReenviar) {
+                    btnReenviar.disabled = false;
+                    btnReenviar.classList.remove('btn-reenviar-disabled');
+                }
+                
+                // Manter input e botão de verificação habilitados para permitir
+                // verificação de códigos válidos mesmo após expiração do cronômetro
+                document.getElementById('btnVerificarModal').disabled = false;
+                document.getElementById('codigoInputModal').disabled = false;
+                
+                // Parar cronômetro
+                if (intervaloCronometroModal) {
+                    clearInterval(intervaloCronometroModal);
+                }
+                
+                $('#erroVerificacao').show();
+                $('#mensagemErro').text('Código expirado. Use o botão "Reenviar Código" para gerar um novo código.');
+                
+                // Fechar modal automaticamente após 5 segundos
+                setTimeout(() => {
+                    fecharModalVerificacao();
+                }, 5000);
+                
+                return;
+            } else if (tempoRestanteModal < 60) {
+                cronometroEl.classList.add('danger');
+            } else if (tempoRestanteModal < 120) {
+                cronometroEl.classList.add('warning');
+            }
+            
+            tempoRestanteModal--;
+        }
+
+        function configurarInputCodigo() {
+            const input = document.getElementById('codigoInputModal');
+            
+            // Permitir apenas números
+            input.addEventListener('input', function(e) {
+                this.value = this.value.replace(/\D/g, '').substring(0, 4);
+                
+                // Auto-submit quando digitar 4 dígitos
+                if (this.value.length === 4) {
+                    setTimeout(() => {
+                        verificarCodigoAjax();
+                    }, 500);
+                }
+            });
+            
+            // Efeito visual ao digitar
+            input.addEventListener('keydown', function(e) {
+                if (e.key >= '0' && e.key <= '9') {
+                    this.style.transform = 'scale(1.05)';
+                    setTimeout(() => {
+                        this.style.transform = 'scale(1.02)';
+                    }, 100);
+                }
+            });
+            
+            // Enter para verificar
+            input.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault(); // Previne submit do formulário
+                    e.stopPropagation(); // Impede propagação do evento
+                    verificarCodigoAjax();
+                }
+            });
+        }
+
+        function verificarCodigoAjax() {
+            const codigo = $('#codigoInputModal').val();
+            
+            if (codigo.length !== 4) {
+                $('#erroVerificacao').show();
+                $('#mensagemErro').text('Por favor, digite um código de 4 dígitos.');
+                return;
+            }
+            
+            // Garantir que os controles estejam habilitados para verificação
+            const btnVerificar = $('#btnVerificarModal');
+            const inputCodigo = $('#codigoInputModal');
+            
+            // Temporariamente habilitar se estiver desabilitado
+            const btnEstavDesabilitado = btnVerificar.prop('disabled');
+            const inputEstavDesabilitado = inputCodigo.prop('disabled');
+            
+            // Desabilitar apenas durante a verificação
+            btnVerificar.prop('disabled', true).text('⏳ Verificando...');
+            $('#erroVerificacao').hide();
+            $('#sucessoVerificacao').hide();
+            
+            $.ajax({
+                url: '@Url.Action("VerificarCodigoAjax", "Demonstracao", new { lang = ViewContext.RouteData.Values["lang"] })',
+                type: 'POST',
+                data: {
+                    codigoInformado: codigo
+                },
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val()
+                },
+                success: function(response) {
+                    console.log('[VERIFICACAO] Resposta completa:', response);
+                    $('#btnVerificarModal').prop('disabled', false).text(' Verificar Código');
+                    
+                    if (response.sucesso) {
+                        // Sucesso na verificação
+                        $('#sucessoVerificacao').show();
+                        $('#mensagemSucesso').text('Código verificado com sucesso! Cadastro realizado.');
+                        
+                        console.log('[VERIFICACAO] Código válido. CadastroSucesso:', response.cadastroSucesso);
+                        
+                        // Parar cronômetro
+                        if (intervaloCronometroModal) {
+                            clearInterval(intervaloCronometroModal);
+                        }
+                        
+                        // Fechar modal após 3 segundos e redirecionar para página de sucesso
+                        setTimeout(() => {
+                            fecharModalVerificacao();
+                            
+                            // Sempre redirecionar para a página de sucesso após verificação bem-sucedida
+                            console.log('[VERIFICACAO] Redirecionando para página de sucesso...');
+                            window.location.href = '@Url.Action("Success")';
+                        }, 3000);
+                        
+                    } else {
+                        // Erro na verificação
+                        $('#erroVerificacao').show();
+                        $('#mensagemErro').text(response.erro);
+                        
+                        if (response.expirado) {
+                            // Código expirado
+                            $('#btnVerificarModal').prop('disabled', true);
+                            $('#codigoInputModal').prop('disabled', true);
+                            
+                            if (intervaloCronometroModal) {
+                                clearInterval(intervaloCronometroModal);
+                            }
+                        } else {
+                            // Código incorreto - limpar e focar
+                            $('#codigoInputModal').val('').focus();
+                        }
+                    }
+                },
+                error: function(xhr, status, error) {
+                    $('#btnVerificarModal').prop('disabled', false).text(' Verificar Código');
+                    $('#erroVerificacao').show();
+                    $('#mensagemErro').text('Erro de conexão. Tente novamente.');
+                    console.error('Erro AJAX verificação:', error);
+                }
+            });
+        }
+
+        function fecharModalVerificacao() {
+            $('#modalVerificacao').fadeOut(300);
+            
+            // Parar cronômetro
+            if (intervaloCronometroModal) {
+                clearInterval(intervaloCronometroModal);
+                intervaloCronometroModal = null;
+            }
+            
+            // Resetar botão reenviar para estado inicial
+            const btnReenviar = document.getElementById('btnReenviarCodigo');
+            if (btnReenviar) {
+                btnReenviar.disabled = true;
+                btnReenviar.classList.remove('btn-reenviar-cooldown');
+                btnReenviar.classList.add('btn-reenviar-disabled');
+                btnReenviar.innerHTML = 'Reenviar Código';
+            }
+            
+            // Resetar formulário principal se necessário
+            // (permite refazer o cadastro)
+        }
+
+        function enviarCodigoPorEmailModal() {
+            const btnEnviar = document.getElementById('btnEnviarPorEmailModal');
+            const statusDiv = document.getElementById('statusEnvioEmailModal');
+            
+            // Desabilitar botão e mostrar loading
+            btnEnviar.disabled = true;
+            btnEnviar.innerHTML = '⏳ Enviando...';
+            statusDiv.innerHTML = '';
+            
+            $.ajax({
+                url: '@Url.Action("ReenviarCodigoPorEmail", "Demonstracao", new { lang = ViewContext.RouteData.Values["lang"] })',
+                type: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val()
+                },
+                success: function(response) {
+                    if (response.sucesso) {
+                        statusDiv.innerHTML = '<span style="color: #27ae60;">✓ ' + response.mensagem + '</span>';
+                        alertDanger = document.getElementById('erroVerificacao');
+
+                        alertDanger.innerHTML = '<span style="color: #27ae60; background-color: none; border: none">✓ ' + 'Enviado por Email' + '</span>';
+                        btnEnviar.innerHTML = '✓ Enviado';
+                        // Reabilitar após 30 segundos
+                        setTimeout(() => {
+                            btnEnviar.disabled = false;
+                            btnEnviar.innerHTML = 'Enviar por Email';
+                        }, 30000);
+                    } else {
+                        statusDiv.innerHTML = '<span style="color: #e74c3c;">⚠ ' + response.mensagem + '</span>';
+                        btnEnviar.disabled = false;
+                        btnEnviar.innerHTML = 'Enviar por Email';
+                    }
+                },
+                error: function() {
+                    statusDiv.innerHTML = '<span style="color: #e74c3c;">⚠ Erro de conexão. Tente novamente.</span>';
+                    btnEnviar.disabled = false;
+                    btnEnviar.innerHTML = 'Enviar por Email';
+                }
+            });
+        }
+
+        function reenviarCodigo() {
+            const btnReenviar = document.getElementById('btnReenviarCodigo');
+            
+            if (!btnReenviar) {
+                console.error('[REENVIO] Botão btnReenviarCodigo não encontrado!');
+                return;
+            }
+            
+            // Verificar se já está em cooldown
+            if (btnReenviar.classList.contains('btn-reenviar-cooldown')) {
+                console.log('[REENVIO] Botão em cooldown, ignorando clique');
+                return;
+            }
+            
+            console.log('[REENVIO] Iniciando reenvio de código...');
+            
+            // Estado de loading
+            btnReenviar.disabled = true;
+            btnReenviar.innerHTML = '⏳ Reenviando...';
+            
+            // Limpar mensagens anteriores
+            $('#erroVerificacao').hide();
+            $('#sucessoVerificacao').hide();
+            
+            $.ajax({
+                url: '@Url.Action("ReenviarCodigo", "Demonstracao", new { lang = ViewContext.RouteData.Values["lang"] })',
+                type: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                success: function(response) {
+                    console.log('[REENVIO] Resposta:', response);
+                    
+                    if (response.sucesso) {
+                        console.log('[REENVIO] Código reenviado com sucesso');
+                        // Sucesso - resetar cronômetro e reabilitar controles
+                        tempoRestanteModal = 300; // 5 minutos
+                        
+                        // Reabilitar controles imediatamente
+                        document.getElementById('btnVerificarModal').disabled = false;
+                        document.getElementById('codigoInputModal').disabled = false;
+                        document.getElementById('codigoInputModal').value = '';
+                        
+                        // Focar no input após um pequeno delay para garantir que está visível
+                        setTimeout(() => {
+                            document.getElementById('codigoInputModal').focus();
+                        }, 100);
+                        
+                        // Reiniciar cronômetro
+                        if (intervaloCronometroModal) {
+                            clearInterval(intervaloCronometroModal);
+                        }
+                        atualizarCronometroModal();
+                        intervaloCronometroModal = setInterval(atualizarCronometroModal, 1000);
+                        
+                        // Mostrar mensagem de sucesso
+                        $('#sucessoVerificacao').show();
+                        $('#mensagemSucesso').text('Novo código enviado para ' + response.telefone);
+                        
+                        // Estado de cooldown por 2 minutos (120 segundos)
+                        btnReenviar.classList.add('btn-reenviar-cooldown');
+                        
+                        let cooldownTime = 120;
+                        const intervaloCooldown = setInterval(() => {
+                            const minutos = Math.floor(cooldownTime / 60);
+                            const segundos = cooldownTime % 60;
+                            const tempoFormatado = minutos > 0 ? `${minutos}:${segundos.toString().padStart(2, '0')}` : `${segundos}s`;
+                            btnReenviar.innerHTML = 'Aguarde ' + tempoFormatado;
+                            cooldownTime--;
+                            
+                            if (cooldownTime < 0) {
+                                clearInterval(intervaloCooldown);
+                                btnReenviar.disabled = false;
+                                btnReenviar.classList.remove('btn-reenviar-cooldown');
+                                btnReenviar.innerHTML = 'Reenviar Código';
+                            }
+                        }, 1000);
+                        
+                    } else {
+                        console.log('[REENVIO] Erro:', response.mensagem);
+                        // Erro - mostrar mensagem
+                        $('#erroVerificacao').show();
+                        $('#mensagemErro').text(response.mensagem);
+                        
+                        // Resetar botão
+                        btnReenviar.disabled = false;
+                        btnReenviar.innerHTML = 'Reenviar Código';
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('[REENVIO] Erro AJAX:', xhr.responseText || error);
+                    
+                    // Erro de conexão
+                    $('#erroVerificacao').show();
+                    $('#mensagemErro').text('Erro interno: ' + (xhr.responseText || error || 'Tente novamente.'));
+                    
+                    // Resetar botão
+                    btnReenviar.disabled = false;
+                    btnReenviar.innerHTML = 'Reenviar Código';
+                }
+            });
+        }
+
+        // Evento do botão verificar do modal
+        $(document).on('click', '#btnVerificarModal', function() {
+            verificarCodigoAjax();
+        });
+    </script>
+}
+<form asp-action="Index" asp-anti-forgery="true" method="post">
+    <div class="divCadastro">
+        <div class="tvp-container">
+            <div class="row rowmargin">
+                <div class="col-sm-12">
+                    <div id="cadastrodemonstracao">
+                        <div style="text-align: center;">
+                            <div class="divSubTituloConteudo">
+                                <img alt="ICON REDE ATENDIDA" src="/img/Demonstracao/icon-demonstracao.png" />
+                                <h1>
+                                    @localizerCommon["Demonstracao"]
+                                </h1>
+                            </div>
+                            <div style="margin-bottom: 35px;">
+                                @TVPlayerSite.Controllers.BaseController.ImageTag("PRODUTOS E SOLUÇÔES FX LINE", "/img/QuemSomos/fx-line-degrade.png", null, null, "responsive", "img-responsive center-block", ViewContext.RouteData.Values["amp"]?.ToString() == "amp")
+                            </div>
+                            <div class="divAvaliacaoSistema">
+                                <p style="font-size: 36px;font-family: 'Montserrat-bold';margin-bottom: 0;margin-top: 25px;">@localizer["Texto1"]</p>
+                                <p style="font-size: 22px;font-weight: 500;margin-bottom: 25px;">@localizer["Texto2"]</p>
+                            </div>
+                            <div class="row form-group">
+                                <div class="col-sm-6">
+                                    <div class="row">
+                                        <div class="col-xs-12 labelContato">
+                                            <label asp-for="CliNome"></label>
+                                        </div>
+                                        <div class="col-xs-12">
+                                            <input asp-for="CliNome" class="form-control" />
+                                        </div>
+                                    </div>
+                                    <div class="row row-cadastro">
+                                        <div class="col-xs-12 labelValidator">
+                                            <span asp-validation-for="CliNome" class="text-danger"></span>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-xs-12 labelContato">
+                                            <label asp-for="CliEmpresa"></label>
+                                        </div>
+                                        <div class="col-xs-12">
+                                            <input asp-for="CliEmpresa" class="form-control" />
+                                        </div>
+                                    </div>
+                                    <div class="row row-cadastro">
+                                        <div class="col-xs-12 labelValidator">
+                                            <span asp-validation-for="CliEmpresa" class="text-danger"></span>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-xs-12 labelContato">
+                                            <label asp-for="CEP"></label>
+                                        </div>
+                                        <div class="col-xs-12">
+                                            <input type="text" asp-for="CEP" id="txtCEP" class="form-control" data-mask="00000-000" />
+                                        </div>
+                                    </div>
+                                    <div class="row row-cadastro">
+                                        <div class="col-xs-12 labelValidator">
+                                            <span class="text-danger"></span>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-xs-12">
+                                            <input type="button" id="btnBuscarCEP" value="@localizerCommon["CarregarCidadePeloCEP"]" class="botaoCep" />
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-xs-12 labelContato">
+                                            <label asp-for="CliEstadoId"></label>
+                                        </div>
+                                        <div class="col-xs-12">
+                                            <select id="cbxEstado" asp-for="CliEstadoId" asp-items="ViewBag.Estado" class="form-control"></select>
+                                        </div>
+                                    </div>
+                                    <div class="row row-cadastro">
+                                        <div class="col-xs-12 labelValidator">
+                                            <span asp-validation-for="CliEstadoId" class="text-danger"></span>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-xs-12 labelContato">
+                                            <label asp-for="CliCidadeId"></label>
+                                        </div>
+                                        <div class="col-xs-12">
+                                            <select id="cbxCidade" asp-for="CliCidadeId" asp-items="ViewBag.Cidade" class="form-control"></select>
+                                        </div>
+                                    </div>
+                                    <div class="row row-cadastro">
+                                        <div class="col-xs-12 labelValidator">
+                                            <span asp-validation-for="CliCidadeId" class="text-danger"></span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-sm-6">
+                                    <div class="row">
+                                        <div class="col-xs-12 labelContato">
+                                            <label asp-for="CliTelefoneCelular"></label>
+                                        </div>
+                                        <div class="col-xs-12">
+                                            <input asp-for="CliTelefoneCelular" data-mask="(00) 00000-0000" class="form-control" />
+                                        </div>
+                                    </div>
+                                    <div class="row row-cadastro">
+                                        <div class="col-xs-12 labelValidator">
+                                            <span asp-validation-for="CliTelefoneCelular" class="text-danger"></span>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-xs-12 labelContato">
+                                            <label asp-for="CliTelefoneFixo"></label>
+                                        </div>
+                                        <div class="col-xs-12">
+                                            <input asp-for="CliTelefoneFixo" data-mask="(00) 0000-0000" class="form-control" />
+                                        </div>
+                                    </div>
+                                    <div class="row row-cadastro">
+                                        <div class="col-xs-12 labelValidator">
+                                            <span asp-validation-for="CliTelefoneFixo" class="text-danger"></span>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-xs-12 labelContato">
+                                            <label asp-for="CliEmail"></label>
+                                        </div>
+                                        <div class="col-xs-12">
+                                            <input asp-for="CliEmail" class="form-control" />
+                                        </div>
+                                    </div>
+                                    <div class="row row-cadastro">
+                                        <div class="col-xs-12 labelValidator">
+                                            <span asp-validation-for="CliEmail" class="text-danger"></span>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-xs-12 labelContato">
+                                            <label asp-for="CliObservacao"></label>
+                                        </div>
+                                        <div class="col-xs-12">
+                                            <textarea asp-for="CliObservacao" class="form-control"></textarea>
+                                        </div>
+                                    </div>
+                                    <div class="row row-cadastro">
+                                        <div class="col-xs-12 labelValidator">
+                                            <span asp-validation-for="CliObservacao" class="text-danger"></span>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-xs-12">
+                                            <div class="g-recaptcha" data-sitekey="6Ld5TtMUAAAAABlpgJeip58FwHarnL-v71oY-qy7"></div>
+                                        </div>
+                                    </div>
+                                    <div class="row row-cadastro">
+                                        <div class="col-xs-12 labelValidator">
+                                            <span asp-validation-for="ReCaptcha" class="text-danger"></span>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-xs-12 col-sm-offset-4" style="text-align: right;">
+                                            <div class="form-group">
+                                                <input type="submit" value="@localizerCommon["Enviar"]" id="botaoEnviar" class="botaoEnviar" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal de Verificação de Código -->
+    <div id="modalVerificacao" class="modal-verificacao" style="display: none;">
+        <div class="modal-content-verificacao-horizontal">
+            <!-- Lado Esquerdo - Informações e Logo -->
+            <div class="modal-lado-esquerdo">
+                <div class="icon-verificacao">
+                    <img src="@Url.Content("~/img/tvplayer-h.png")" alt="TVPlayer Logo" />
+                </div>
+                <h2>VERIFICAR CÓDIGO</h2>
+                
+                <div class="info-verificacao1">
+                    <p><strong>Olá <span id="nomeClienteModal"></span>!</strong></p>
+                    <p>Enviamos um código de 4 dígitos para o WhatsApp:</p>
+                    <p><strong><span id="telefoneModal"></span></strong></p>
+                    <p>Digite o código ao lado para finalizar seu cadastro.</p>
+                </div>
+                
+                <div class="info-verificacao2">
+                    <h1><strong>Não recebeu o código?</strong></h1>
+					<div class="grupo">
+                        <img src="@Url.Content("~/img/Demonstracao/marcador.png")" class="iconeVerde" alt="iconeVerde" />
+                        <p> Verifique se o número está correto</p>
+                    </div>
+
+                    <div class="grupo">
+                        <img src="@Url.Content("~/img/Demonstracao/marcador.png")" class="iconeVerde" alt="iconeVerde" />
+                        <p> Aguarde alguns minutos</p>
+                    </div>
+
+                    <div class="grupo">
+                        <img src="@Url.Content("~/img/Demonstracao/marcador.png")" class="iconeVerde" alt="iconeVerde" />
+                        <p> Caso não receba, volte e refaça o cadastro</p>
+                    </div>
+					
+                    
+                  
+                </div>
+            </div>
+            
+            <!-- Lado Direito - Formulário e Cronômetro -->
+            <div class="modal-lado-direito">
+                <div id="cronometroModal" class="cronometro">05:00</div>
+                
+                <div id="erroVerificacao" class="erro-verificacao" style="display: none;">
+                    ⚠️ <span id="mensagemErro"></span>
+                </div>
+                
+                <div id="sucessoVerificacao" class="sucesso-verificacao" style="display: none;">
+                    ✅ <span id="mensagemSucesso"></span>
+                </div>
+                
+                <div class="form-verificacao">
+                    <label for="codigoInputModal" class="codigo-label">Digite o código de 4 dígitos:</label>
+                    <input type="text" 
+                           id="codigoInputModal" 
+                           class="codigo-input" 
+                           placeholder="0000" 
+                           maxlength="4" 
+                           autocomplete="off" />
+                    
+                    <div class="botoes-container">
+                        <button type="button" id="btnVerificarModal" class="btn-verificar">
+                             Verificar Código
+                        </button>
+                        <button type="button" id="btnReenviarCodigo" class="btn-reenviar btn-reenviar-disabled" disabled>
+                            Reenviar Código
+                        </button>
+                        <button type="button" class="btn-cancelar" onclick="fecharModalVerificacao()">
+                             Voltar ao Cadastro
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="email-section">
+                    <p><strong>Receber por e-mail:</strong></p>
+                    <button type="button" id="btnEnviarPorEmailModal" class="btn-email" onclick="enviarCodigoPorEmailModal()">
+                    Enviar por Email
+                    </button>
+                    <div id="statusEnvioEmailModal" class="status-email"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div style="text-align: center; margin-top: 50px; margin-bottom: 100px;">
+        <img src="/img/Demonstracao/icon-demonstracao-degrade.png" />
+    </div>
+</form>
+@await Html.PartialAsync("_Loading")

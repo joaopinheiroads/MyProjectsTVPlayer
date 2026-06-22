@@ -1,0 +1,2 @@
+npm install -D @types/express @types/cors
+pm2 start scraper.js --name impostometro

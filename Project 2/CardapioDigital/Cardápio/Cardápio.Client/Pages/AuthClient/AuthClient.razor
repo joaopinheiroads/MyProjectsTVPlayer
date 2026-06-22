@@ -1,0 +1,224 @@
+﻿@page "/entrar"
+
+@using OptionsForm
+
+@inject IJSRuntime JSRuntime;
+@inject HttpClient HttpClient;
+@inject NavigationManager NavigationManager;
+@inject Cardápio.Client.Infra.Provider.CustomAuthenticationStateProvider Provider;
+
+@code {
+    private string token;
+    private string errorResponse;
+    private bool isFirstRenderForce = false;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            isFirstRenderForce = true;
+        }
+
+        if (isFirstRenderForce && !Provider.IsLoading)
+        {
+            isFirstRenderForce = false;
+            StateHasChanged();
+            await Task.Yield();
+
+            await JSRuntime.InvokeVoidAsync("initializeGoogleSignIn", DotNetObjectReference.Create(this));
+        } 
+
+        if (Provider.IsLoading)
+        {
+            StateHasChanged();
+        }
+    }
+
+    private LoginStep currentStep = LoginStep.Initial;
+
+    private Dictionary<LoginStep, RenderFragment> views;
+
+    public AuthClient()
+    {
+        views = new Dictionary<LoginStep, RenderFragment>
+        {
+            { LoginStep.Email, BuildEmailLogin },
+            { LoginStep.Phone, BuildPhoneLogin }
+        };
+    }
+
+    private RenderFragment DynamicComponent => views.ContainsKey(currentStep) ? views[currentStep] : null;
+
+    private async Task ShowView(LoginStep step)
+    {
+        if (step == currentStep) return;
+
+        currentStep = step;
+
+        await Task.Yield();
+
+        await JSRuntime.InvokeVoidAsync("initializeGoogleSignIn", DotNetObjectReference.Create(this));
+        StateHasChanged();
+    }
+
+    [JSInvokable("HandleGoogleLogin")]
+    public async Task HandleGoogleLogin(string credential)
+    {
+        GoogleAutenticationDTO account = new()
+        {
+            Email = credential,
+        };
+
+        var response = await HttpClient.PostAsJsonAsync("/api/authentication/google-authentication", account);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            var errorResponseContent = await response.Content.ReadAsStringAsync();
+            try
+            {
+                var errorObject = JsonSerializer.Deserialize<ErrorResponse>(errorResponseContent);
+                errorResponse = errorObject?.MessageError ?? "Ocorreu um erro desconhecido.";
+            }
+            catch
+            {
+                errorResponse = errorResponseContent;
+            }
+
+            throw new Exception(errorResponse);
+        }
+
+        string responseContent = await response.Content.ReadAsStringAsync();
+        AuthenticationDto tokenResponse = JsonSerializer.Deserialize<AuthenticationDto>(responseContent);
+
+        token = tokenResponse?._Token;
+
+        if (!string.IsNullOrEmpty(token))
+        {
+            await Provider.SetTokenAsync(token, true);
+
+            var returnUrl = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "returnUrl");
+
+            await JSRuntime.InvokeVoidAsync("localStorage.removeItem", "returnUrl");
+
+            NavigationManager.NavigateTo(string.IsNullOrEmpty(returnUrl) ? "/loja/Rei-do-Hamburguer-Região-Leste" : returnUrl, false);
+        }
+
+        Console.WriteLine($"Google Credential: {credential}");
+    }
+
+    private RenderFragment BuildEmailLogin => builder =>
+    {
+        builder.OpenComponent(0, typeof(EmailLogin));
+        builder.AddAttribute(1, "OnBack", EventCallback.Factory.Create(this, () => ShowView(LoginStep.Initial)));
+        builder.CloseComponent();
+    };
+
+    private RenderFragment BuildPhoneLogin => builder =>
+    {
+        builder.OpenComponent(0, typeof(PhoneLogin));
+        builder.AddAttribute(1, "OnBack", EventCallback.Factory.Create(this, () => ShowView(LoginStep.Initial)));
+        builder.CloseComponent();
+    };
+}
+
+<head>
+    <HeadOutlet />
+    <PageTitle>Faça login e peça online | Escolha AI</PageTitle>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+
+<div id="g_id_onload"
+     data-client_id="329193632224-to083b8d75cqs3lvtlnuetsr70rpmoqt.apps.googleusercontent.com"
+     data-callback="handleCredentialResponse">
+</div>
+
+@if (!Provider.IsLoading)
+{
+    <header class="header-auth">
+        <nav>
+            <img class="logo" src="assets/teste3.png" />
+        </nav>
+    </header>
+
+    <main>
+        <div class="background-circle">
+            <div class="circle">
+                <div class="illustration">
+                    <img src="assets/illustration-login.svg" alt="Illustration Login" />
+                </div>
+            </div>
+            <div class="container-form">
+                @if (currentStep == LoginStep.Initial)
+                {
+                    <h2 class="title">Falta pouco para <br> matar sua fome!</h2>
+                    <span class="message">Como deseja continuar?</span>
+
+                    <div class="buttons-container">
+                        <div id="g_id_signin" class="g_id_signin button-google" data-type="standard"></div>
+
+                        <div class="container-divide">
+                            <div class="divide"></div>
+                            <span>ou</span>
+                            <div class="divide"></div>
+                        </div>
+
+                        <div class="buttons-wrap">
+                            <div class="email">
+                                <button type="button" @onclick="() => ShowView(LoginStep.Email)">
+                                    <i class="fa-solid fa-envelope"></i><span>Entrar com E-mail</span>
+                                </button>
+                            </div>
+                            <div class="phone">
+                                <button type="button" @onclick="() => ShowView(LoginStep.Phone)">
+                                    <i class="fa-solid fa-phone"></i><span>Entrar com Celular</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    @DynamicComponent
+                }
+            </div>
+        </div>
+    </main>
+}
+
+@if (Provider.IsLoading)
+{
+    <div class="loader-initial">
+        <SpinnerLoader PrimaryColor="#272A2D" SecondaryColor="#ffffff" Size="90" />
+    </div>
+}
+
+<script>
+    window.initializeGoogleSignIn = function (dotNetObject) {
+        google.accounts.id.initialize({
+            client_id: '329193632224-to083b8d75cqs3lvtlnuetsr70rpmoqt.apps.googleusercontent.com',
+            callback: (response) => {
+                const jwt = response.credential;
+                const decoded = JSON.parse(atob(jwt.split('.')[1]));
+
+                dotNetObject.invokeMethodAsync('HandleGoogleLogin', decoded.email);
+            }
+        });
+
+        google.accounts.id.renderButton(
+            document.getElementById('g_id_signin'),
+            { theme: 'outline', size: 'large' }
+        );
+    }
+</script>
+
+<style>
+    div#g_id_signin > div > div > div {
+        background-color: white !important;
+        border-radius: 0.375rem;
+    }
+
+    div#g_id_signin > div > div > div > div > span {
+        color: #3D3D3D !important;
+        font-family: 'Nunito';
+    }
+</style>

@@ -1,0 +1,70 @@
+﻿.header {
+	display: flex;
+	align-items: center;
+	justify-content: end;
+	padding-bottom: 1.25rem;
+}
+
+.content-header {
+	display: flex;
+	align-items: center;
+	gap: .75rem;
+}
+
+.success-message {
+	width: 100%;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	flex-direction: column;
+}
+
+.close {
+	color: #6B7280;
+	font-size: 1rem;
+	line-height: 0;
+	cursor: pointer;
+	margin-bottom: 1rem;
+	padding: .4rem;
+}
+
+.icon {
+	width: 131px;
+	height: 131px;
+	border-radius: 100%;
+	background-color: #29c2291a;
+	border: 2px solid #29C229;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+}
+
+.icon i {
+	color: #29C229;
+	line-height: 0;
+	font-size: 40px;
+}
+
+.title {
+	padding-top: .5rem;
+	font-size: 40px;
+	text-align: center;
+}
+
+.message {
+	margin-top: .5rem;
+	max-width: 250px;
+	text-align: center;
+	font-size: 15px;
+}
+
+.redirect {
+	padding-top: 3rem;
+	text-align: center;
+	font-size: 14px;
+}
+
+.link {
+	color: #118AB2;
+	text-decoration: underline;
+}

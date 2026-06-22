@@ -1,0 +1,444 @@
+/* Estilos para o componente de horários */
+.horarios-container {
+    padding: 1.5rem;
+    background-color: #ffffff;
+    border-radius: 0.5rem;
+    position: relative;
+}
+
+.horarios-header {
+    margin-bottom: 2rem;
+    text-align: center;
+}
+
+.horarios-header h4 {
+    margin: 0 0 0.5rem 0;
+    color: #2d3748;
+    font-size: 1.25rem;
+    font-weight: 600;
+}
+
+.horarios-description {
+    color: #718096;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    margin: 0 0 1.5rem 0;
+    max-width: 600px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+/* Formulário para adicionar horário */
+.add-horario-form {
+    background-color: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.75rem;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.add-horario-form h5 {
+    margin: 0 0 1rem 0;
+    color: #2d3748;
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr auto;
+    gap: 1rem;
+    align-items: end;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.form-group label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #4a5568;
+    margin-bottom: 0.25rem;
+}
+
+.form-select,
+.form-input {
+    padding: 0.75rem;
+    border: 1px solid #d1d5db;
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+    transition: all 0.2s ease;
+    background-color: white;
+    font-weight: 500;
+}
+
+.form-select:focus,
+.form-input:focus {
+    outline: none;
+    border-color: #4299e1;
+    box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
+}
+
+.form-select:hover,
+.form-input:hover {
+    border-color: #a0aec0;
+}
+
+.field-error {
+    color: #e53e3e;
+    font-size: 0.75rem;
+    font-weight: 500;
+    margin-top: 0.25rem;
+}
+
+.alert {
+    padding: 1rem;
+    border-radius: 0.5rem;
+    margin-bottom: 1rem;
+    font-weight: 500;
+}
+
+.alert-error {
+    background-color: #fed7d7;
+    border: 1px solid #feb2b2;
+    color: #c53030;
+}
+
+.btn-add-horario {
+    background: linear-gradient(135deg, #4299e1 0%, #3182ce 100%);
+    color: white;
+    border: none;
+    border-radius: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 4px rgba(66, 153, 225, 0.2);
+    white-space: nowrap;
+}
+
+.btn-add-horario:hover:not(:disabled) {
+    background: linear-gradient(135deg, #3182ce 0%, #2c5aa0 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(66, 153, 225, 0.3);
+}
+
+.btn-add-horario:active {
+    transform: translateY(0);
+}
+
+.btn-add-horario:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* Lista de horários salvos */
+.horarios-salvos {
+    margin-bottom: 2rem;
+}
+
+.horarios-salvos h5 {
+    margin: 0 0 1rem 0;
+    color: #2d3748;
+    font-size: 1.125rem;
+    font-weight: 600;
+}
+
+.horarios-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.horario-item-saved {
+    background-color: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.75rem;
+    padding: 1.5rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    transition: all 0.2s ease;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-left: 4px solid #48bb78;
+}
+
+.horario-item-temp {
+    background-color: #fffbf0;
+    border: 1px solid #f6e05e;
+    border-radius: 0.75rem;
+    padding: 1.5rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    transition: all 0.2s ease;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-left: 4px solid #f6ad55;
+}
+
+.horario-item-saved:hover,
+.horario-item-temp:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    border-color: #cbd5e0;
+    transform: translateY(-1px);
+}
+
+.horario-info {
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+    flex: 1;
+}
+
+.horario-badge {
+    margin-left: 1rem;
+}
+
+.badge-salvo {
+    background-color: #c6f6d5;
+    color: #22543d;
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+}
+
+.badge-temp {
+    background-color: #fed7aa;
+    color: #9c4221;
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+    animation: pulse-badge 2s infinite;
+}
+
+@keyframes pulse-badge {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.7;
+    }
+}
+
+.dia-semana,
+.horario-time,
+.horario-status {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.dia-semana {
+    color: #2d3748;
+    min-width: 120px;
+}
+
+.horario-time {
+    color: #4a5568;
+    min-width: 100px;
+}
+
+.status-ativo {
+    color: #38a169;
+}
+
+.status-inativo {
+    color: #e53e3e;
+}
+
+.horario-actions {
+    display: flex;
+    align-items: center;
+}
+
+.btn-remove-horario-saved,
+.btn-remove-horario-temp {
+    background: linear-gradient(135deg, #e53e3e 0%, #c53030 100%);
+    color: white;
+    border: none;
+    border-radius: 0.5rem;
+    padding: 0.75rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    position: relative;
+}
+
+.btn-remove-horario-temp {
+    background: linear-gradient(135deg, #ed8936 0%, #dd6b20 100%);
+}
+
+.btn-remove-horario-saved:hover,
+.btn-remove-horario-temp:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(229, 62, 62, 0.3);
+}
+
+.btn-remove-horario-temp:hover {
+    box-shadow: 0 4px 12px rgba(237, 137, 54, 0.3);
+}
+
+.btn-remove-horario-saved:disabled,
+.btn-remove-horario-temp:disabled {
+    background: #cbd5e0;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+    opacity: 0.6;
+}
+
+.horarios-empty {
+    text-align: center;
+    padding: 3rem 2rem;
+    color: #718096;
+    max-width: 500px;
+    margin: 0 auto;
+}
+
+.empty-icon {
+    margin-bottom: 1rem;
+}
+
+.empty-icon i {
+    font-size: 3rem;
+    color: #cbd5e0;
+}
+
+.horarios-empty h5 {
+    margin: 0 0 0.75rem 0;
+    color: #4a5568;
+    font-size: 1.125rem;
+    font-weight: 600;
+}
+
+.horarios-empty p {
+    margin: 0 0 0.5rem 0;
+    font-size: 0.875rem;
+    line-height: 1.5;
+}
+
+.empty-tip {
+    font-style: italic;
+    color: #a0aec0 !important;
+}
+
+/* Loading overlay */
+.loading-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(255, 255, 255, 0.9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.5rem;
+    z-index: 10;
+}
+
+.loading-content {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-weight: 500;
+    color: #4a5568;
+}
+
+/* Responsividade para dispositivos móveis */
+@media screen and (max-width: 768px) {
+    .horarios-container {
+        padding: 1rem;
+    }
+    
+    .form-row {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+    
+    .horarios-header {
+        margin-bottom: 1.5rem;
+    }
+    
+    .horarios-header h4 {
+        font-size: 1.125rem;
+    }
+    
+    .btn-add-horario {
+        width: 100%;
+        justify-content: center;
+        padding: 1rem 1.5rem;
+    }
+    
+    .horario-item-saved,
+    .horario-item-temp {
+        padding: 1rem;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 1rem;
+    }
+    
+    .horario-info {
+        flex-direction: column;
+        gap: 0.75rem;
+        align-items: stretch;
+    }
+    
+    .horario-badge {
+        margin-left: 0;
+        align-self: center;
+    }
+    
+    .badge-salvo,
+    .badge-temp {
+        font-size: 0.625rem;
+        padding: 0.2rem 0.5rem;
+    }
+    
+    .dia-semana,
+    .horario-time,
+    .horario-status {
+        min-width: auto;
+        justify-content: flex-start;
+    }
+    
+    .horario-actions {
+        justify-content: center;
+    }
+    
+    .horarios-empty {
+        padding: 2rem 1rem;
+    }
+}
+
+@media screen and (max-width: 480px) {
+    .horarios-description {
+        font-size: 0.8rem;
+    }
+    
+    .form-select,
+    .form-input {
+        padding: 0.625rem;
+        font-size: 0.8rem;
+    }
+}

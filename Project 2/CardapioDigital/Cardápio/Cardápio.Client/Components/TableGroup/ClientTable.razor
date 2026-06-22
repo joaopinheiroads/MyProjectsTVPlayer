@@ -1,0 +1,743 @@
+﻿@inject HttpClient HttpClient;
+@inject IJSRuntime jsRuntime;
+@inject Cardápio.Client.Infra.Provider.CustomAuthenticationStateProvider Provider;
+
+@inject Cardápio.Client.Pages.Empresas.EmpresaService EmpresaService;
+@inject Cardápio.Client.Pages.Usuarios.UsuarioService UsuarioService;
+@inject Cardápio.Client.Pages.Grupo.GrupoService GrupoService;
+
+@using System.Text.Json.Serialization;
+@using System.Collections.ObjectModel;
+@using Cardápio.Client.Components.Modal;
+
+@code {
+    [Parameter] public ObservableCollection<GrupoGetDTO> Grupos { get; set; } = new ObservableCollection<GrupoGetDTO>();
+    [Parameter] public EventCallback<IList<GrupoGetDTO>> HandleConfirm { get; set; }
+    [Parameter] public EventCallback<IList<GrupoGetDTO>> SelectedTypeChanged { get; set; }
+    [Parameter] public IList<GrupoGetDTO> SelectedGrupo { get; set; } = new List<GrupoGetDTO>();
+    public RadzenDataGrid<GrupoGetDTO> dataGrid { get; set; }
+
+    private UsuarioGetDTO usuario;
+    private string token;
+    private Dictionary<int, bool> expandedRows = new Dictionary<int, bool>();
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            token = await Provider.GetTokenAsync();
+        }
+    }
+
+    private async Task RowChanged(GrupoGetDTO grupo)
+    {
+        if (SelectedGrupo.Contains(grupo))
+        {
+            return;
+        }
+
+        SelectedGrupo.Clear();
+        SelectedGrupo.Add(grupo);
+
+        await SelectedTypeChanged.InvokeAsync(SelectedGrupo);
+    }
+
+    private void RowRender(RowRenderEventArgs<GrupoGetDTO> args)
+    {
+        if (SelectedGrupo.Any() && args.Data.ID == SelectedGrupo?.FirstOrDefault().ID)
+        {
+            args.Attributes.Add("class", "rz-state-highlight rz-data-row");
+        }
+    }
+
+    private RadzenDataGrid<EmpresaGetDTO> dataGride;
+    private IList<EmpresaGetDTO> ExpandedEmpresa = new List<EmpresaGetDTO>();
+
+    void OnEmpresaRowExpand(EmpresaGetDTO empresa)
+    {
+        if (!expandedRows.ContainsKey(empresa.ID))
+        {
+            expandedRows[empresa.ID] = true;
+        }
+
+        StateHasChanged();
+    }
+
+    void OnEmpresaRowCollapse(EmpresaGetDTO empresa)
+    {
+        if (expandedRows.ContainsKey(empresa.ID))
+        {
+            expandedRows[empresa.ID] = false;
+        }
+
+        StateHasChanged();
+    }
+
+    private void LoadEmpresaExpand(RowRenderEventArgs<EmpresaGetDTO> args)
+    {
+        if (ExpandedEmpresa.FirstOrDefault()?.ID == args.Data.ID)
+        {
+            if (!dataGride.IsRowExpanded(args.Data))
+            {
+                dataGride.ExpandRow(args.Data);
+            }
+        }
+    }
+}
+
+@code {
+    private bool isCreatingCompanyModalOpen;
+    private bool isEditingCompanyModalOpen;
+    private bool isDeletingCompanyModalOpen;
+    private bool isViewCompanyModalOpen;
+
+    private EmpresaGetDTO selectedEmpresa;
+
+    private void OpenCreatingCompanyModal()
+    {
+        isCreatingCompanyModalOpen = true;
+    }
+
+    private async Task OnCreateCompanyConfirm(EmpresaAddDTO companyTransferDataDTO)
+    {
+        try
+        {
+            companyTransferDataDTO.Files = null;
+            companyTransferDataDTO.CEP.Trim();
+
+            await EmpresaService.OnCreateCompanyInGroupIDConfirm(companyTransferDataDTO, SelectedGrupo.FirstOrDefault().ID);
+            await HandleConfirm.InvokeAsync(SelectedGrupo);
+
+            isCreatingCompanyModalOpen = false;
+        }
+        catch (Exception err)
+        {
+            throw err;
+        }
+    }
+
+    private async Task OnCreateCompanyCancel()
+    {
+        isCreatingCompanyModalOpen = false;
+    }
+
+    private void OpenEditingCompanyModal(EmpresaGetDTO empresaGetDTO)
+    {
+        
+        selectedEmpresa = empresaGetDTO;
+        isEditingCompanyModalOpen = true;
+        StateHasChanged(); // <-- adicione isso
+    }
+
+    private async Task OnEditCompanyConfirm(EmpresaAddDTO companyTransferDataDTO)
+    {
+        try
+        {
+            companyTransferDataDTO.Files = null;
+            companyTransferDataDTO.CEP.Trim();
+
+            await EmpresaService.OnEditCompanyConfirm(companyTransferDataDTO, selectedEmpresa.ID);
+            await HandleConfirm.InvokeAsync(SelectedGrupo);
+
+            isEditingCompanyModalOpen = false;
+            selectedEmpresa = null;
+        }
+        catch (Exception err)
+        {
+            throw err;
+        }
+    }
+
+    private async Task OnEditCompanyCancel()
+    {
+        selectedEmpresa = null;
+        isEditingCompanyModalOpen = false;
+    }
+
+    private void OpenDeletingCompanyModal(EmpresaGetDTO empresaGetDTO)
+    {
+        selectedEmpresa = empresaGetDTO;
+        isDeletingCompanyModalOpen = true;
+    }
+
+    private async Task OnDeleteCompanyConfirm()
+    {
+        HttpClient.DefaultRequestHeaders.Authorization =
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+        HttpResponseMessage response = await HttpClient.DeleteAsync($"/api/enterprise/DeleteCompany/{selectedEmpresa.ID}");
+
+        string? jsonResponse = await response.Content.ReadAsStringAsync();
+        await HandleConfirm.InvokeAsync(SelectedGrupo);
+
+        isDeletingCompanyModalOpen = false;
+        selectedEmpresa = null;
+    }
+
+    private async Task OnDeleteCompanyCancel()
+    {
+        isDeletingCompanyModalOpen = false;
+        selectedEmpresa = null;
+    }
+
+    private void OpenViewCompanyModal(EmpresaGetDTO empresaGetDTO)
+    {
+        selectedEmpresa = empresaGetDTO;
+        isViewCompanyModalOpen = true;
+    }
+
+    private void OnViewCompanyClose()
+    {
+        isViewCompanyModalOpen = false;
+        selectedEmpresa = null;
+    }
+}
+
+@code {
+    private bool isCreatingUserModalOpen;
+    private bool isEditingUserModalOpen;
+    private bool isDeletingUserModalOpen;
+    private UsuarioGetDTO selectedUser;
+    private EmpresaGetDTO selectedEmpresaModal;
+
+
+    private void OpenCreatingUserModel(EmpresaGetDTO empresa)
+    {
+        selectedGrupoModal = SelectedGrupo.FirstOrDefault();
+        selectedEmpresaModal = empresa;
+        Console.WriteLine($"[OpenCreatingUserModel] GrupoID: {selectedGrupoModal?.ID}, EmpresaID: {selectedEmpresaModal?.ID}");
+        isCreatingUserModalOpen = true;
+    }
+    private async Task OnCreateUserConfirm(UsuarioAddDTO userDTO)
+    {
+        try
+        {
+            await UsuarioService.OnCreateUserInCompanyIDConfirm(userDTO, SelectedGrupo.First().ID);
+            await HandleConfirm.InvokeAsync(SelectedGrupo);
+
+            isCreatingUserModalOpen = false;
+            selectedGrupoModal = null;
+        }
+        catch (Exception err)
+        {
+            Console.WriteLine(err);
+        }
+    }
+
+    private Task OnCreateUserCancel()
+    {
+        isCreatingUserModalOpen = false;
+        selectedGrupoModal = null;
+        return Task.CompletedTask;
+    }
+
+    private void OpenEditingUserModel(UsuarioGetDTO selectedUserDTO)
+    {
+        Console.WriteLine($"[OpenEditingUserModel] userID: {selectedUserDTO?.ID}");
+        selectedUser = selectedUserDTO;
+        isEditingUserModalOpen = true;
+        StateHasChanged(); // <-- adicione isso
+    }
+
+    private void OpenDeletingUserModal(UsuarioGetDTO selectedUserDTO)
+    {
+        selectedUser = selectedUserDTO;
+        isDeletingUserModalOpen = true;
+    }
+
+    private async Task OnDeleteUserConfirm()
+    {
+        try
+        {
+            await UsuarioService.OnDeleteUserConfirm(selectedUser.ID);
+            await HandleConfirm.InvokeAsync(SelectedGrupo);
+            selectedUser = null;
+        }
+        catch (Exception err)
+        {
+            Console.WriteLine(err.Message);
+        }
+
+        isDeletingUserModalOpen = false;
+    }
+
+    private Task OnDeleteUserCancel()
+    {
+        isDeletingUserModalOpen = false;
+        selectedUser = null;
+        return Task.CompletedTask;
+    }
+
+    private async Task OnEditUserConfirm(UsuarioUpdateDTO userDTO)
+    {
+        try
+        {
+            await UsuarioService.OnEditProductConfirm(userDTO, selectedUser.ID);
+            await HandleConfirm.InvokeAsync(SelectedGrupo);
+
+            isEditingUserModalOpen = false;
+            selectedUser = null;
+        }
+        catch (Exception err)
+        {
+            throw err;
+        }
+    }
+
+    private Task OnEditUserCancel()
+    {
+        selectedUser = null;
+        isEditingUserModalOpen = false;
+        return Task.CompletedTask;
+    }
+}
+
+@code {
+    private bool isCreatingGroupModalOpen;
+    private bool isEditingGroupModalOpen;
+    private bool isDeletingGroupModalOpen;
+    private GrupoGetDTO selectedGrupoModal;
+
+    private void OpenEditingGroupModal(GrupoGetDTO grupoGetDTO)
+    {
+        selectedGrupoModal = grupoGetDTO;
+        isEditingGroupModalOpen = true;
+    }
+
+    private void OpenDeletingGroupModal(GrupoGetDTO grupoGetDTO)
+    {
+        selectedGrupoModal = grupoGetDTO;
+        isDeletingGroupModalOpen = true;
+    }
+
+    private async Task OnEditGroupConfirm(GrupoUpdateDTO grupoDataDTO)
+    {
+        try
+        {
+            await GrupoService.OnEditGroupConfirm(grupoDataDTO, selectedGrupoModal.ID);
+            await HandleConfirm.InvokeAsync(SelectedGrupo);
+
+            isEditingGroupModalOpen = false;
+            selectedGrupoModal = null;
+        }
+        catch (Exception err)
+        {
+            throw err;
+        }
+    }
+
+    private Task OnEditGroupCancel()
+    {
+        isEditingGroupModalOpen = false;
+        selectedGrupoModal = null;
+        return Task.CompletedTask;
+    }
+
+    private async Task OnDeleteGroupConfirm()
+    {
+        try
+        {
+            await GrupoService.OnDeleteGroupConfirm(selectedGrupoModal.ID);
+
+            if (Grupos != null && Grupos.Any())
+            {
+                await HandleConfirm.InvokeAsync(SelectedGrupo);
+                StateHasChanged();
+
+                if (Grupos.Count != 0)
+                {
+                    SelectedGrupo = new List<GrupoGetDTO> { Grupos[0] };
+                    StateHasChanged();
+                }
+            }
+
+            isDeletingGroupModalOpen = false;
+            selectedGrupoModal = null;
+        }
+        catch (Exception err)
+        {
+            throw err;
+        }
+    }
+
+    private Task OnDeleteGroupCancel()
+    {
+        isDeletingGroupModalOpen = false;
+        selectedGrupoModal = null;
+        return Task.CompletedTask;
+    }
+}
+
+<Modal T="EmpresaAddDTO"
+       IsOpen="isCreatingCompanyModalOpen"
+       OnConfirm="@OnCreateCompanyConfirm"
+       OnCancel="@OnCreateCompanyCancel"
+       ActionType="creating/empresa"
+       SelectedDTO="object">
+</Modal>
+
+<Modal T="EmpresaAddDTO"
+       IsOpen="isEditingCompanyModalOpen"
+       OnConfirm="@OnEditCompanyConfirm"
+       OnCancel="@OnEditCompanyCancel"
+       ActionType="editing/empresa"
+       SelectedDTO="EmpresaGetDTO"
+       Selected="selectedEmpresa">
+</Modal>
+
+<Modal T="object"
+       IsOpen="isDeletingCompanyModalOpen"
+       OnConfirm="@OnDeleteCompanyConfirm"
+       OnCancel="@OnDeleteCompanyCancel"
+       ActionType="deleting/empresa"
+       SelectedDTO="object">
+</Modal>
+
+<Modal T="object"
+       IsOpen="isViewCompanyModalOpen"
+       OnConfirm="() => {}"
+       OnCancel="@OnViewCompanyClose"
+       ActionType="view/company"
+       SelectedDTO="EmpresaGetDTO"
+       Selected="selectedEmpresa">
+</Modal>
+
+<Modal T="UsuarioAddDTO"
+       IsOpen="isCreatingUserModalOpen"
+       OnConfirm="@OnCreateUserConfirm"
+       OnCancel="@(() => isCreatingUserModalOpen = false)"
+       ActionType="creating/usuario"
+       SelectedDTO="object"
+       GrupoID="@(selectedGrupoModal?.ID)"
+       EmpresaID="@(selectedEmpresaModal?.ID)">
+</Modal>
+
+<Modal T="UsuarioUpdateDTO"
+       IsOpen="isEditingUserModalOpen"
+       OnConfirm="@OnEditUserConfirm"
+       OnCancel="@OnEditUserCancel"
+       ActionType="editing/usuario"
+       SelectedDTO="UsuarioGetDTO"
+       Selected="selectedUser">
+</Modal>
+
+<Modal T="object"
+       IsOpen="isDeletingUserModalOpen"
+       OnConfirm="@OnDeleteUserConfirm"
+       OnCancel="@OnDeleteUserCancel"
+       ActionType="deleting/usuario"
+       SelectedDTO="object">
+</Modal>
+
+<Modal T="GrupoUpdateDTO"
+       IsOpen="isEditingGroupModalOpen"
+       OnConfirm="@OnEditGroupConfirm"
+       OnCancel="@OnEditGroupCancel"
+       ActionType="editing/grupo"
+       SelectedDTO="GrupoGetDTO"
+       Selected="selectedGrupoModal">
+</Modal>
+
+<Modal T="object"
+       IsOpen="isDeletingGroupModalOpen"
+       OnConfirm="@OnDeleteGroupConfirm"
+       OnCancel="@OnDeleteGroupCancel"
+       ActionType="deleting/grupo"
+       SelectedDTO="object">
+</Modal>
+
+<RadzenColumn Size="12" SizeMD="6">
+    <RadzenDataGrid @ref="dataGrid"
+                    TItem="GrupoGetDTO" 
+                    AllowFiltering="false" 
+                    AllowPaging="true" 
+                    AllowColumnResize="true"
+                    PageSize="5" 
+                    AllowSorting="true" 
+                    Data="@Grupos" 
+                    @bind-Value="@SelectedGrupo" 
+                    class="rz-border-radius-1 rz-shadow-1"
+                    style="min-height: 500px; max-height: 500px; height: 100%;" 
+                    lang="pt-br" 
+                    RowSelect="@(e => RowChanged(e))" 
+                    RowRender="@(args => RowRender(args))"
+                    Responsive="true"
+                    Page="@(() => {})">
+        <EmptyTemplate>
+            <p style="color: lightgrey; font-size: 24px; text-align: center; margin: 2rem;">Nenhum grupo foi encontrado.</p>
+        </EmptyTemplate>
+        <Columns>
+            <RadzenDataGridColumn Property="ID" Title="ID" Width="120px" CssClass="number" Resizable="true"/>
+            <RadzenDataGridColumn Property="Nome" Title="Nome" Resizable="true"/>
+            <RadzenDataGridColumn Property="Ativo" Title="Status" Width="120px" Resizable="true">
+                <Template Context="grupo">
+                    @if (grupo.Ativo)
+                    {
+                        <span class="active" title="Ativo"><i class="fa-solid fa-user"></i></span>
+                    }
+                    else
+                    {
+                        <span class="deactive" title="Desativado"><i class="fa-solid fa-user"></i></span>
+                    }
+                </Template>
+            </RadzenDataGridColumn>
+            <RadzenDataGridColumn TItem="GrupoGetDTO" Property="Buttons:" Filterable="false" Sortable="false" Width="140px" Resizable="false" Frozen="true" FrozenPosition="FrozenColumnPosition.Right">
+                <Template>
+                    <div class="wrap">
+                        <button title="Editar informações" class="edit-button rz-ripple button-blue" @onclick="() => OpenEditingGroupModal(context)"><i class="fa-regular fa-pen-to-square"></i></button>
+                        <button title="Deletar grupo" class="trash-button rz-ripple button-pink" @onclick="() => OpenDeletingGroupModal(context)"><i class="fa-regular fa-trash-can"></i></button>
+                    </div>
+                </Template>
+            </RadzenDataGridColumn>
+        </Columns>
+    </RadzenDataGrid>
+</RadzenColumn>
+
+<RadzenColumn Size="12" SizeMD="6">
+    <RadzenCard Variant="Variant.Outlined" Style="height: 100%;">
+        <RadzenStack Gap="1rem">
+            <RadzenCard Variant="Variant.Text" class="rz-background-color-primary-lighter rz-color-on-primary-lighter">
+                @if (SelectedGrupo != null && SelectedGrupo.Any() && SelectedGrupo.FirstOrDefault() != null && !string.IsNullOrEmpty(SelectedGrupo.FirstOrDefault().Nome))
+                {
+                    @:Grupo: <span style="color: #073B4C !important;">@SelectedGrupo.FirstOrDefault().Nome</span>
+                }
+                else
+                {
+                    @:Selecione um grupo para informações
+                }
+            </RadzenCard>
+
+            @if (SelectedGrupo != null && SelectedGrupo.Any())
+            {
+                var grupo = SelectedGrupo?.FirstOrDefault();
+
+                @if (grupo.Empresas != null)
+                {
+                                        <RadzenDataGrid ExpandMode="DataGridExpandMode.Single"
+                                    RowExpand="@OnEmpresaRowExpand"
+                                    RowCollapse="@OnEmpresaRowCollapse"
+                                    Data="@grupo.Empresas"
+                                    TItem="EmpresaGetDTO"
+                                    AllowPaging="true"
+                                    AllowColumnResize="true"
+                                    AllowFiltering="false"
+                                    PageSize="5"
+                                    style="min-height: 200px; max-height: 600px; height: 100%;"
+                                    Page="@(() => {})"
+                                    Responsive="true"> 
+                        <EmptyTemplate>
+                            <p style="color: lightgrey; font-size: 24px; text-align: center; margin: 2rem;">Nenhuma empresa foi encontrada.</p>
+                        </EmptyTemplate>
+                        <Columns>
+                            <RadzenDataGridColumn TItem="EmpresaGetDTO" Property="ID" Title="ID da empresa" Resizable="true" Filterable="false" Sortable="true" CssClass="number" Width="110px">
+                                <Template>
+                                    @((context as EmpresaGetDTO).ID)
+                                </Template>
+                            </RadzenDataGridColumn>
+                            <RadzenDataGridColumn TItem="EmpresaGetDTO" Property="Nome" Title="Nome da empresa" Resizable="true" Filterable="false" Sortable="true" Width="150px">
+                                <Template>
+                                    <div style="overflow-x: auto; max-height: 100px; white-space: nowrap; box-sizing: border-box; padding-right: 16px; width: 100%;">
+                                        @((context as EmpresaGetDTO).Nome)
+                                    </div>
+                                </Template>
+                            </RadzenDataGridColumn>
+                            <RadzenDataGridColumn TItem="EmpresaGetDTO" Property="RazaoSocial" Title="Razão Social" Resizable="true" Filterable="false" Sortable="true" Width="150px">
+                                <Template>
+                                    <div style="overflow-x: auto; max-height: 100px; white-space: nowrap; box-sizing: border-box; padding-right: 16px; width: 100%;">
+                                        @((context as EmpresaGetDTO).RazaoSocial)
+                                    </div>
+                                </Template>
+                            </RadzenDataGridColumn>
+                            <RadzenDataGridColumn TItem="EmpresaGetDTO" Property="Cidade.CidNome" Title="Cidade" Resizable="true" Filterable="false" Sortable="true" Width="110px">
+                                <Template>
+                                    <div style="overflow-x: auto; max-height: 100px; white-space: nowrap; box-sizing: border-box; padding-right: 16px; width: 100%;">
+                                        @((context as EmpresaGetDTO).Cidade.CidNome)
+                                    </div>
+                                </Template>
+                            </RadzenDataGridColumn>
+                            <RadzenDataGridColumn TItem="EmpresaGetDTO" Property="Ativo" Title="Status" Resizable="true" Filterable="false" Sortable="true" Width="100px">
+                                <Template>
+                                    @{
+                                        var status = (context as EmpresaGetDTO).Ativo;
+                                        if (status)
+                                        {
+                                            <span class="active" title="Ativo"><i class="fa-solid fa-user"></i></span>
+                                        }
+                                        else
+                                        {
+                                            <span class="deactive" title="Desativado"><i class="fa-solid fa-user"></i></span>
+                                        }
+                                    }
+                                </Template>
+                            </RadzenDataGridColumn>
+                            <RadzenDataGridColumn TItem="EmpresaGetDTO" Property="Buttons:" Filterable="false" Sortable="false" Width="140px" Resizable="false" Frozen="true" FrozenPosition="FrozenColumnPosition.Right">
+                                <HeaderTemplate>
+                                    <button class="add-button rz-ripple" @onclick="OpenCreatingCompanyModal" title="Adicionar empresa"><i class="fa-solid fa-plus"></i></button>
+                                </HeaderTemplate>
+                                <Template>
+                                    <div class="wrap">
+                                        <button title="Editar informações" class="edit-button rz-ripple button-blue" @onclick="() => OpenEditingCompanyModal(context)"><i class="fa-regular fa-pen-to-square"></i></button>
+                                        <button title="Deletar empresa" class="trash-button rz-ripple button-pink" @onclick="() => OpenDeletingCompanyModal(context)"><i class="fa-regular fa-trash-can"></i></button>
+                                    </div>
+                                </Template>
+                            </RadzenDataGridColumn>
+                        </Columns>
+
+                        <Template Context="empresa">
+                            <RadzenDataGrid Data="@empresa.Usuarios" TItem="UsuarioGetDTO" AllowPaging="true" PageSize="5" Responsive="true" Style="width: 100%;" AllowColumnResize="true" Page="@(() => {})">
+                                <EmptyTemplate>
+                                    <p style="color: lightgrey; font-size: 24px; text-align: center; margin: 2rem;">Nenhum usuário foi encontrado.</p>
+                                </EmptyTemplate>
+                                <Columns>
+                                    <RadzenDataGridColumn TItem="UsuarioGetDTO" Property="ID" Title="ID do Usuário" Resizable="true" Filterable="false" Sortable="true" CssClass="number" Width="150px">
+                                        <Template>
+                                            @((context as UsuarioGetDTO).ID)
+                                        </Template>
+                                    </RadzenDataGridColumn>
+                                    <RadzenDataGridColumn TItem="UsuarioGetDTO" Property="Nome" Title="Nome do Usuário" Resizable="true" Filterable="false" Sortable="true" Width="170px">
+                                        <Template>
+                                            <div style="overflow-x: auto; max-height: 100px; white-space: nowrap; box-sizing: border-box; padding-right: 16px; width: 100%;">
+                                                <Cardápio.Client.Components.CopyButton.CopyButton Content="@((context as UsuarioGetDTO).Nome)" Title="Copiar Nome" />
+                                            </div>
+                                        </Template>
+                                    </RadzenDataGridColumn>
+                                    <RadzenDataGridColumn TItem="UsuarioGetDTO" Property="Email" Title="Email" Resizable="true" Filterable="false" Sortable="true" Width="200px">
+                                        <Template>
+                                            <div style="overflow-x: auto; max-height: 100px; white-space: nowrap; box-sizing: border-box; padding-right: 16px; width: 100%;">
+                                                <Cardápio.Client.Components.CopyButton.CopyButton Content="@((context as UsuarioGetDTO).Email)" Title="Copiar Email" />
+                                            </div>
+                                        </Template>
+                                    </RadzenDataGridColumn>
+                                    <RadzenDataGridColumn TItem="UsuarioGetDTO" Property="UsuarioTipo" Title="Tipo de Usuário" Resizable="true" Filterable="false" Sortable="true">
+                                        <Template>
+                                            @{
+                                                var usuarioTipoID = (context as UsuarioGetDTO).UsuarioTipoID;
+                                                if (usuarioTipoID == 1 || usuarioTipoID == 3)
+                                                {
+                                                    <span>Admin</span>
+                                                }
+                                                else
+                                                {
+                                                    <span>Comum</span>
+                                                }
+                                            }
+                                        </Template>
+                                    </RadzenDataGridColumn>
+                                    <RadzenDataGridColumn TItem="UsuarioGetDTO" Property="Ativo" Title="Status" Resizable="true" Filterable="false" Sortable="true" Width="120px">
+                                        <Template>
+                                            @{
+                                                var status = (context as UsuarioGetDTO).Ativo;
+                                                if (status)
+                                                {
+                                                    <span class="active" title="Ativo"><i class="fa-solid fa-user"></i></span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="deactive" title="Desativado"><i class="fa-solid fa-user"></i></span>
+                                                }
+                                            }
+                                        </Template>
+                                    </RadzenDataGridColumn>
+                                    <RadzenDataGridColumn TItem="UsuarioGetDTO" Property="Buttons" Filterable="false" Sortable="false" Width="140px" Resizable="false" Frozen="true" FrozenPosition="FrozenColumnPosition.Right">
+                                        <HeaderTemplate>
+                                            <button class="add-button rz-ripple" @onclick="@(() => OpenCreatingUserModel(empresa))" title="Adicionar usuário">
+                                                <i class="fa-solid fa-plus"></i>
+                                            </button>
+                                        </HeaderTemplate>
+                                        <Template>
+                                            <div class="wrap">
+                                                <button title="Editar informações" class="edit-button rz-ripple button-blue" @onclick="() => OpenEditingUserModel(context)"><i class="fa-regular fa-pen-to-square"></i></button>
+                                                <button title="Deletar usuário" class="trash-button rz-ripple button-pink" @onclick="() => OpenDeletingUserModal(context)"><i class="fa-regular fa-trash-can"></i></button>
+                                            </div>
+                                        </Template>
+                                    </RadzenDataGridColumn>
+                                </Columns>
+                            </RadzenDataGrid>
+                        </Template>
+                    </RadzenDataGrid>
+                }
+            }
+        </RadzenStack>
+    </RadzenCard>
+</RadzenColumn>
+
+<style type="text/css">
+    @@media screen and (max-width:770px) {
+        .copy {
+            display: none !important
+        }
+    }
+
+    .rz-column-title-content {
+        font-weight: bold !important;
+    }
+
+    .rz-column-title {
+        font-weight: bold !important;
+    }
+
+    .rz-dropdown {
+        font-size: 14px !important;
+        display: flex;
+        justify-content: center;
+    }
+
+    @@media screen and (max-width:600px) {
+        .hidden {
+            display: none !important;
+        }
+
+        tbody {
+            display: grid !important;
+            grid-template-columns: repeat(1, 1fr);
+        }
+    }
+
+    .rz-row-toggler {
+        cursor: pointer !important;
+    }
+
+    .rz-selectable tbody tr.rz-data-row.rz-state-highlight > td {
+        background-color: #118AB230 !important;
+    }
+
+    .rz-selectable tbody tr.rz-data-row.rz-state-highlight .rz-cell-data {
+        color: #118AB2 !important;
+    }
+
+    .rz-background-color-primary-lighter {
+        background-color: #118AB230 !important;
+    }
+
+    .rz-color-on-primary-lighter {
+        color: #118AB2 !important;
+    }
+
+    .rz-card {
+        font-size: 14px !important;
+    }
+
+    .rz-expanded-row-content > td {
+        padding-top: 0;
+        padding-right: 0;
+        padding-bottom: 0;
+    }
+
+    th:last-child .rz-column-title:last-child {
+        justify-content: end !important;
+        padding-right: 1rem !important
+    }
+
+    @@media screen and (max-width: 768px) {
+        td:last-child {
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: start !important;
+            gap: .5rem !important;
+        }
+    }
+
+    .wrap {
+        gap: .5rem !important;
+    }
+</style>

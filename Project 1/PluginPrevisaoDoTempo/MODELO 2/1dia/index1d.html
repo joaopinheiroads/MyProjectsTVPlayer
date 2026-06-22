@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Previsão do Tempo</title>
+    <link rel="stylesheet" href="./style1d.css?v=39">
+    <link href="weather-icons.min.css" rel="stylesheet">
+</head>
+<body>
+   
+    <div class="tempo-container">
+        <div class="tempo-details">
+           
+            <div class="tempo-content">
+                <div class="atual">
+                    <div class="header">
+                        <h4 id="cidade" class="lugar-nome"></h4>
+
+                        
+
+                    </div>
+                    <div class="status">
+                        
+                        <i id="icon" class="wi wi-yahoo-44"></i>
+                        <span id="condicaoClima" class="tipo-status"></span>
+                    </div>
+                    <div class="valor">
+                        <div class="dia">
+                            <span id="dataAtual"></span>
+                        </div>
+                        <div class="temperatura-principal">
+                            <div class="max">
+                                <span id="maxValue" class="number"></span>
+                                <i class="fa-solid fa-arrow-up"></i>
+                            </div>
+                            <span class="divide"> / </span>
+                            <div class="min">
+                                <span id="minValue" class="number"></span>
+                                <i class="fa-solid fa-arrow-down"></i>
+                            </div>
+                            
+                         
+                            <span class="type-temp">C</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="detalhes">
+                    <div class="vento">
+                        <div class="vento-container">
+                            
+                            <div class="icon-text-vento">
+                                <i class="fa-solid fa-wind vento-icon"></i>
+                                <span class="vento-text">Velocidade do vento</span>
+                            </div>
+                           
+                            <div class="vento-content">
+                                
+                                <div class="min">
+                                    <span class="min-text">min</span>
+                                    <span id="minValueV" class="value"></span>
+                                    <span id="kmUm" class="medida">km/h</span>
+                                </div>
+                                <div class="max">
+                                    <span class="max-text">max</span>
+                                    <span id="maxValueV" class="value"></span>
+                                    <span id="kmDois" class="medida">km/h</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="umidade">
+                        <div class="umidade-container">
+                            <div class="icon-text-umidade">
+                                <i class="fa-solid fa-droplet umidade-icon"></i>
+                                <span class="umidade-text">Umidade</span>
+                            </div>
+                           
+                            <div class="umidade-content">
+                                
+                                <div class="min">
+                                    <span class="min-text">min</span>
+                                    <span id="minU" class="value"></span>
+                                    <span class="medida">%</span>
+                                </div>
+                                <div class="max">
+                                    <span class="max-text">max</span>
+                                    <span id="maxU" class="value"></span>
+                                    <span class="medida">%</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+    
+        
+    </div>
+    <script src="./clima_1d.js"></script>
+    
+</body>
+</html>

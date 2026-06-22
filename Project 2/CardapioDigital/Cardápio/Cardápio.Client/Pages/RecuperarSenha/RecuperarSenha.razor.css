@@ -1,0 +1,295 @@
+﻿* {
+	margin: 0;
+	padding: 0;
+	box-sizing: border-box;
+	font-family: "Nunito", sans-serif;
+}
+
+html {
+	width: 100%;
+	height: 100%;
+	max-height: 100%
+	
+}
+
+
+
+
+.container {
+	height: 100%;
+	width: 100%;
+	max-height: 100%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	position: relative;
+	overflow: hidden;
+	background-image: url(/imagens/Logo/escolhaai_fundo.png);
+	background-size: 100% 100%;
+	background-repeat: no-repeat;
+}
+
+.recuperar-card img{
+	width: 20rem
+}
+
+.recuperar-card button{
+	color: white;
+    background: linear-gradient(135deg, #6622CC 0%, #2AABE2 100%) !important;
+    border: 1px solid #272A2D;
+    border-radius: .2rem;
+    min-width: 226px;
+    padding: .6rem;
+    font-size: .9rem;
+    cursor: pointer;
+    transition-duration: .2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+	margin-bottom: 4%;
+
+}
+
+
+
+body {
+	height: 100%;
+	width: 100%;
+	max-height: 100%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	position: relative;
+	overflow: hidden;
+	background-image: url(/imagens/Logo/escolhaai_fundo.png);
+	background-size: 100% 100%;
+	background-repeat: no-repeat;
+}
+
+html > body {
+	box-shadow: 15px 15px 15px rgba(0, 0, 0, 0.6);
+	border-radius: 15px;
+}
+body[b-bgtr1rm8za] {
+	border-radius: 15px;
+}
+
+
+
+
+.recuperar-card {
+	position: relative;
+	background: #f3f3f3;
+	width: 600px;
+	padding: 40px 35px;
+	box-shadow: 15px 15px 15px rgba(0, 0, 0, 0.6);
+	border-radius: 15px;
+	text-align: center;
+	z-index: 2;
+	height: 725px;
+	align-items: center;
+	justify-content: center;
+	display: flex;
+	flex-direction: column;
+	background-color: white;
+	gap: 2%;
+}
+
+.recuperar-card form{
+
+	width: 65%;
+	margin-bottom: 5%;
+	}
+
+	.recuperar-card form[b-bgtr1rm8za] {
+		margin-bottom: 5%;
+	}
+
+.second[b-bgtr1rm8za] {
+	
+	color: #272A2D;
+	font-size: 14px;
+}
+
+.logo-icon {
+	width: 60px;
+	height: 60px;
+	margin: 0 auto 15px;
+	border-radius: 12px;
+	background-image: url(imagens/Logo/logoescolhaai.png);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	color: white;
+	font-size: 28px;
+}
+
+#login-logo {
+	display: block;
+	margin-top: 0;
+	margin-right: auto;
+	margin-bottom: 70px;
+	margin-left: auto;
+	max-width: 300px;
+	max-height: 200px;
+}
+
+.recuperar-card h2 {
+	font-weight: 500;
+	margin-bottom: 5px;
+}
+
+.subtitle {
+	font-size: 13px;
+	color: #777;
+	margin-bottom: 25px;
+}
+
+.input-group {
+	margin-bottom: 20px;
+	text-align: left;
+}
+
+	.input-group label {
+		font-size: 13px;
+		color: #555;
+	}
+
+	/*.input-group input {
+		width: 100%;
+		padding: 10px 0;
+		border: none;
+		border-bottom: 1px solid #ccc;
+		background: transparent;
+		outline: none;
+		font-size: 14px;
+	}*/
+
+.remember {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	font-size: 13px;
+	margin-bottom: 20px;
+}
+
+.btn-recuperar {
+	min-width: 226px;
+	padding: 12px;
+	border: none;
+	border-radius: 6px;
+	background: linear-gradient(135deg, #6622CC 0%, #2AABE2 100%) !important;
+	color: white;
+	font-weight: 500;
+	cursor: pointer;
+	transition: 0.3s ease;
+}
+
+	.btn-login:hover {
+		opacity: 0.9;
+		transform: translateY(-2px);
+	}
+
+.register {
+	margin-top: 18px;
+	font-size: 13px;
+}
+
+	.register a {
+		color: #2575fc;
+		text-decoration: none;
+		font-weight: 500;
+	}
+
+		.register a:hover {
+			text-decoration: underline;
+		}
+
+@media (max-width: 480px) {
+	.recuperar-card {
+		width: 90%;
+	}
+}
+
+
+
+.teste input {
+	border: none;
+	background: transparent;
+	outline: none;
+}
+.teste {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	gap: 1%;
+	justify-content: center;
+	background: transparent;
+	outline: none;
+	font-size: 14px;
+	height: 4vh;
+}
+
+	.teste > div {
+		border-bottom: 1px solid #ccc;
+		padding: 10px 10px 10px 15px;
+	
+	}
+
+.input-group {
+	gap: 4vh;
+	display: flex;
+	flex-direction: column;
+}
+
+form {
+	
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+}
+
+.recuperar-card form > button {
+	color: white;
+	background: linear-gradient(135deg, #6622CC 0%, #2AABE2 100%) !important;
+	border: 1px solid #272A2D;
+	border-radius: .2rem;
+	min-width: 226px;
+	padding: .6rem;
+	font-size: .9rem;
+	cursor: pointer;
+	transition-duration: .2s;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	position: relative;
+	max-width: 226px;
+}
+
+.second {
+	font-size: 12px;
+	font-weight: 600;
+	color:#272A2D;
+}
+
+.second > .link[b-14hxumav7p] {
+	color: #118AB2;
+	font-weight: 500;
+	text-decoration: underline;
+	cursor: pointer;
+}
+
+
+.alert-danger {
+	color: #f56060;
+	font-size: .8rem;
+	font-weight: 500;
+}
+
+
+.alert-success {
+	color: #18c904;
+	font-size: 1rem;
+	font-weight: 500;
+}

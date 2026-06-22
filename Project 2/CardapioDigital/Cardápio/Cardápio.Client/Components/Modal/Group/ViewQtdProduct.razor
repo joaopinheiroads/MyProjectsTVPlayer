@@ -1,0 +1,152 @@
+﻿@typeparam SelectedDTOParam
+
+@inject IJSRuntime JSRuntime
+@inject HttpClient HttpClient
+@inject Cardápio.Client.Infra.Provider.CustomAuthenticationStateProvider Provider;
+
+@using Cardápio.Client.Components.Modal.Product.SubModal
+
+@code {
+    [Parameter] public EventCallback OnCancel { get; set; }
+    [Parameter] public SelectedDTOParam? SelectedDTO { get; set; }
+    [Parameter] public EventCallback? ComponentIsLoaded { get; set; }
+
+    [Inject] private ModalService ModalService { get; set; }
+
+    private List<ProdutoGetDTO> produtos = new();
+    private int grupoID = 0;
+    private int produtoID;
+    private string token;
+    private UsuarioGetDTO usuario;
+
+    private bool firstCall { get; set; } = false;
+    private bool isLoadingIntern = false;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JSRuntime.InvokeVoidAsync("handleEscKey", DotNetObjectReference.Create(this));
+
+            StateHasChanged();
+
+            token = await Provider.GetTokenAsync();
+            //await GetUser();
+            usuario = Provider.UsuarioOwner;
+
+            await GetData();
+
+            if (ComponentIsLoaded is EventCallback isLoaded)
+            {
+                await isLoaded.InvokeAsync();
+            }
+        }
+    }
+
+    protected async override void OnParametersSet()
+    {
+        if (!firstCall && SelectedDTO is GrupoAdicionalGetDTO grupo)
+        {
+            grupoID = grupo.ID;
+
+            firstCall = true;
+        }
+    }
+
+    async Task GetUser()
+    {
+        HttpClient.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+        var result = await HttpClient.GetFromJsonAsync<UsuarioGetDTO>("/api/authentication/getCompanyID");
+        usuario = result;
+    }
+
+    private async Task GetData()
+    {
+        HttpClient.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+        var response = await HttpClient.GetFromJsonAsync<List<ProdutoGetDTO>>("/api/product/GetProductsByGroupID/" + grupoID);
+
+        produtos = response;
+        StateHasChanged();
+    }
+
+    [JSInvokable("HandleEscapeKey")]
+    public async Task HandleEscapeKey()
+    {
+        await CancelAsync();
+    }
+
+    private async Task CancelAsync()
+    {
+        await OnCancel.InvokeAsync();
+    }
+
+    private async Task Desvincule(ProdutoGetDTO produto)
+    {
+        isLoadingIntern = true;
+        produtoID = produto.ID;
+        ModalService.OpenModal(
+            "Desvincule",
+            onConfirm: async () => await OnDesvinculeConfirm(),
+            onCancel: async () => await OnDesvinculeCancel()
+        );
+    }
+
+    private async Task OnDesvinculeConfirm()
+    {
+        HttpClient.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+        var response = await HttpClient.PutAsJsonAsync("/api/additional-group/data/unlink/" + grupoID + "/" + produtoID, "");
+
+        response.EnsureSuccessStatusCode();
+
+        await GetData();
+
+        isLoadingIntern = false;
+        ModalService.CloseModal("Desvincule");
+    }
+
+    private async Task OnDesvinculeCancel()
+    {
+        ModalService.CloseModal("Desvincule");
+        isLoadingIntern = false;
+    }
+}
+
+<div class="form-view">
+    <div class="form-header">
+        <div class="header">
+            <div class="content-header">
+                <div class="icon"><i class="fa-solid fa-tag"></i></div>
+                <div class="title-container">
+                    <h4 class="title">Listagem de produtos</h4>
+                </div>
+            </div>
+            <div class="close" @onclick="CancelAsync"><i class="fa-solid fa-x"></i></div>
+        </div>
+    </div>
+    <div>
+        <p class="text">Produtos que estão utilizando este grupo:</p>
+        <div class="list">
+            @foreach (var grupo in produtos.GroupBy(p => p.Categoria))
+            {
+                <h3 class="category-name">Categoria: @grupo.Key</h3>
+                <ul class="products-list">
+                    @foreach (var product in grupo)
+                    {
+                        <li class="product text">
+                            <div class="container-item-list">
+                                <span>- @product.Nome</span>
+                            </div>
+                            <button class="button-pink" title="desvincular produto" @onclick="() => Desvincule(product)"><i class="fa-solid fa-link-slash"></i></button>
+                        </li>
+                    }
+                </ul>
+            }
+        </div>
+    </div>
+</div>

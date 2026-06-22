@@ -1,0 +1,208 @@
+﻿@typeparam T
+@typeparam SelectedDTOParam
+
+@inject IJSRuntime JSRuntime;
+
+@using System.Collections.ObjectModel
+
+@code {
+    [Parameter] public string ActionType { get; set; }
+    [Parameter] public EventCallback<T> OnSubmit { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+    [Parameter] public SelectedDTOParam? SelectedDTO { get; set; }
+    [Parameter] public bool IsLoading { get; set; }
+    [Parameter] public EventCallback? ComponentIsLoaded { get; set; }
+
+    private ElementReference InputFocus;
+    private bool firstCall { get; set; } = false;
+    private string Title => ActionType == "creating/frame" ? "Criar nova moldura" : "Editar moldura";
+
+    private Dictionary<string, string> validationErrors = new();
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JSRuntime.InvokeVoidAsync("handleEscKey", DotNetObjectReference.Create(this));
+            await JSRuntime.InvokeVoidAsync("handleModalEnterKey", DotNetObjectReference.Create(this));
+
+            if (ComponentIsLoaded is EventCallback isLoaded)
+            {
+                await isLoaded.InvokeAsync();
+            }
+        }
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (!firstCall && SelectedDTO is MesaGetDTO mesa)
+        {
+            firstCall = true;
+        }
+    }
+
+    private async Task SubmitAsync()
+    {
+        try
+        {
+            if (IsLoading)
+            {
+                return;
+            }
+
+            QrCodeLayoutAddDTO qrCodeLayout = new QrCodeLayoutAddDTO()
+                {
+                    Nome = ModelName,
+                    TextColor = TextColor,
+                    BackgroundColor = BackgroundColor,
+                    BorderColor = BorderColor,
+                    BorderRadius = BorderRadius,
+                    DescriptionText = DescriptionText,
+                    TitleText = TitleText
+                };
+
+            if (!await ValidateEntityAsync(qrCodeLayout, nameof(qrCodeLayout.Nome)))
+            {
+                return;
+            }
+
+            await OnSubmit.InvokeAsync((T)(object)qrCodeLayout);
+        } catch (Exception err)
+        {
+            if (err.Message.Contains("Nome"))
+            {
+                validationErrors["Nome"] = "Nome já registrado.";
+            }
+        } finally
+        {
+            if (ComponentIsLoaded is EventCallback isLoaded)
+            {
+                await isLoaded.InvokeAsync();
+            }
+        }
+    }
+
+    private async Task CancelAsync()
+    {
+        await Task.Yield();
+        await OnCancel.InvokeAsync();
+    }
+
+    private async Task<bool> ValidateEntityAsync<GenericValidate>(GenericValidate entity, params string[] requiredFields)
+    {
+        var validator = new ValidationService<GenericValidate>();
+        var validationResult = validator.Validate(entity, requiredFields);
+
+        if (!validationResult.IsValid)
+        {
+            validationErrors = validationResult.Errors;
+            StateHasChanged();
+            return false;
+        }
+
+        validationErrors.Clear();
+        return true;
+    }
+}
+
+<div class="form">
+    <div class="form-header">
+        <div class="header">
+            <div class="content-header">
+                <div class="icon"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
+                <div class="title-container">
+                    <h4 class="title">@Title</h4>
+                </div>
+            </div>
+            <div class="close" @onclick="CancelAsync"><i class="fa-solid fa-x"></i></div>
+        </div>
+    </div>
+
+    <form class="form-body">
+        <div class="inputs-container">
+            <div class="inputs">
+                <label for="modelName">Nome do modelo:</label>
+                <input type="text" id="modelName" @bind-value="@ModelName" maxlength="100" @bind-value:event="oninput" />
+                <span class="error">@validationErrors.GetValueOrDefault("Nome")</span>
+            </div>
+            <div class="inputs">
+                <label for="titleText">Título:</label>
+                <input type="text" id="titleText" @bind-value="@TitleText" maxlength="19" @bind-value:event="oninput" />
+            </div>
+            <div class="inputs">
+                <label for="descriptionText">Descrição:</label>
+                <input type="text" id="descriptionText" @bind-value="DescriptionText" maxlength="75" @bind-value:event="oninput" />
+            </div>
+            <div class="color-pick">
+                <label>Cor do Texto:</label>
+                <RadzenColorPicker @bind-Value="TextColor" Style="width: 150px;" />
+            </div>
+            <div class="color-pick">
+                <label>Cor do Fundo:</label>
+                <RadzenColorPicker @bind-Value="BackgroundColor" Style="width: 150px;" />
+            </div>
+            <div class="color-pick">
+                <label>Cor da Borda:</label>
+                <RadzenColorPicker @bind-Value="BorderColor" Style="width: 150px;" />
+            </div>
+            <div class="inputs">
+                <label for="borderRadius">Arredondamento da Borda:</label>
+                <div class="range">
+                    <input type="range" id="borderRadius" min="0" max="100" @bind-value="BorderRadius" @bind-value:event="oninput" />
+                    <span>@BorderRadius</span>
+                </div>
+            </div>
+        </div>
+        <div class="preview">
+            <div class="frame" style="background-color: @BackgroundColor; border: 1px solid @BorderColor; border-radius: @($"{BorderRadius}px");">
+                <div class="header-qrcode">
+                    <h2 class="title" style="color: @TextColor !important;">@TitleText</h2>
+                    <p class="description" style="color: @TextColor !important;">@DescriptionText</p>
+                </div>
+                <div class="qrCode" style="background-image: url('/imagens/QrCode/d433f74e-ed00-4071-8715-708557ab77e1.png')"></div>
+                <h3 style="color: @TextColor !important;">Mesa 1</h3>
+                <p style="color: @TextColor !important;">www.escolha.ai</p>
+            </div>
+        </div>
+    </form>
+    <div class="form-footer">
+        <button type="button" @onclick="CancelAsync" class="cancel rz-ripple" disabled="@IsLoading"><span>Cancelar</span></button>
+        <button type="button" @onclick="SubmitAsync" class="confirm rz-ripple button-green">
+            @if (IsLoading)
+            {
+                <SpinnerLoader PrimaryColor="#FFFFFF" SecondaryColor="#118AB2" Size="20" />
+            }
+            else
+            {
+                <span>Salvar</span>
+            }
+        </button>
+    </div>
+</div>
+
+@code {
+    private string ModelName = "Modelo sem nome";
+    private string TextColor = "rgb(215, 223, 225)";
+    private string BackgroundColor = "rgb(68, 58, 110)";
+    private string BorderColor = "rgb(7, 59, 76, 100)";
+    private int BorderRadius = 5;
+    private string TitleText = "CARDÁPIO VIRTUAL";
+    private string DescriptionText = "Escaneie o QR Code abaixo com o seu celular e faça seu pedido";
+}
+
+<style>
+    .rz-colorpicker-popup {
+        user-select: none !important;
+        z-index: 100000 !important;
+    }
+
+    .rz-popup {
+        z-index: 100000 !important;
+    }
+</style>
+
+<script type="text/javascript">
+    document.querySelector('form').addEventListener('submit', function(event) {
+        event.preventDefault();
+    });
+</script>

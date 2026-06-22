@@ -1,0 +1,254 @@
+﻿@typeparam T
+@typeparam SelectedDTOParam
+
+@inject IJSRuntime JSRuntime;
+
+@code {
+    [Parameter] public string ActionType { get; set; }
+    [Parameter] public EventCallback<T> OnSubmit { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+    [Parameter] public SelectedDTOParam? SelectedDTO { get; set; }
+    [Parameter] public bool IsLoading { get; set; }
+    [Parameter] public EventCallback? ComponentIsLoaded { get; set; }
+
+    private ElementReference InputFocus;
+
+    private bool firstCall { get; set; } = false;
+
+    private string Title => ActionType == "creating/categoria" ? "Criar Categoria" : "Editar Categoria";
+    private string categoryName = string.Empty;
+    private string selectedColor = "#073B4C";
+
+    private Dictionary<string, string> validationErrors = new();
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JSRuntime.InvokeVoidAsync("handleEscKey", DotNetObjectReference.Create(this));
+            await JSRuntime.InvokeVoidAsync("handleModalEnterKey", DotNetObjectReference.Create(this));
+
+            StateHasChanged();
+
+            if (ComponentIsLoaded is EventCallback isLoaded)
+            {
+                await isLoaded.InvokeAsync();
+            }
+
+            await FocusInputRecursively();
+        }
+    }
+
+    private async Task FocusInputRecursively()
+    {
+        while (true)
+        {
+            bool isFocused = await JSRuntime.InvokeAsync<bool>("tryFocusElementDirect", InputFocus);
+
+            if (isFocused)
+            {
+                break;
+            }
+        }
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (!firstCall && ActionType == "editing/categoria" && SelectedDTO is CategoriaGetDTO categoria)
+        {
+            categoryName = categoria.Nome;
+            selectedColor = categoria.BackgroundColor;
+
+            firstCall = true;
+        }
+    }
+
+    private async Task SubmitAsync()
+    {
+        try
+        {
+            if (ActionType == "creating/categoria" && !IsLoading)
+            {
+                await SendCreate();
+            }
+
+            if (ActionType == "editing/categoria" && !IsLoading)
+            {
+                await SendEdit();
+            }
+        }
+        catch (Exception err)
+        {
+            if (err.Message.Contains("Nome"))
+            {
+                validationErrors["Nome"] = "Nome já registrado.";
+            }
+
+            await ValidateApiResponseError(err);
+        } finally
+        {
+            if (ComponentIsLoaded is EventCallback isLoaded)
+            {
+                await isLoaded.InvokeAsync();
+            }
+        }
+    }
+
+    [JSInvokable("HandleModalEnterKey")]
+    public async Task HandleModalEnterKey()
+    {
+        if (IsLoading)
+        {
+            return;
+        }
+
+        await SubmitAsync();
+    }
+
+    [JSInvokable("HandleEscapeKey")]
+    public async Task HandleEscapeKey()
+    {
+        await CancelAsync();
+    }
+
+    private async Task CancelAsync()
+    {
+        ResetFields();
+        await Task.Yield();
+        await OnCancel.InvokeAsync();
+    }
+
+    private async Task SendCreate()
+    {
+        CategoriaAddDTO data = new CategoriaAddDTO
+            {
+                Nome = categoryName,
+                BackgroundColor = selectedColor
+            };
+
+        if (!await ValidateEntityAsync(data, nameof(data.Nome), nameof(data.BackgroundColor)))
+        {
+            return;
+        }
+
+        await OnSubmit.InvokeAsync((T)(object)data);
+        ResetFields();
+    }
+
+    private async Task SendEdit()
+    {
+        CategoriaUpdateDTO data = new CategoriaUpdateDTO
+            {
+                Nome = categoryName,
+                BackgroundColor = selectedColor
+            };
+
+        if (!await ValidateEntityAsync(data, nameof(data.Nome), nameof(data.BackgroundColor)))
+        {
+            return;
+        }
+
+        await OnSubmit.InvokeAsync((T)(object)data);
+        ResetFields();
+    }
+
+    private void ResetFields()
+    {
+        categoryName = string.Empty;
+        selectedColor = "#073B4C";
+
+        firstCall = false;
+    }
+
+    private async Task<bool> ValidateEntityAsync<GenericValidate>(GenericValidate entity, params string[] requiredFields)
+    {
+        var validator = new ValidationService<GenericValidate>();
+        var validationResult = validator.Validate(entity, requiredFields);
+
+        if (!validationResult.IsValid)
+        {
+            validationErrors = validationResult.Errors;
+            StateHasChanged();
+            return false;
+        }
+
+        validationErrors.Clear();
+        return true;
+    }
+
+    private async Task ValidateApiResponseError(Exception err)
+    {
+        ValidationErrorResponseApi errorResponse = ValidationErrorResponseApi.ConvertJsonToData(err.Message);
+        if (errorResponse.Errors != null)
+        {
+            foreach (var apiError in errorResponse.Errors)
+            {
+                foreach (var message in apiError.Value)
+                {
+                    validationErrors[apiError.Key] = message;
+                }
+            }
+        }
+
+        validationErrors["API"] = "Erro ao processar a solicitação.";
+    }
+}
+
+<div>
+    <div class="form-header">
+        <div class="header">
+            <div class="content-header">
+                <div class="icon"><i class="fa-solid fa-tag"></i></div>
+                <div class="title-container">
+                    <h4 class="title">@Title</h4>
+                </div>
+            </div>
+            <div class="close" @onclick="CancelAsync"><i class="fa-solid fa-x"></i></div>
+        </div>
+    </div>
+    <form class="form-body">
+        <div class="inputs">
+            <label>Nome</label>
+            <input @ref="InputFocus" id="nome" @bind-value="categoryName" @bind-value:event="oninput" />
+            <span class="error">@validationErrors.GetValueOrDefault("Nome")</span>
+        </div>
+        <div class="inputs">
+            <label>Cor</label>
+            <RadzenColorPicker @bind-Value="selectedColor" />
+        </div>
+    </form>
+    <div class="form-footer">
+        <button type="button" @onclick="CancelAsync" class="cancel rz-ripple" disabled="@IsLoading"><span>Cancelar</span></button>
+        <button type="button" @onclick="SubmitAsync" class="confirm rz-ripple button-green">
+            @if (IsLoading)
+            {
+                <SpinnerLoader PrimaryColor="#FFFFFF" SecondaryColor="#118AB2" Size="20" />
+            }
+            else
+            {
+                <span>Salvar</span>
+            }
+        </button>
+    </div>
+</div>
+
+<style>
+    .rz-colorpicker-popup {
+        user-select: none !important;
+    }
+</style>
+
+<script type="text/javascript">
+    document.querySelector('form').addEventListener('submit', function(event) {
+        event.preventDefault();
+    });
+
+    window.tryFocusElementDirect = async function (element) {
+        if (element && document.activeElement !== element) {
+            element.focus();
+            return document.activeElement === element; // Verifica se o foco foi aplicado com sucesso
+        }
+
+        return document.activeElement === element; // Retorna true se já está focado
+    };
+</script>

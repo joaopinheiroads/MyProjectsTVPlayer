@@ -1,0 +1,394 @@
+﻿@typeparam T;
+@typeparam SelectedDTOParam
+@inject IJSRuntime JSRuntime;
+@inject HttpClient HttpClient;
+@inject SelectCompanyService EmpresaService;
+@inject Cardápio.Client.Infra.Provider.CustomAuthenticationStateProvider Provider;
+
+@using System.Collections.ObjectModel
+@using Cardápio.Client.Components.SpinnerLoader
+@using Cardápio.Client.Dto
+@using Cardápio.Client.Services
+@using Cardápio.Client.Infra.Validation
+
+@code {
+    [Parameter] public string ActionType { get; set; } = string.Empty;
+    [Parameter] public EventCallback<T> OnSubmit { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+    [Parameter] public SelectedDTOParam? SelectedDTO { get; set; }
+    [Parameter] public bool IsLoading { get; set; }
+    [Parameter] public EventCallback? ComponentIsLoaded { get; set; }
+
+    private ElementReference InputFocus;
+
+    private bool firstCall { get; set; } = false;
+    private string Title => ActionType == "creating/grupo" ? "Registrar Grupo" : "Editar Grupo";
+
+    private string nomeGrupo { get; set; } = string.Empty;
+    private string nomeEmpresa { get; set; } = string.Empty;
+    private string nomeUsuario { get; set; } = string.Empty;    
+    private int typeCompany { get; set; } = 1;
+    private string login { get; set; } = string.Empty;
+    private string senha { get; set; } = string.Empty;
+    private bool isAtivo { get; set; } = true;
+    private bool isCliente { get; set; } = false;
+    private bool isDemostracao { get; set; } = false;
+    private bool isDesativado { get; set; } = false;
+
+
+
+
+    
+
+
+    private Dictionary<string, string> validationErrors = new();
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JSRuntime.InvokeVoidAsync("handleEscKey", DotNetObjectReference.Create(this));
+            await JSRuntime.InvokeVoidAsync("handleModalEnterKey", DotNetObjectReference.Create(this));
+
+            if (ComponentIsLoaded is EventCallback isLoaded)
+            {
+                await isLoaded.InvokeAsync();
+            }
+
+            await FocusInputRecursively();
+        }
+    }
+
+    private async Task FocusInputRecursively()
+    {
+        while (true)
+        {
+            bool isFocused = await JSRuntime.InvokeAsync<bool>("tryFocusElementDirect", InputFocus);
+
+            if (isFocused)
+            {
+                break;
+            }
+        }
+    }
+
+    protected async override void OnParametersSet()
+    {
+        if (!firstCall && ActionType.Contains("editing") && SelectedDTO is GrupoGetDTO group)
+        {
+            if (group != null)
+            {
+                nomeGrupo = group.Nome;
+                isAtivo = group.Ativo;
+
+                isCliente = group.GrupoTipoID == 2;
+                isDemostracao = group.GrupoTipoID == 1;
+                isDesativado = group.GrupoTipoID == 3;
+            }
+
+            firstCall = true;
+        }
+    }
+
+    private async Task SubmitAsync()
+    {
+        try
+        {
+            if (ActionType == "creating/grupo" && !IsLoading)
+            {
+                await SendCreate();
+            }
+
+            if (ActionType == "editing/grupo" && !IsLoading)
+            {
+                await SendEdit();
+            }
+        } 
+        catch (Exception err)
+        {
+            await ValidateApiResponseError(err);
+        } finally {
+            if (ComponentIsLoaded is EventCallback isLoaded)
+            {
+                await isLoaded.InvokeAsync();
+            }
+        }
+    }
+
+    [JSInvokable("HandleModalEnterKey")]
+    public async Task HandleModalEnterKey()
+    {
+        if (IsLoading)
+        {
+            return;
+        }
+
+        StateHasChanged();
+        await SubmitAsync();
+    }
+
+    [JSInvokable("HandleEscapeKey")]
+    public async Task HandleEscapeKey()
+    {
+        await CancelAsync();
+    }
+
+    private async Task CancelAsync()
+    {
+        await OnCancel.InvokeAsync();
+        ResetFields();
+    }
+
+    private async Task SendCreate()
+    {
+        GrupoAddDTO data = new GrupoAddDTO
+            {
+                Nome = nomeGrupo,
+                NomeEmpresa = nomeEmpresa,
+                EmpresaTipoID = typeCompany,
+                NomeUsuarioAdmin = nomeUsuario,
+                UsuarioEmail = login,
+                UsuarioLogin = login,
+                UsuarioSenha = senha,
+                Ativo = isAtivo,
+            };
+
+        if (!await ValidateEntityAsync(data, nameof(data.Nome), nameof(data.NomeEmpresa), nameof(data.NomeUsuarioAdmin),
+            nameof(data.UsuarioLogin), nameof(data.UsuarioSenha), nameof(data.EmpresaTipoID)))
+        {
+            return;
+        }
+
+        await OnSubmit.InvokeAsync((T)(object)data);
+        ResetFields();
+    }
+
+    private async Task SendEdit()
+    {
+        GrupoUpdateDTO data = new GrupoUpdateDTO
+            {
+                Nome = nomeGrupo,
+                Ativo = isAtivo,
+                GrupoTipoID = GrupoTipoID
+            };
+
+        if (!await ValidateEntityAsync(data, nameof(data.Nome)))
+        {
+            return;
+        }
+
+        await OnSubmit.InvokeAsync((T)(object)data);
+        ResetFields();
+    }
+
+    private void ResetFields()
+    {
+        nomeGrupo = string.Empty;
+        nomeEmpresa = string.Empty;
+        nomeUsuario = string.Empty;
+        typeCompany = 1;
+        login = string.Empty;
+        senha = string.Empty;
+        isAtivo = true;
+
+        firstCall = false;
+    }
+
+    private async Task<bool> ValidateEntityAsync<GenericValidate>(GenericValidate entity, params string[] requiredFields)
+    {
+        var validator = new ValidationService<GenericValidate>();
+        var validationResult = validator.Validate(entity, requiredFields);
+
+        if (!validationResult.IsValid)
+        { 
+            validationErrors = validationResult.Errors;
+            StateHasChanged();
+            return false;
+        }
+
+        validationErrors.Clear();
+        return true;
+    }
+
+    private async Task ValidateApiResponseError(Exception err)
+    {
+        ValidationErrorResponseApi errorResponse = ValidationErrorResponseApi.ConvertJsonToData(err.Message);
+        if (errorResponse.Errors != null)
+        {
+            foreach (var apiError in errorResponse.Errors)
+            {
+                foreach (var message in apiError.Value)
+                {
+                    validationErrors[apiError.Key] = message;
+                }
+            }
+        }
+
+        validationErrors["API"] = "Erro ao processar a solicitação.";
+    }
+
+
+       
+        int GrupoTipoID {
+            get {
+                if (isCliente) return 2;
+                if (isDemostracao) return 1;
+                if (isDesativado) return 3;
+                return 0; // ou algum valor padrão
+            }
+        }
+
+        private void OnRadioNivelChanged(string value)
+        {
+            isCliente = value == "Cliente";
+            isDemostracao = value == "Demostracao";
+            isDesativado = value == "Desativado";
+        }
+
+
+
+
+       
+        
+
+    
+
+
+    private void OnRadioChanged(bool value)
+    {
+        isAtivo = value;
+    }
+}
+
+<div class="form">
+    <div class="form-header">
+        <div class="header">
+            <div class="content-header">
+                <div class="icon"><i class="fa-solid fa-building"></i></div>
+                <div class="title-container">
+                    <h4 class="title">@Title</h4>
+                </div>
+            </div>
+            <div class="close" @onclick="CancelAsync"><i class="fa-solid fa-x"></i></div>
+        </div>
+    </div>
+    <form class="form-body">
+        <div class="content-inputs">
+            <div class="wrap-inputs">
+                <div class="inputs">
+                    <label>Nome do Grupo</label>
+                    <input @ref="InputFocus" @bind="nomeGrupo" @bind:event="oninput" />
+                    <span class="error">@validationErrors.GetValueOrDefault("Nome")?.Replace("Nome", "Nome do Grupo")</span>
+                </div>
+                @if (!ActionType.Contains("editing"))
+                {
+                    <div class="inputs">
+                        <label>Nome da Empresa</label>
+                        <input @bind="nomeEmpresa" @bind:event="oninput" />
+                        <span class="error">@validationErrors.GetValueOrDefault("NomeEmpresa")?.Replace("NomeEmpresa", "Nome da Empresa")</span>
+                    </div>
+                }
+            </div>
+            @if (!ActionType.Contains("editing"))
+            {
+                <div class="inputs select">
+                    <label>Tipo de empresa</label>
+                    <select @bind="typeCompany">
+                        <option value="1">Demonstração</option>
+                        <option value="2" selected>Cliente</option>
+                    </select>
+                    <span class="error">@validationErrors.GetValueOrDefault("EmpresaTipoID")?.Replace("EmpresaTipoID", "Tipo")</span>
+                </div>
+                <div class="inputs">
+                    <label>Nome do Usuário</label>
+                    <input class="nomeUsuario" @bind="nomeUsuario" @bind:event="oninput" />
+                    <span class="error">@validationErrors.GetValueOrDefault("NomeUsuarioAdmin")?.Replace("NomeUsuarioAdmin", "Nome do Usuário")</span>
+                </div>
+                <div class="wrap-inputs">
+                    <div class="inputs">
+                        <label>Login</label>
+                        <input @bind="login" @bind:event="oninput" />
+                        <span class="error">@validationErrors.GetValueOrDefault("UsuarioLogin")?.Replace("UsuarioLogin", "Login do Usuário")</span>
+                    </div>
+                    <div class="inputs">
+                        <label>Senha</label>
+                        <input @bind="senha" @bind:event="oninput" />
+                        <span class="error">@validationErrors.GetValueOrDefault("UsuarioSenha")?.Replace("O UsuarioSenha", "A Senha do Usuário")</span>
+                    </div>
+                </div>
+            }
+            @if (ActionType.Contains("editing") && SelectedDTO is GrupoGetDTO group && group.Excluido != true)
+            {
+                <div class="inputs">
+                    <label>Status</label>
+                    <div class="radios">
+                        <div class="input-radio">
+                            <input type="radio" id="ativo" name="status" value="true" checked="@isAtivo" @onchange="() => OnRadioChanged(true)" />
+                            <label class="active" for="ativo">Ativo</label>
+                        </div>
+                        <div class="input-radio">
+                            <input type="radio" id="desativado" name="status" value="false" checked="@(isAtivo == false)" @onchange="() => OnRadioChanged(false)" />
+                            <label class="disabled" for="desativado">Desativado</label>
+                        </div>
+                    </div>
+                </div>
+                //corrija o numero excessivo de caracteres 
+                <div class="inputs" >
+                   <label >Nível</label>
+                    <div class="radios">
+                         <div class="input-radio">
+                        <input type="radio" id="cliente" name="nivel" value="Cliente" 
+                            checked="@isCliente" 
+                            @onchange='() => OnRadioNivelChanged("Cliente")' />
+                        <label for="cliente">Clientes</label>
+                    </div>
+                    <div class="input-radio">
+                        <input type="radio" id="demostracao" name="nivel" value="Demostracao" 
+                            checked="@isDemostracao" 
+                            @onchange='() => OnRadioNivelChanged("Demostracao")' />
+                        <label for="demostracao">Demonstração</label>
+                    </div>
+                   
+                    <div class="input-radio">
+                        <input type="radio" id="excluido" name="nivel" value="Desativado" 
+                            checked="@isDesativado" 
+                            @onchange='() => OnRadioNivelChanged("Desativado")' />
+                        <label for="excluido">Excluído</label>
+                    </div>
+                </div>
+                </div>
+
+
+            }
+        </div>
+    </form>
+    <div class="form-footer">
+        <button type="button" @onclick="CancelAsync" class="cancel rz-ripple" disabled="@IsLoading"><span>Cancelar</span></button>
+        <button type="button" @onclick="SubmitAsync" class="confirm rz-ripple button-green" disabled="@IsLoading">
+            @if (IsLoading)
+            {
+                <Cardápio.Client.Components.SpinnerLoader.SpinnerLoader PrimaryColor="#FFFFFF" SecondaryColor="#118AB2" Size="20" />
+            }
+            else
+            {
+                <span>Salvar</span>
+            }
+        </button>
+    </div>
+</div>
+
+<script type="text/javascript">
+    document.querySelector('form').addEventListener('submit', function(event) {
+        event.preventDefault();
+    });
+
+    window.tryFocusElementDirect = async function (element) {
+        if (element && document.activeElement !== element) {
+            element.focus();
+            return document.activeElement === element;
+        }
+
+        return document.activeElement === element;
+    };
+    
+</script>

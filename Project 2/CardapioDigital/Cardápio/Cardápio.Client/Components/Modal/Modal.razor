@@ -1,0 +1,595 @@
+﻿@typeparam T
+@typeparam SelectedDTO
+
+@namespace Cardápio.Client.Components.Modal
+
+@inject IJSRuntime JSRuntime;
+@inject StateContainer StateContainer
+
+@using Cardápio.Client.Components.StateModal
+@using Confirmation
+@using Alert
+@using Category
+@using Company
+@using Product
+@using User
+@using Date
+@using Group
+@using Export
+@using QrCodeDownload
+@using Mesa
+@using Product.SubModal
+
+@code {
+    [Parameter] public List<CategoriaGetDTO>? Categories { get; set; }
+}
+
+@code {
+    [Parameter] public string ActionType { get; set; } = string.Empty;
+    [Parameter] public EventCallback<T?> OnConfirm { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+    [Parameter] public EventCallback OnSecondaryModalOpen { get; set; }
+    [Parameter] public SelectedDTO? Selected { get; set; }
+    [Parameter] public int? GrupoID { get; set; }
+    [Parameter] public bool IsOpen { get; set; } = false;
+    [Parameter] public int? EmpresaID { get; set; }
+
+    private ProductModal<T, SelectedDTO> requestedUserAlertRef;
+
+    private string modalId = "modal-" + Guid.NewGuid().ToString();
+    public bool IsLoading = false;
+
+
+    private bool isReadyToRender = false;
+    private bool isLoaded = false;
+    private bool hasSynced = false;
+	
+
+    protected async override Task OnParametersSetAsync()
+    {
+        if (IsOpen)
+        {
+            if (!isReadyToRender)
+            {
+                isReadyToRender = true;
+                await SyncComponent(); // <-- troque _ = por await
+            }
+        }
+        else
+        {
+            isReadyToRender = false;
+            StateHasChanged();
+        }
+
+        if (IsOpen && isReadyToRender && !hasSynced)
+        {
+            await SyncComponent();
+            hasSynced = true;
+        }
+
+        if (IsOpen && isReadyToRender && (!ActionType.Contains("create") && !ActionType.Contains("editing")) && !hasSynced)
+        {
+            await SyncComponent();
+            hasSynced = true;
+        }
+
+        if (!IsOpen)
+        {
+            hasSynced = false;
+        }
+    }
+
+    private async Task ConfirmAsync(T value)
+    {
+        try
+        {
+            if (IsOpen)
+            {
+                IsLoading = true;
+                await OnConfirm.InvokeAsync(value);
+                await JSRuntime.InvokeVoidAsync("resetModalState", modalId);
+
+                IsOpen = false;
+                isReadyToRender = false;
+                await JSRuntime.InvokeVoidAsync("removeEnterKeyListener");
+                await JSRuntime.InvokeVoidAsync("removeEscKeyListener");
+                await JSRuntime.InvokeVoidAsync("removeOverflow");
+
+                CloseSecondaryModal();
+                StateHasChanged();
+            }
+        }
+        catch (Exception err)
+        {
+            throw err;
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private async Task CancelAsync()
+    {
+        if (IsOpen)
+        {
+            CloseSecondaryModal();
+
+            IsOpen = false;
+            await OnCancel.InvokeAsync();
+            isReadyToRender = false;
+            await JSRuntime.InvokeVoidAsync("removeEnterKeyListener");
+            await JSRuntime.InvokeVoidAsync("removeEscKeyListener");
+            await JSRuntime.InvokeVoidAsync("resetModalState", modalId);
+            await JSRuntime.InvokeVoidAsync("removeOverflow");
+
+            await Task.Yield();
+
+            StateHasChanged();
+        }
+    }
+
+    private async Task SyncComponent()
+    {
+        try
+        {
+            await Task.Yield();
+            await JSRuntime.InvokeVoidAsync("makeModalDraggable", modalId);
+
+            if (IsOpen) {
+                await JSRuntime.InvokeVoidAsync("addOverflow");
+            } else {
+                await JSRuntime.InvokeVoidAsync("removeOverflow");
+            }
+        }
+        catch (Microsoft.JSInterop.JSDisconnectedException)
+        {
+            // Ignorar erros de JavaScript quando o circuito está desconectado
+            Console.WriteLine("[Modal] JavaScript desconectado durante SyncComponent");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[Modal] Erro no SyncComponent: {ex.Message}");
+        }
+    }
+
+    private async Task HandleSecondaryModalOpen()
+    {
+        StateContainer.SecondaryModalIsOpen = true;
+
+        await OnSecondaryModalOpen.InvokeAsync();
+    }
+
+    private void CloseSecondaryModal()
+    {
+        if (ActionType.Contains("editing/categoria") || ActionType.Contains("creating/categoria"))
+        {
+            StateContainer.SecondaryModalIsOpen = false;
+        }
+    }
+
+    private RenderFragment GetForm()
+    {
+        if (!IsOpen || !isReadyToRender) return builder => { };
+        return ActionType switch
+        {
+            // Important
+            "importing/additional" => (builder) =>
+            {
+                builder.OpenComponent<ImportAdditionalGroupModal<T, SelectedDTO>>(0);
+                builder.AddAttribute(1, "ActionType", "importing/additional");
+                builder.AddAttribute(2, "OnSubmit", EventCallback.Factory.Create<T>(this, ConfirmAsync));
+                builder.AddAttribute(3, "OnCancel", EventCallback.Factory.Create(this, CancelAsync));
+                builder.AddAttribute(4, "IsLoading", IsLoading);
+                builder.AddAttribute(5, "ComponentIsLoaded", EventCallback.Factory.Create(this, SyncComponent));
+                builder.CloseComponent();
+            },
+            // Exportando
+            "exporting/product" => (builder) =>
+            {
+                builder.OpenComponent<ExportModal<T, SelectedDTO>>(0);
+                builder.AddAttribute(1, "ActionType", "creating/categoria");
+                builder.AddAttribute(2, "OnSubmit", EventCallback.Factory.Create<T>(this, ConfirmAsync));
+                builder.AddAttribute(3, "OnCancel", EventCallback.Factory.Create(this, CancelAsync));
+                builder.AddAttribute(4, "IsLoading", IsLoading);
+                builder.AddAttribute(5, "ComponentIsLoaded", EventCallback.Factory.Create(this, SyncComponent));
+                builder.CloseComponent();
+            },
+            // Alerta
+            "alerting/solicitacao" => (builder) =>
+            {
+                builder.OpenComponent<RequestedUserAlert<T>>(0);
+                builder.AddAttribute(1, "OnCancel", EventCallback.Factory.Create(this, CancelAsync));
+                builder.CloseComponent();
+            },
+            "alerting/actived" => (builder) =>
+            {
+                builder.OpenComponent<AccountActivatedAlert<T>>(0);
+                builder.AddAttribute(1, "OnCancel", EventCallback.Factory.Create(this, CancelAsync));
+                builder.CloseComponent();
+            }
+            ,
+            // Criando
+            "creating/categoria" => (builder) =>
+            {
+                builder.OpenComponent<CategoryModal<T, SelectedDTO>>(0);
+                builder.AddAttribute(1, "ActionType", "creating/categoria");
+                builder.AddAttribute(2, "OnSubmit", EventCallback.Factory.Create<T>(this, ConfirmAsync));
+                builder.AddAttribute(3, "OnCancel", EventCallback.Factory.Create(this, CancelAsync));
+                builder.AddAttribute(4, "IsLoading", IsLoading);
+                builder.AddAttribute(5, "ComponentIsLoaded", EventCallback.Factory.Create(this, SyncComponent));
+                builder.CloseComponent();
+            }
+            ,
+            "creating/produto" => (builder) =>
+            {
+                builder.OpenComponent<ProductModal<T, SelectedDTO>>(0);
+                builder.AddAttribute(1, "ActionType", "creating/produto");
+                builder.AddAttribute(2, "OnSubmit", EventCallback.Factory.Create<T>(this, ConfirmAsync));
+                builder.AddAttribute(3, "OnCancel", EventCallback.Factory.Create(this, CancelAsync));
+                builder.AddAttribute(4, "OnOpenCategoryModal", EventCallback.Factory.Create(this, HandleSecondaryModalOpen));
+                builder.AddAttribute(5, "IsLoading", IsLoading);
+                builder.AddAttribute(6, "ComponentIsLoaded", EventCallback.Factory.Create(this, SyncComponent));
+                builder.AddAttribute(7, "CategoriesDataAPI", Categories);
+
+                builder.CloseComponent();
+            }
+            ,
+            "creating/empresa" => (builder) =>
+            {
+                builder.OpenComponent<CompanyModal<T, SelectedDTO>>(0);
+                builder.AddAttribute(1, "ActionType", "creating/empresa");
+                builder.AddAttribute(2, "OnSubmit", EventCallback.Factory.Create<T>(this, ConfirmAsync));
+                builder.AddAttribute(3, "OnCancel", EventCallback.Factory.Create(this, CancelAsync));
+                builder.AddAttribute(4, "IsLoading", IsLoading);
+                builder.AddAttribute(5, "ComponentIsLoaded", EventCallback.Factory.Create(this, SyncComponent));
+                builder.CloseComponent();
+            }
+            ,
+            "creating/usuario" => (builder) =>
+             {
+                 builder.OpenComponent<UserModal<T, SelectedDTO>>(0);
+                 builder.AddAttribute(1, "ActionType", "creating/usuario");
+                 builder.AddAttribute(2, "OnSubmit", EventCallback.Factory.Create<T>(this, ConfirmAsync));
+                 builder.AddAttribute(3, "OnCancel", EventCallback.Factory.Create(this, CancelAsync));
+                 builder.AddAttribute(4, "IsLoading", IsLoading);
+                 builder.AddAttribute(5, "ComponentIsLoaded", EventCallback.Factory.Create(this, SyncComponent));
+                 builder.AddAttribute(6, "EmpresaID", EmpresaID);
+                 builder.CloseComponent();
+             }
+            ,
+            "creating/grupo" => (builder) =>
+            {
+                builder.OpenComponent<GroupModal<T, SelectedDTO>>(0);
+                builder.AddAttribute(1, "ActionType", "creating/grupo");
+                builder.AddAttribute(2, "OnSubmit", EventCallback.Factory.Create<T>(this, ConfirmAsync));
+                builder.AddAttribute(3, "OnCancel", EventCallback.Factory.Create(this, CancelAsync));
+                builder.AddAttribute(4, "IsLoading", IsLoading);
+                builder.AddAttribute(5, "ComponentIsLoaded", EventCallback.Factory.Create(this, SyncComponent));
+                builder.CloseComponent();
+            }
+            ,
+            "creating/additional" => (builder) =>
+            {
+                builder.OpenComponent<AdditionalGroupModal<T, SelectedDTO>>(0);
+                builder.AddAttribute(1, "ActionType", "creating/additional");
+                builder.AddAttribute(2, "OnSubmit", EventCallback.Factory.Create<T>(this, ConfirmAsync));
+                builder.AddAttribute(3, "OnCancel", EventCallback.Factory.Create(this, CancelAsync));
+                builder.AddAttribute(4, "IsLoading", IsLoading);
+                builder.AddAttribute(5, "ComponentIsLoaded", EventCallback.Factory.Create(this, SyncComponent));
+                builder.CloseComponent();
+            }
+            ,
+            "creating/frame" => (builder) =>
+            {
+                builder.OpenComponent<NewQrCodeFrame<T, SelectedDTO>>(0);
+                builder.AddAttribute(1, "ActionType", "creating/frame");
+                builder.AddAttribute(2, "OnSubmit", EventCallback.Factory.Create<T>(this, ConfirmAsync));
+                builder.AddAttribute(3, "OnCancel", EventCallback.Factory.Create(this, CancelAsync));
+                builder.AddAttribute(4, "IsLoading", IsLoading);
+                builder.AddAttribute(5, "ComponentIsLoaded", EventCallback.Factory.Create(this, SyncComponent));
+                builder.CloseComponent();
+            }
+            ,
+
+            // Editando
+            "editing/categoria" => (builder) =>
+            {
+                builder.OpenComponent<CategoryModal<T, SelectedDTO>>(0);
+                builder.AddAttribute(1, "ActionType", "editing/categoria");
+                builder.AddAttribute(2, "OnSubmit", EventCallback.Factory.Create<T>(this, ConfirmAsync));
+                builder.AddAttribute(3, "OnCancel", EventCallback.Factory.Create(this, CancelAsync));
+                builder.AddAttribute(4, "SelectedDTO", Selected);
+                builder.AddAttribute(5, "IsLoading", IsLoading);
+                builder.AddAttribute(6, "ComponentIsLoaded", EventCallback.Factory.Create(this, SyncComponent));
+                builder.CloseComponent();
+            }
+            ,
+            "editing/additional" => (builder) =>
+            {
+                builder.OpenComponent<AdditionalGroupModal<T, SelectedDTO>>(0);
+                builder.AddAttribute(1, "ActionType", "editing/additional");
+                builder.AddAttribute(2, "OnSubmit", EventCallback.Factory.Create<T>(this, ConfirmAsync));
+                builder.AddAttribute(3, "OnCancel", EventCallback.Factory.Create(this, CancelAsync));
+                builder.AddAttribute(4, "IsLoading", IsLoading);
+                builder.AddAttribute(5, "ComponentIsLoaded", EventCallback.Factory.Create(this, SyncComponent));
+                builder.AddAttribute(6, "SelectedDTO", Selected);
+                builder.CloseComponent();
+            }
+            ,
+            "editing/produto" => (builder) =>
+            {
+                builder.OpenComponent<ProductModal<T, SelectedDTO>>(0);
+                builder.AddAttribute(1, "ActionType", "editing/produto");
+                builder.AddAttribute(2, "OnSubmit", EventCallback.Factory.Create<T>(this, ConfirmAsync));
+                builder.AddAttribute(3, "OnCancel", EventCallback.Factory.Create(this, CancelAsync));
+                builder.AddAttribute(4, "OnOpenCategoryModal", EventCallback.Factory.Create(this, HandleSecondaryModalOpen));
+                builder.AddAttribute(5, "SelectedDTO", Selected);
+                builder.AddAttribute(6, "IsLoading", IsLoading);
+                builder.AddAttribute(7, "ComponentIsLoaded", EventCallback.Factory.Create(this, SyncComponent));
+                builder.AddAttribute(8, "CategoriesDataAPI", Categories);
+                builder.CloseComponent();
+            }
+            ,
+            "editing/empresa" => (builder) =>
+            {
+                builder.OpenComponent<CompanyModal<T, SelectedDTO>>(0);
+                builder.AddAttribute(1, "ActionType", "editing/empresa");
+                builder.AddAttribute(2, "OnSubmit", EventCallback.Factory.Create<T>(this, ConfirmAsync));
+                builder.AddAttribute(3, "OnCancel", EventCallback.Factory.Create(this, CancelAsync));
+                builder.AddAttribute(4, "SelectedDTO", Selected);
+                builder.AddAttribute(5, "IsLoading", IsLoading);
+                builder.AddAttribute(6, "ComponentIsLoaded", EventCallback.Factory.Create(this, SyncComponent));
+                builder.CloseComponent();
+            }
+            ,
+            "editing/usuario" => (builder) =>
+            {
+                builder.OpenComponent<UserModal<T, SelectedDTO>>(0);
+                builder.AddAttribute(1, "ActionType", "editing/usuario");
+                builder.AddAttribute(2, "OnSubmit", EventCallback.Factory.Create<T>(this, ConfirmAsync));
+                builder.AddAttribute(3, "OnCancel", EventCallback.Factory.Create(this, CancelAsync));
+                builder.AddAttribute(4, "SelectedDTO", Selected);
+                builder.AddAttribute(5, "IsLoading", IsLoading);
+                builder.AddAttribute(6, "ComponentIsLoaded", EventCallback.Factory.Create(this, SyncComponent));
+                builder.CloseComponent();
+            }
+            ,
+            "editing/grupo" => (builder) =>
+            {
+                builder.OpenComponent<GroupModal<T, SelectedDTO>>(0);
+                builder.AddAttribute(1, "ActionType", "editing/grupo");
+                builder.AddAttribute(2, "OnSubmit", EventCallback.Factory.Create<T>(this, ConfirmAsync));
+                builder.AddAttribute(3, "OnCancel", EventCallback.Factory.Create(this, CancelAsync));
+                builder.AddAttribute(4, "SelectedDTO", Selected);
+                builder.AddAttribute(5, "IsLoading", IsLoading);
+                builder.AddAttribute(6, "ComponentIsLoaded", EventCallback.Factory.Create(this, SyncComponent));
+                builder.CloseComponent();
+            },
+            "editing/date" => (builder) =>
+            {
+                builder.OpenComponent<DateModal<T, SelectedDTO>>(0);
+                builder.AddAttribute(1, "ActionType", "editing/date");
+                builder.AddAttribute(2, "OnSubmit", EventCallback.Factory.Create<T>(this, ConfirmAsync));
+                builder.AddAttribute(3, "OnCancel", EventCallback.Factory.Create(this, CancelAsync));
+                builder.AddAttribute(4, "SelectedDTO", Selected);
+                builder.AddAttribute(5, "IsLoading", IsLoading);
+                builder.AddAttribute(6, "ComponentIsLoaded", EventCallback.Factory.Create(this, SyncComponent));
+                builder.CloseComponent();
+            }
+            ,
+            "editing/mesa" => (builder) =>
+            {
+                builder.OpenComponent<MesaModal<T, SelectedDTO>>(0);
+                builder.AddAttribute(1, "ActionType", "editing/mesa");
+                builder.AddAttribute(2, "OnSubmit", EventCallback.Factory.Create<T>(this, ConfirmAsync));
+                builder.AddAttribute(3, "OnCancel", EventCallback.Factory.Create(this, CancelAsync));
+                builder.AddAttribute(4, "SelectedDTO", Selected);
+                builder.AddAttribute(5, "IsLoading", IsLoading);
+                builder.AddAttribute(6, "ComponentIsLoaded", EventCallback.Factory.Create(this, SyncComponent));
+                builder.CloseComponent();
+            }
+            ,
+
+            // Deletando
+            "deleting/categoria" => (builder) =>
+            {
+                builder.OpenComponent<DeleteModal<T>>(0);
+                builder.AddAttribute(1, "ActionType", "deleting/categoria");
+                builder.AddAttribute(2, "OnSubmit", EventCallback.Factory.Create<T>(this, ConfirmAsync));
+                builder.AddAttribute(3, "OnCancel", EventCallback.Factory.Create(this, CancelAsync));
+                builder.AddAttribute(4, "IsLoading", IsLoading);
+                builder.AddAttribute(5, "ComponentIsLoaded", EventCallback.Factory.Create(this, SyncComponent));
+                builder.CloseComponent();
+            }
+            ,
+            "deleting/produto" => (builder) =>
+            {
+                builder.OpenComponent<DeleteModal<T>>(0);
+                builder.AddAttribute(1, "ActionType", "deleting/produto");
+                builder.AddAttribute(2, "OnSubmit", EventCallback.Factory.Create<T>(this, ConfirmAsync));
+                builder.AddAttribute(3, "OnCancel", EventCallback.Factory.Create(this, CancelAsync));
+                builder.AddAttribute(4, "IsLoading", IsLoading);
+                builder.AddAttribute(5, "ComponentIsLoaded", EventCallback.Factory.Create(this, SyncComponent));
+                builder.CloseComponent();
+            }
+            ,
+            "deleting/empresa" => (builder) =>
+            {
+                builder.OpenComponent<DeleteModal<T>>(0);
+                builder.AddAttribute(1, "ActionType", "deleting/empresa");
+                builder.AddAttribute(2, "OnSubmit", EventCallback.Factory.Create<T>(this, ConfirmAsync));
+                builder.AddAttribute(3, "OnCancel", EventCallback.Factory.Create(this, CancelAsync));
+                builder.AddAttribute(4, "IsLoading", IsLoading);
+                builder.AddAttribute(5, "ComponentIsLoaded", EventCallback.Factory.Create(this, SyncComponent));
+                builder.CloseComponent();
+            }
+            ,
+            "deleting/usuario" => (builder) =>
+            {
+                builder.OpenComponent<DeleteModal<T>>(0);
+                builder.AddAttribute(1, "ActionType", "deleting/usuario");
+                builder.AddAttribute(2, "OnSubmit", EventCallback.Factory.Create<T>(this, ConfirmAsync));
+                builder.AddAttribute(3, "OnCancel", EventCallback.Factory.Create(this, CancelAsync));
+                builder.AddAttribute(4, "IsLoading", IsLoading);
+                builder.AddAttribute(5, "ComponentIsLoaded", EventCallback.Factory.Create(this, SyncComponent));
+                builder.CloseComponent();
+            }
+            ,
+            "deleting/grupo" => (builder) =>
+            {
+                builder.OpenComponent<DeleteModal<T>>(0);
+                builder.AddAttribute(1, "ActionType", "deleting/grupo");
+                builder.AddAttribute(2, "OnSubmit", EventCallback.Factory.Create<T>(this, ConfirmAsync));
+                builder.AddAttribute(3, "OnCancel", EventCallback.Factory.Create(this, CancelAsync));
+                builder.AddAttribute(4, "IsLoading", IsLoading);
+                builder.AddAttribute(5, "ComponentIsLoaded", EventCallback.Factory.Create(this, SyncComponent));
+                builder.CloseComponent();
+            },
+            "deleting/additional" => (builder) =>
+            {
+                builder.OpenComponent<DeleteModal<T>>(0);
+                builder.AddAttribute(1, "ActionType", "deleting/grupo de adicional");
+                builder.AddAttribute(2, "OnSubmit", EventCallback.Factory.Create<T>(this, ConfirmAsync));
+                builder.AddAttribute(3, "OnCancel", EventCallback.Factory.Create(this, CancelAsync));
+                builder.AddAttribute(4, "IsLoading", IsLoading);
+                builder.AddAttribute(5, "ComponentIsLoaded", EventCallback.Factory.Create(this, SyncComponent));
+                builder.CloseComponent();
+            }
+            ,
+            "deleting/mesa" => (builder) =>
+            {
+                builder.OpenComponent<DeleteModal<T>>(0);
+                builder.AddAttribute(1, "ActionType", "deleting/mesa");
+                builder.AddAttribute(2, "OnSubmit", EventCallback.Factory.Create<T>(this, ConfirmAsync));
+                builder.AddAttribute(3, "OnCancel", EventCallback.Factory.Create(this, CancelAsync));
+                builder.AddAttribute(4, "IsLoading", IsLoading);
+                builder.AddAttribute(5, "ComponentIsLoaded", EventCallback.Factory.Create(this, SyncComponent));
+                builder.CloseComponent();
+            }
+            ,
+            "returning/group" => (builder) =>
+              {
+                  builder.OpenComponent<ReturnGroup<T>>(0);
+                  builder.AddAttribute(1, "OnSubmit", EventCallback.Factory.Create<T>(this, ConfirmAsync));
+                  builder.AddAttribute(2, "OnCancel", EventCallback.Factory.Create(this, CancelAsync));
+                  builder.AddAttribute(3, "IsLoading", IsLoading);
+                  builder.AddAttribute(4, "ComponentIsLoaded", EventCallback.Factory.Create(this, SyncComponent));
+                  builder.CloseComponent();
+              },
+                        
+            "returning/empresa" => (builder) =>  // <-- adicione isso
+            {
+                builder.OpenComponent<ReturnGroup<T>>(0); // reutiliza o mesmo componente visual
+                builder.AddAttribute(1, "OnSubmit", EventCallback.Factory.Create<T>(this, ConfirmAsync));
+                builder.AddAttribute(2, "OnCancel", EventCallback.Factory.Create(this, CancelAsync));
+                builder.AddAttribute(3, "IsLoading", IsLoading);
+                builder.AddAttribute(4, "ComponentIsLoaded", EventCallback.Factory.Create(this, SyncComponent));
+                builder.CloseComponent();
+            },
+            "confirm/unlink" => (builder) =>
+            {
+                builder.OpenComponent<DeleteModal<T>>(0);
+                builder.AddAttribute(1, "ActionType", "deleting/vinculo de produto");
+                builder.AddAttribute(2, "OnSubmit", EventCallback.Factory.Create<T>(this, ConfirmAsync));
+                builder.AddAttribute(3, "OnCancel", EventCallback.Factory.Create(this, CancelAsync));
+                builder.AddAttribute(4, "IsLoading", IsLoading);
+                builder.AddAttribute(5, "ComponentIsLoaded", EventCallback.Factory.Create(this, SyncComponent));
+                builder.CloseComponent();
+            }
+            ,
+            "confirm/additional" => (builder) =>
+            {
+                builder.OpenComponent<EditGroupAdditional<T, SelectedDTO>>(0);
+                builder.AddAttribute(1, "OnSubmit", EventCallback.Factory.Create<T>(this, ConfirmAsync));
+                builder.AddAttribute(2, "OnCancel", EventCallback.Factory.Create(this, CancelAsync));
+                builder.AddAttribute(3, "IsLoading", IsLoading);
+                builder.AddAttribute(4, "ComponentIsLoaded", EventCallback.Factory.Create(this, SyncComponent));
+                builder.AddAttribute(5, "SelectedDTO", Selected);
+                builder.CloseComponent();
+            }
+            ,
+
+            // Visualizando
+            "view-cart/produto" => (builder) =>
+            {
+                builder.OpenComponent<ViewProductDetails<T, SelectedDTO>>(0);
+                builder.AddAttribute(1, "ActionType", "view-cart/product");
+                builder.AddAttribute(2, "OnSubmit", EventCallback.Factory.Create<T>(this, ConfirmAsync));
+                builder.AddAttribute(3, "OnCancel", EventCallback.Factory.Create(this, CancelAsync));
+                builder.AddAttribute(4, "productSelected", Selected);
+                builder.AddAttribute(5, "ComponentIsLoaded", EventCallback.Factory.Create(this, SyncComponent));
+                builder.CloseComponent();
+            }
+            ,
+            "view-menu/produto" => (builder) =>
+            {
+                builder.OpenComponent<ViewProductDetails<T, SelectedDTO>>(0);
+                builder.AddAttribute(1, "ActionType", "view-menu/product");
+                builder.AddAttribute(2, "OnSubmit", EventCallback.Factory.Create<T>(this, ConfirmAsync));
+                builder.AddAttribute(3, "OnCancel", EventCallback.Factory.Create(this, CancelAsync));
+                builder.AddAttribute(4, "ProductSelected", Selected);
+                builder.AddAttribute(5, "ComponentIsLoaded", EventCallback.Factory.Create(this, SyncComponent));
+                builder.CloseComponent();
+            }
+            ,
+            "view/company" => (builder) =>
+            {
+                builder.OpenComponent<ViewCompanyDetails<SelectedDTO>>(0);
+                builder.AddAttribute(1, "OnCancel", EventCallback.Factory.Create(this, CancelAsync));
+                builder.AddAttribute(2, "companySelected", Selected);
+                builder.AddAttribute(3, "ComponentIsLoaded", EventCallback.Factory.Create(this, SyncComponent));
+                builder.CloseComponent();
+            }
+            ,
+            "view/qtdProduct" => (builder) =>
+            {
+                builder.OpenComponent<ViewQtdProduct<SelectedDTO>>(0);
+                builder.AddAttribute(1, "OnCancel", EventCallback.Factory.Create(this, CancelAsync));
+                builder.AddAttribute(2, "SelectedDTO", Selected);
+                builder.AddAttribute(3, "ComponentIsLoaded", EventCallback.Factory.Create(this, SyncComponent));
+                builder.CloseComponent();
+            },
+            "download/qrCode" => (builder) =>
+            {
+                builder.OpenComponent<QrCodeDownloadModal<T, SelectedDTO>>(0);
+                builder.AddAttribute(1, "ActionType", "download/qrCode");
+                builder.AddAttribute(2, "OnSubmit", EventCallback.Factory.Create<T>(this, ConfirmAsync));
+                builder.AddAttribute(3, "OnCancel", EventCallback.Factory.Create(this, CancelAsync));
+                builder.AddAttribute(4, "SelectedDTO", Selected);
+                builder.AddAttribute(5, "IsLoading", IsLoading);
+                builder.AddAttribute(6, "ComponentIsLoaded", EventCallback.Factory.Create(this, SyncComponent));
+                builder.CloseComponent();
+            }
+            ,
+
+            // Padrão
+            _ => (builder) =>
+            {
+                builder.AddContent(0, "Tipo de ação desconhecido.");
+            }
+        };
+    }
+
+}
+
+<div class="modal-overlay @(IsOpen ? "show" : "")" @onclick="CancelAsync">
+    <div id="@modalId" class="modal-content @(IsOpen ? "show" : "")"
+         style="@(ActionType == "view-menu/produto" || ActionType == "view-cart/produto" ? "padding: 0 !important; overflow: hidden;" : "")"
+         @onclick:stopPropagation="true">
+        <div class="modal-header">
+            <i class="fa-solid fa-grip" title="Segure e Arraste para mover"></i>
+        </div>
+        @GetForm()
+    </div>
+</div>
+
+<script>
+    function removeOverflow() {
+        document.body.classList.remove('no-scroll');
+    }
+
+    function addOverflow() {
+        document.body.classList.add('no-scroll');
+    }
+</script>

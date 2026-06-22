@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Gerenciar FAQ — Agente de IA</title>
+  <link rel="icon" type="image/x-icon" href="favicon.ico" />
+  <style>
+    :root { --grad: linear-gradient(to right,#f06,#5cc6d0); }
+    * { box-sizing: border-box; }
+    body { font-family: 'Roboto', Arial, sans-serif; margin: 0; background: #f5f6f8; color: #222; }
+    header { background: var(--grad); color: #fff; padding: 16px 22px; font-weight: bold; font-size: 18px; }
+    main { max-width: 860px; margin: 0 auto; padding: 20px; }
+    .card { background: #fff; border: 1px solid #e3e5e8; border-radius: 10px; padding: 16px; margin-bottom: 18px; }
+    label { display: block; font-size: 13px; color: #555; margin: 8px 0 4px; }
+    input[type=text], textarea { width: 100%; border: 1px solid #ccd0d6; border-radius: 8px; padding: 9px 11px; font-size: 14px; font-family: inherit; }
+    textarea { resize: vertical; min-height: 70px; }
+    button { background: var(--grad); color: #fff; border: none; border-radius: 8px; padding: 9px 16px; cursor: pointer; font-size: 14px; }
+    button.sec { background: #fff; color: #2c3647; border: 1px solid #ccd0d6; }
+    button.danger { background: #fff; color: #d33; border: 1px solid #f0c0c0; }
+    button:disabled { opacity: .5; cursor: default; }
+    .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .faq { border-bottom: 1px solid #eee; padding: 12px 0; }
+    .faq:last-child { border-bottom: none; }
+    .faq .p { font-weight: bold; }
+    .faq .r { color: #444; white-space: pre-wrap; margin: 4px 0 8px; }
+    .badge { font-size: 11px; padding: 2px 8px; border-radius: 10px; }
+    .on { background: #e3f5e8; color: #1a7f37; }
+    .off { background: #fdeaea; color: #b00; }
+    .badge.vid { background: #e7f0fb; color: #2c79c6; }
+    .msg { padding: 10px 14px; border-radius: 8px; margin-bottom: 12px; display: none; }
+    .msg.ok { background: #e3f5e8; color: #1a7f37; display: block; }
+    .msg.err { background: #fdeaea; color: #b00; display: block; }
+    .muted { color: #888; font-size: 13px; }
+    .tvp-modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,.45); display: none; align-items: center; justify-content: center; z-index: 9999; }
+    .tvp-modal.open { display: flex; }
+    .tvp-modal-card { background: #fff; border-radius: 12px; max-width: 400px; width: 90%; box-shadow: 0 12px 40px rgba(0,0,0,.3); overflow: hidden; }
+    .tvp-modal-head { background: linear-gradient(to right,#f06,#5cc6d0); color: #fff; padding: 14px 18px; font-weight: bold; }
+    .tvp-modal-body { padding: 18px; color: #444; font-size: 14px; }
+    .tvp-modal-body .q { margin-top: 8px; padding: 8px 10px; background: #f5f6f8; border-radius: 8px; font-style: italic; color: #333; white-space: pre-wrap; }
+    .tvp-modal-actions { display: flex; justify-content: flex-end; gap: 8px; padding: 0 18px 18px; }
+  </style>
+</head>
+<body>
+  <header>Gerenciar FAQ — Agente de IA</header>
+  <main>
+    <div id="msg" class="msg"></div>
+
+    <div class="card" id="formCard">
+      <strong>Adicionar pergunta e resposta</strong>
+      <label>Pergunta</label>
+      <input type="text" id="pergunta" maxlength="1000" placeholder="Ex.: Como faço para...?" />
+      <label>Resposta</label>
+      <textarea id="resposta" maxlength="8000" placeholder="Escreva a resposta que a IA deve dar."></textarea>
+      <div class="row" style="margin-top:10px">
+        <button id="btnAdd">Adicionar</button>
+        <span class="muted">A IA passa a usar em alguns segundos.</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="row" style="justify-content:space-between">
+        <strong>FAQs cadastrados</strong>
+        <button class="sec" id="btnReload">Atualizar lista</button>
+      </div>
+      <input type="text" id="busca" placeholder="Buscar por palavra-chave (pergunta ou resposta)..." style="margin:10px 0" />
+      <div id="lista"><p class="muted">Carregando…</p></div>
+    </div>
+  </main>
+
+  <div id="modal" class="tvp-modal">
+    <div class="tvp-modal-card">
+      <div class="tvp-modal-head">Confirmar exclusão</div>
+      <div class="tvp-modal-body">
+        Tem certeza que deseja excluir este FAQ? Essa ação não pode ser desfeita.
+        <div class="q" id="modalQ"></div>
+      </div>
+      <div class="tvp-modal-actions">
+        <button class="sec" id="modalCancel">Cancelar</button>
+        <button class="danger" id="modalOk">Excluir</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // token vem do painel via #t=...; guardamos em sessionStorage para o F5 não perder.
+    var TKEY = "tvp_faq_admin_token";
+    var TOKEN = "";
+    (function () {
+      var m = /[#&]t=([^&]+)/.exec(location.hash || "");
+      if (m) {
+        TOKEN = decodeURIComponent(m[1]);
+        try { sessionStorage.setItem(TKEY, TOKEN); } catch (_) {}
+        history.replaceState(null, "", location.pathname); // tira o token da URL
+      } else {
+        try { TOKEN = sessionStorage.getItem(TKEY) || ""; } catch (_) {} // recupera no F5
+      }
+    })();
+    var API = location.pathname.replace(/admin\.html$/, "") + "api/faq";
+
+    var msg = document.getElementById("msg");
+    function showMsg(text, ok) { msg.textContent = text; msg.className = "msg " + (ok ? "ok" : "err"); setTimeout(function(){ msg.className = "msg"; }, 4000); }
+
+    function api(path, opts) {
+      opts = opts || {};
+      opts.headers = Object.assign({ "Content-Type": "application/json", "X-Admin-Token": TOKEN }, opts.headers || {});
+      return fetch(API + path, opts).then(function (r) {
+        if (r.status === 401) { try { sessionStorage.removeItem(TKEY); } catch (_) {} throw new Error("Sessão expirada. Feche e reabra pelo painel."); }
+        return r.json().then(function (j) { if (!r.ok) throw new Error(j.error || "Erro"); return j; });
+      });
+    }
+
+    function esc(s) { return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+
+    // modal de confirmação estilizado (substitui o confirm() do navegador)
+    function askConfirm(pergunta, onConfirm) {
+      var modal = document.getElementById("modal");
+      document.getElementById("modalQ").textContent = pergunta || "";
+      modal.classList.add("open");
+      var ok = document.getElementById("modalOk");
+      var cancel = document.getElementById("modalCancel");
+      function close() { modal.classList.remove("open"); ok.onclick = null; cancel.onclick = null; modal.onclick = null; }
+      ok.onclick = function () { close(); onConfirm(); };
+      cancel.onclick = close;
+      modal.onclick = function (e) { if (e.target === modal) close(); };
+    }
+
+    var allFaqs = [];
+    function load() {
+      var lista = document.getElementById("lista");
+      lista.innerHTML = '<p class="muted">Carregando…</p>';
+      api("", { method: "GET" }).then(function (j) {
+        allFaqs = j.faqs || [];
+        renderList();
+      }).catch(function (e) { lista.innerHTML = '<p class="muted">' + esc(e.message) + '</p>'; });
+    }
+
+    // renderiza a lista aplicando o filtro do campo de busca
+    function renderList() {
+      var lista = document.getElementById("lista");
+      var termo = (document.getElementById("busca").value || "").trim().toLowerCase();
+      if (!allFaqs.length) { lista.innerHTML = '<p class="muted">Nenhum FAQ cadastrado ainda.</p>'; return; }
+      var filtrados = !termo ? allFaqs : allFaqs.filter(function (f) {
+        return (f.Pergunta || "").toLowerCase().indexOf(termo) !== -1 ||
+               (f.Resposta || "").toLowerCase().indexOf(termo) !== -1;
+      });
+      if (!filtrados.length) { lista.innerHTML = '<p class="muted">Nenhum resultado para "' + esc(termo) + '".</p>'; return; }
+      lista.innerHTML = "";
+      filtrados.forEach(function (f) {
+        var div = document.createElement("div");
+        div.className = "faq";
+        renderView(div, f);
+        lista.appendChild(div);
+      });
+    }
+
+    // modo de exibição (com botões Editar / Ativar-Desativar / Excluir)
+    function renderView(div, f) {
+      var temVideo = !!f.VideoUrl;
+      div.innerHTML =
+        '<div class="row" style="justify-content:space-between">' +
+          '<span class="p">' + esc(f.Pergunta) + '</span>' +
+          '<span>' +
+            (temVideo ? '<span class="badge vid">vídeo</span> ' : '') +
+            '<span class="badge ' + (f.Ativo ? "on" : "off") + '">' + (f.Ativo ? "Ativo" : "Inativo") + '</span>' +
+          '</span>' +
+        '</div>' +
+        '<div class="r">' + esc(f.Resposta) + '</div>' +
+        '<div class="row">' +
+          '<button class="sec" data-act="edit">Editar</button>' +
+          '<button class="sec" data-act="toggle">' + (f.Ativo ? "Desativar" : "Ativar") + '</button>' +
+          '<button class="danger" data-act="del">Excluir</button>' +
+          '<button class="sec" data-act="video">' + (temVideo ? "Vincular (vídeo ✓)" : "Vincular") + '</button>' +
+        '</div>';
+      div.querySelector('[data-act="edit"]').onclick = function () { renderEdit(div, f); };
+      div.querySelector('[data-act="video"]').onclick = function () { renderVincular(div, f); };
+      div.querySelector('[data-act="toggle"]').onclick = function () {
+        api("/update", { method: "POST", body: JSON.stringify({ id: f.Id, pergunta: f.Pergunta, resposta: f.Resposta, ativo: !f.Ativo, videoUrl: f.VideoUrl || "" }) })
+          .then(function () { showMsg("Atualizado.", true); load(); }).catch(function (e) { showMsg(e.message, false); });
+      };
+      div.querySelector('[data-act="del"]').onclick = function () {
+        askConfirm(f.Pergunta, function () {
+          api("/delete", { method: "POST", body: JSON.stringify({ id: f.Id }) })
+            .then(function () { showMsg("Excluído.", true); load(); }).catch(function (e) { showMsg(e.message, false); });
+        });
+      };
+    }
+
+    // vincular/editar/remover o vídeo tutorial do FAQ
+    function renderVincular(div, f) {
+      div.innerHTML =
+        '<div class="p">' + esc(f.Pergunta) + '</div>' +
+        '<label>Link do vídeo tutorial (abre dentro do sistema pelo chat)</label>' +
+        '<input type="text" class="ed-v" maxlength="500" placeholder="https://..." />' +
+        '<div class="row" style="margin-top:8px">' +
+          '<button data-act="save">Salvar</button>' +
+          '<button class="sec" data-act="cancel">Cancelar</button>' +
+          (f.VideoUrl ? '<button class="danger" data-act="remove">Remover vídeo</button>' : '') +
+        '</div>';
+      div.querySelector(".ed-v").value = f.VideoUrl || "";
+      div.querySelector('[data-act="cancel"]').onclick = function () { renderView(div, f); };
+      div.querySelector('[data-act="save"]').onclick = function () {
+        var v = div.querySelector(".ed-v").value.trim();
+        api("/update", { method: "POST", body: JSON.stringify({ id: f.Id, pergunta: f.Pergunta, resposta: f.Resposta, ativo: f.Ativo, videoUrl: v }) })
+          .then(function () { showMsg("Vídeo vinculado.", true); load(); }).catch(function (e) { showMsg(e.message, false); });
+      };
+      if (f.VideoUrl) {
+        div.querySelector('[data-act="remove"]').onclick = function () {
+          api("/update", { method: "POST", body: JSON.stringify({ id: f.Id, pergunta: f.Pergunta, resposta: f.Resposta, ativo: f.Ativo, videoUrl: "" }) })
+            .then(function () { showMsg("Vídeo removido.", true); load(); }).catch(function (e) { showMsg(e.message, false); });
+        };
+      }
+    }
+
+    // modo de edição (altera pergunta/resposta)
+    function renderEdit(div, f) {
+      div.innerHTML =
+        '<label>Pergunta</label>' +
+        '<input type="text" class="ed-p" maxlength="1000" />' +
+        '<label>Resposta</label>' +
+        '<textarea class="ed-r" maxlength="8000"></textarea>' +
+        '<div class="row" style="margin-top:8px">' +
+          '<button data-act="save">Salvar</button>' +
+          '<button class="sec" data-act="cancel">Cancelar</button>' +
+        '</div>';
+      div.querySelector(".ed-p").value = f.Pergunta;
+      div.querySelector(".ed-r").value = f.Resposta;
+      div.querySelector('[data-act="cancel"]').onclick = function () { renderView(div, f); };
+      div.querySelector('[data-act="save"]').onclick = function () {
+        var p = div.querySelector(".ed-p").value.trim();
+        var r = div.querySelector(".ed-r").value.trim();
+        if (!p || !r) { showMsg("Preencha pergunta e resposta.", false); return; }
+        api("/update", { method: "POST", body: JSON.stringify({ id: f.Id, pergunta: p, resposta: r, ativo: f.Ativo, videoUrl: f.VideoUrl || "" }) })
+          .then(function () { showMsg("Pergunta atualizada.", true); load(); }).catch(function (e) { showMsg(e.message, false); });
+      };
+    }
+
+    document.getElementById("btnAdd").onclick = function () {
+      var p = document.getElementById("pergunta").value.trim();
+      var r = document.getElementById("resposta").value.trim();
+      if (!p || !r) { showMsg("Preencha pergunta e resposta.", false); return; }
+      this.disabled = true;
+      var self = this;
+      api("", { method: "POST", body: JSON.stringify({ pergunta: p, resposta: r }) })
+        .then(function () {
+          document.getElementById("pergunta").value = "";
+          document.getElementById("resposta").value = "";
+          showMsg("Adicionado!", true); load();
+        }).catch(function (e) { showMsg(e.message, false); })
+        .then(function(){ self.disabled = false; });
+    };
+    document.getElementById("btnReload").onclick = load;
+    document.getElementById("busca").oninput = renderList;
+
+    if (!TOKEN) {
+      showMsg("Sem token de acesso. Abra esta tela pelo botão no painel (login do admin master).", false);
+      document.getElementById("formCard").style.display = "none";
+    } else {
+      load();
+    }
+  </script>
+</body>
+</html>

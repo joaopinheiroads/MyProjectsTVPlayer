@@ -1,0 +1,307 @@
+﻿@page "/confirmar-pedido"
+
+@using System.Net.Http
+@using Cardápio.Client.Dto
+@using Cardápio.Client.Pages.ConfirmarPedido
+@using Cardápio.Client.Components.SpinnerLoader
+@using Microsoft.AspNetCore.SignalR.Client
+@using Microsoft.AspNetCore.Http.Connections
+@using Microsoft.Extensions.Logging
+@using System.Threading.Tasks
+@using System.Collections.Generic
+@using Microsoft.AspNetCore.Components
+
+@inject PedidoStorage PedidoStorage
+@inject NavigationManager Navigation
+@inject HttpClient Http
+
+<p>@statusMessage</p>
+
+
+<div class="container">
+    @if (isLoading)
+    {
+        <SpinnerLoader PrimaryColor="#272A2D" SecondaryColor="#ffffff" Size="90" />
+    }
+    else if (pedido == null)
+    {
+        <div class="error-message">
+            <h3>Pedido não encontrado!</h3>
+            <p>O pedido não foi carregado corretamente. Tente adicionar um produto ao carrinho novamente.</p>
+        </div>
+    }
+    else
+    {
+        <div class="content-order">
+            <div class="logo-container">
+                <img class="logo" src="/assets/blue-logo.png" />
+            </div>
+            <h3 class="title">Finalize seu pedido</h3>
+            <div>
+                <div class="tabs-container">
+                    <div class="tabs">
+                        <div @onclick="() => selectedIndex = 0" class="tab @(selectedIndex == 0 ? "active" : "")">Retirada</div>
+                    </div>
+                    <div class="tab-indicator" style="transform: translateX(@(selectedIndex * 100)%);"></div>
+                </div>
+            </div>
+            <div class="content-cards">
+                <div class="row">
+                    <div class="card">
+                        <div class="header-card">
+                            <i class="fa-solid fa-shop"></i>
+                            <p>Restaurante</p>
+                        </div>
+                        <div class="container-market">
+                            <div class="content-market">
+                                <img alt="logo" src="/imagens/logo/@pedido.EmpresaImageUrl" />
+                                <p>@pedido.EmpresaNome</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="header-card">
+                            <i class="fa-solid fa-cart-shopping"></i>
+                            <p>Itens do pedido</p>
+                        </div>
+                        <div class="container-itens">
+                            @for (int i = 0; i < (pedido?.ColPedidoItem?.Count ?? 0); i++)
+                            {
+                                var item = pedido!.ColPedidoItem![i];
+                                <div class="item">
+                                    <div class="content-item @(item.ColPedidoItemAdicional != null && item.ColPedidoItemAdicional.Any() || !string.IsNullOrEmpty(item.Observacao) ? "with-info" : "")">
+                                        <div class="item-header" style="display: flex; align-items: center; gap: 8px;">
+                                            <button class="rz-ripple button-red" style="width:32px;height:32px;" @onclick="() => AlterarQuantidade(i, -1)"><i class="fa-solid fa-minus"></i></button>
+                                            <span class="item-quantity">@item.Quantidade x </span>
+                                            <img src="@GetProductImageUrl(item.ProdutoID, item)" alt="Imagem Produto" style="width:48px;height:48px;object-fit:cover;margin-right:8px;border-radius:8px;" />
+                                            <span class="item-name">@item.Nome</span>
+                                            <button class="rz-ripple button-green" style="width:32px;height:32px;" @onclick="() => AlterarQuantidade(i, 1)"><i class="fa-solid fa-plus"></i></button>
+                                        </div>
+                                        <div class="item-price">
+                                            <span>R$ @item.Subtotal.ToString("F2")</span>
+                                        </div>
+                                    </div>
+                                    @if (item.ColPedidoItemAdicional?.Count > 0)
+                                    {
+                                        <div class="container-info">
+                                            @foreach (var adicional in item.ColPedidoItemAdicional)
+                                            {
+                                                <div class="content-additional">
+                                                    <div class="additional-header">
+                                                        <span class="additional-quantity">@adicional.Quantidade x </span>
+                                                        <span class="additional-name">@adicional.Nome</span>
+                                                    </div>
+                                                    <div class="additional-price">
+                                                        <span>R$ @adicional.Subtotal.ToString("F2")</span>
+                                                    </div>
+                                                </div>
+                                            }
+                                        </div>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="card">
+                        <div class="header-card">
+                            <i class="fa-regular fa-credit-card"></i>
+                            <p>Forma de pagamento</p>
+                        </div>
+                        <div class="container-payment">
+                            <div class="method">
+                                <input type="radio" checked name="payment" />
+                                <div class="payment-method-info">
+                                    <span>Pagar no local</span>
+                                    <p>Dinheiro, cartão ou PIX na hora da retirada</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="header-card">
+                            <i class="fa-regular fa-clock"></i>
+                            <p>Tempo de espera</p>
+                        </div>
+                        <div class="container-temp">
+                            <span class="temp">30-45 minutos</span>
+                        </div>
+                    </div>
+                    <div style="display: flex; flex-direction: row; gap: 16px; margin-top: 24px;">
+                        <button class="rz-ripple button-gray" style="padding: 12px 24px; border-radius: 8px; font-size: 1rem; display: flex; align-items: center; gap: 8px;" @onclick="VoltarAoCardapio">
+                            <i class="fa-solid fa-arrow-left"></i> Voltar ao Cardápio
+                        </button>
+                        <button class="confirm" style="padding: 12px 24px; border-radius: 8px; font-size: 1rem;" @onclick="EnviarPedido">Confirmar pedido</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+
+@code {
+    private string GetProductImageUrl(int produtoId, PedidoItemAddDTO item)
+    {
+        // Tenta pegar a imagem do produto, se disponível
+        string? imageName = null;
+        if (item != null && item.ColPedidoItemAdicional != null && item.ColPedidoItemAdicional.Any())
+        {
+            imageName = item.ColPedidoItemAdicional.FirstOrDefault()?.Nome;
+        }
+        // Se não houver imagem adicional, tenta usar o nome do produto como imagem
+        if (string.IsNullOrEmpty(imageName))
+        {
+            imageName = "Default.png";
+        }
+        var isDev = Navigation != null && (Navigation.Uri.Contains("localhost") || Navigation.Uri.Contains("127.0.0.1"));
+        if (isDev)
+            return $"/imagens/ThumbnailProducts/{imageName}";
+        else
+            return $"/imagens/ThumbnailProducts/{imageName}";
+    }
+
+    private string GetCompanyLogoUrl(string? logoName)
+    {
+        var isDev = Navigation != null && (Navigation.Uri.Contains("localhost") || Navigation.Uri.Contains("127.0.0.1"));
+        if (isDev)
+            return $"/imagens/logo/{logoName ?? "Default.png"}";
+        else
+            return $"/imagens/logo/{logoName ?? "Default.png"}";
+    }
+
+    private void AlterarQuantidade(int index, int delta)
+    {
+        if (pedido?.ColPedidoItem == null) return;
+        if (index < 0 || index >= pedido.ColPedidoItem.Count)
+            return;
+
+        var item = pedido.ColPedidoItem[index];
+        int novaQtd = item.Quantidade + delta;
+        if (novaQtd < 1)
+        {
+            pedido.ColPedidoItem.RemoveAt(index);
+            StateHasChanged();
+            return;
+        }
+        else
+        {
+            item.Quantidade = novaQtd;
+            // Recalcula subtotal do item
+            item.Subtotal = (item.Preco + (item.ColPedidoItemAdicional?.Sum(add => add.Subtotal) ?? 0)) * item.Quantidade;
+        }
+        StateHasChanged();
+    }
+    private void VoltarAoCardapio()
+    {
+        // Tenta recuperar a URL de origem do cardápio
+        var urlOrigem = PedidoStorage.GetPedido()?.UrlOrigemCardapio;
+        if (!string.IsNullOrEmpty(urlOrigem))
+        {
+            Navigation.NavigateTo(urlOrigem);
+        }
+        else
+        {
+            // Fallback: volta para a home
+            Navigation.NavigateTo("/");
+        }
+    }
+    private bool isLoading = true;
+    private PedidoAddDTO? pedido;
+    private int selectedIndex = 0;
+
+    protected override void OnInitialized()
+    {
+        isLoading = true;
+        pedido = PedidoStorage.GetPedido();
+        // Se não houver url de origem salva, tenta salvar a atual
+        if (pedido != null && string.IsNullOrEmpty(pedido.UrlOrigemCardapio))
+        {
+            pedido.UrlOrigemCardapio = Navigation.Uri;
+            PedidoStorage.SetPedido(pedido);
+        }
+        isLoading = false;
+        StateHasChanged();
+    }
+}
+
+
+@code {
+    private HubConnection? hubConnection;
+    private string statusMessage = "Aguardando confirmação...";
+
+    protected override async Task OnInitializedAsync()
+    {
+        hubConnection = new HubConnectionBuilder()
+            .WithUrl(Navigation.ToAbsoluteUri("/pedidoHub"), options =>
+            {
+                // Configurações otimizadas para IIS
+                options.SkipNegotiation = false;
+                options.Transports = HttpTransportType.WebSockets | HttpTransportType.LongPolling;
+                options.CloseTimeout = TimeSpan.FromSeconds(15);
+                options.Headers.Add("Connection", "Upgrade");
+                options.Headers.Add("Upgrade", "websocket");
+            })
+            .WithAutomaticReconnect(new[] { 
+                TimeSpan.Zero, 
+                TimeSpan.FromSeconds(2), 
+                TimeSpan.FromSeconds(5), 
+                TimeSpan.FromSeconds(10) 
+            })
+            .Build();
+
+        // Configurar handlers de eventos de conexão
+        hubConnection.Reconnecting += (error) =>
+        {
+            statusMessage = "Reconectando...";
+            InvokeAsync(StateHasChanged);
+            return Task.CompletedTask;
+        };
+
+        hubConnection.Reconnected += (connectionId) =>
+        {
+            statusMessage = "Conectado novamente!";
+            InvokeAsync(StateHasChanged);
+            return Task.CompletedTask;
+        };
+
+        hubConnection.Closed += (error) =>
+        {
+            statusMessage = "Conexão perdida. Tentando reconectar...";
+            InvokeAsync(StateHasChanged);
+            return Task.CompletedTask;
+        };
+
+        hubConnection.On<PedidoAddDTO>("PedidoConfirmado", (pedidoConfirmado) =>
+        {
+            statusMessage = "Pedido confirmado com sucesso!";
+            InvokeAsync(StateHasChanged);
+        });
+
+        try
+        {
+            await hubConnection.StartAsync();
+            statusMessage = "Conectado ao servidor!";
+        }
+        catch (Exception ex)
+        {
+            statusMessage = $"Erro ao conectar: {ex.Message}";
+        }
+        StateHasChanged();
+    }
+
+    private async Task EnviarPedido()
+    {
+        if (hubConnection?.State == HubConnectionState.Connected)
+        {
+            statusMessage = "Enviando pedido...";
+            await hubConnection.SendAsync("EnviarPedido", pedido);
+        }
+        else
+        {
+            statusMessage = "Erro ao conectar com o servidor.";
+        }
+        StateHasChanged();
+    }
+}

@@ -1,0 +1,79 @@
+* {
+	padding: 0;
+	margin: 0;
+	color: #272A2D;
+	box-sizing: border-box;
+	font-family: "Nunito", sans-serif;
+	text-rendering: optimizeLegibility;
+	-moz-osx-font-smoothing: grayscale;
+	-webkit-font-smoothing: antialiased;
+	font-optical-sizing: auto;
+	font-style: normal;
+	font-weight: 500;
+	letter-spacing: 0px;
+}
+
+body, html {
+	height: 100% !important ;
+	max-height: 100% !important
+}
+
+.rz-scrollbars > div, .rz-scrollbars > div > main, .container {
+	height: 100%;
+	max-height: 100%
+}
+
+
+
+	.number,
+	.number span {
+		font-family: "Nunito", sans-serif !important;
+		text-rendering: optimizeLegibility;
+		-moz-osx-font-smoothing: grayscale;
+		-webkit-font-smoothing: antialiased;
+		font-style: normal;
+		font-weight: 500;
+		letter-spacing: normal;
+		letter-spacing: 0px;
+	}
+
+body {
+	background-color: white;
+}
+
+.button-green {
+	background-color: #06D6A0 !important;
+	transition: background-color 0.3s ease;
+}
+
+.button-green:hover {
+	background-color: #2a9d62 !important;
+}
+
+.button-cyan {
+	background-color: #073B4C !important;
+	transition: background-color 0.3s ease;
+}
+
+.button-cyan:hover {
+	background-color: #052e3a !important;
+}
+
+.button-pink {
+	background-color: #EF476F !important;
+	transition: background-color 0.3s ease;
+}
+
+.button-pink:hover {
+	background-color: #d9365f !important;
+}
+
+.button-blue {
+	background-color: #2AABE2 !important;
+	transition: background-color 0.3s ease;
+}
+
+.button-blue:hover {
+	background-color: #0e6c8a !important;
+}
+

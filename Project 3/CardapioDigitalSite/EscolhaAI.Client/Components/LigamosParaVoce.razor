@@ -1,0 +1,37 @@
+﻿@rendermode InteractiveServer
+@using EscolhaAI.Client.Services
+@inject NavigationService Nav
+@inject WhatsAppService WhatsApp
+
+
+<div class="LigamosParaVoce" id="ligamos">
+	<div class="boxImage">
+		
+		<div class="logoEscolhaAi" @onclick="AbrirWhats">
+			<h2>Acessar</h2> <img src="/images/icon-enviar.png" alt="Footer Logo" class="logo-footer" />
+			
+
+		</div>
+        
+
+		
+	</div>
+
+	<div id="logoescolhaai2">
+		<img src="/Images/logoescolhaai22.png" />
+
+	</div>
+	
+</div>
+
+@code {
+
+
+	async Task AbrirWhats()
+	{
+		await WhatsApp.OpenWhatsApp(
+			"+551142101933",
+			"Venho através do escolha.ai!"
+		);
+	}
+}

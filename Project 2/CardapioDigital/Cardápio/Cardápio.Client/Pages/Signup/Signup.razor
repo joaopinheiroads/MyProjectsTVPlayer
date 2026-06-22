@@ -1,0 +1,476 @@
+﻿@page "/signup"
+@inject HttpClient HttpClient
+@inject IJSRuntime JSRuntime
+@inject NavigationManager NavigationManager
+@inject Cardápio.Client.Infra.Provider.CustomAuthenticationStateProvider Provider
+
+@using Cardápio.Client.Components.Modal;
+
+<head>
+    <HeadOutlet />
+    <PageTitle>Crie uma conta e começa a usar | Escolha AI</PageTitle>
+    <meta name="description" content="Registre-se com sua conta para acessar todas as funcionalidades da plataforma Escolha AI.">
+</head>
+
+@code {
+    private Dictionary<string, string> validationErrors = new();
+    private Dictionary<string, bool> fieldTouched = new();
+
+    private string nome;
+    private string email;
+    private string empresaNome = string.Empty;
+    private string celular;
+    private string telefone;
+    private string senha;
+    private string confirmarSenha;
+    private string cep = string.Empty;
+    private string estadoID;
+    private int cidadeID;
+    private string cidadeNome;
+    private bool isLoggingIn;
+    private string token;
+    private bool isLoading = true;
+    private bool isFinished = false;
+
+    private bool isSearchingCep = false;
+
+    private ElementReference cepInput;
+    private ElementReference celularInput;
+    private ElementReference telefoneInput;
+
+    private Task OnFinishedClose()
+    {
+        isFinished = false;
+        return Task.CompletedTask;
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Provider.VerifyTokenIsPresent();
+        isLoading = false;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await InitializeInpustMask();
+        }
+    }
+
+    private async Task HandleSignup()
+    {
+        validationErrors = new();
+        isLoggingIn = true;
+
+        NovoUsuarioSistemaDTO requestData = new NovoUsuarioSistemaDTO
+            {
+                Nome = nome,
+                Email = email,
+                EmpresaNome = empresaNome,
+                Senha = senha,
+                Celular = celular?.Replace("(", "")
+                                          .Replace(")", "")
+                                          .Replace(" ", "")
+                                          .Replace("-", ""),
+                Telefone = telefone?.Replace("(", "")
+                                          .Replace(")", "")
+                                          .Replace(" ", "")
+                                          .Replace("-", ""),
+                Cep = cep?.Replace("-", ""),
+                EstadoID = estadoID,
+                CidadeID = cidadeID
+            };
+
+        if (!await ValidateEntityAsync(requestData, nameof(requestData.Nome), nameof(requestData.Email), nameof(requestData.EmpresaNome),
+            nameof(requestData.Senha), nameof(requestData.Celular), nameof(requestData.Telefone), nameof(requestData.Cep),
+            nameof(requestData.EstadoID), nameof(requestData.CidadeID)))
+        {
+            isLoggingIn = false;
+            isLoading = false;
+            StateHasChanged();
+            return;
+        }
+
+        try
+        {
+            HttpResponseMessage response = await HttpClient.PostAsJsonAsync("/api/authentication/signup", requestData);
+            if (response.IsSuccessStatusCode)
+            {
+                ClearFields();
+                isFinished = true;
+            }
+            else
+            {
+                var errorMessage = await response.Content.ReadAsStringAsync();
+                if (errorMessage.Contains("\"Email já existe.\""))
+                {
+                    validationErrors["Email"] = "O email informado já está registrado.";
+
+                    return;
+                }
+
+                if (errorMessage.Contains("Empresa"))
+                {
+                    validationErrors["EmpresaNome"] = "Está empresa já está registrada";
+
+                    return;
+                }
+
+                validationErrors["General"] = "Ocorreu um erro ao tentar criar a conta.";
+            }
+        }
+        catch (Exception ex)
+        {
+        }
+        finally
+        {
+            isLoggingIn = false;
+        }
+    }
+
+    private async Task<bool> ValidateEntityAsync<GenericValidate>(GenericValidate entity, params string[] requiredFields)
+    {
+        var validator = new ValidationService<GenericValidate>();
+        var validationResult = validator.Validate(entity, requiredFields);
+
+        if (!validationResult.IsValid)
+        {
+            validationErrors = validationResult.Errors;
+            StateHasChanged();
+            return false;
+        }
+
+        validationErrors.Clear();
+        return true;
+    }
+
+    private void ClearFields()
+    {
+        nome = string.Empty;
+        email = string.Empty;
+        empresaNome = string.Empty;
+        celular = string.Empty;
+        telefone = string.Empty;
+        cep = string.Empty;
+        estadoID = string.Empty;
+        cidadeID = 0;
+        cidadeNome = string.Empty;
+    }
+
+    private void ValidateField(string fieldName, object value)
+    {
+        ValidationService<NovoUsuarioSistemaDTO> validator = new ValidationService<NovoUsuarioSistemaDTO>();
+
+        NovoUsuarioSistemaDTO entity = new NovoUsuarioSistemaDTO
+            {
+                Nome = nome,
+                Email = email,
+                EmpresaNome = empresaNome,
+                Senha = senha,
+                Celular = celular?.Replace("(", "")
+                          .Replace(")", "")
+                          .Replace(" ", "")
+                          .Replace("-", ""),
+                Telefone = telefone?.Replace("(", "")
+                          .Replace(")", "")
+                          .Replace(" ", "")
+                          .Replace("-", ""),
+                Cep = cep?.Replace("-", ""),
+                EstadoID = estadoID,
+                CidadeID = cidadeID
+            };
+
+        entity.Cep = entity.Cep?.Length > 8 ? entity.Cep.Substring(0, 8) : entity.Cep;
+
+        entity.Celular = entity.Celular?.Length > 10 ? entity.Celular.Substring(0, 11) : entity.Celular;
+
+        entity.Telefone = entity.Telefone?.Length > 10 ? entity.Telefone.Substring(0, 10) : entity.Telefone;
+
+        var validationResult = validator.Validate(entity, fieldName);
+
+        if (fieldName == "ConfirmarSenha")
+        {
+            if (confirmarSenha != senha)
+            {
+                validationErrors["ConfirmarSenha"] = "As senhas não coincidem.";
+            }
+            else
+            {
+                validationErrors.Remove("ConfirmarSenha");
+            }
+        }
+        else
+        {
+            if (validationResult.Errors.ContainsKey(fieldName))
+            {
+                validationErrors[fieldName] = validationResult.Errors[fieldName];
+            }
+            else
+            {
+                validationErrors.Remove(fieldName);
+            }
+        }
+
+        StateHasChanged();
+    }
+
+    private void MarkFieldTouched(string fieldName)
+    {
+        if (!fieldTouched.ContainsKey(fieldName))
+        {
+            fieldTouched[fieldName] = true;
+        }
+    }
+
+    private async Task GetEnderecoPorCep()
+    {
+        if (cep.Length < 1)
+        {
+            return;
+        }
+
+        var cleanedCep = new string(cep.Where(char.IsDigit).ToArray());
+
+        if (string.IsNullOrWhiteSpace(cleanedCep) || cleanedCep.Length != 8)
+        {
+            return;
+        }
+
+        isSearchingCep = true;
+        StateHasChanged();
+
+        try
+        {
+            var result = await HttpClient.PostAsJsonAsync($"api/enterprise/SearchCep?cep={cleanedCep}", new { });
+
+            var enderecoList = await result.Content.ReadFromJsonAsync<List<EnderecoResponse>>();
+            if (enderecoList == null || enderecoList.Count == 0)
+            {
+                Console.WriteLine("Nenhum endereço encontrado para o CEP fornecido.");
+                return;
+            }
+
+            var endereco = enderecoList[0];
+            estadoID = endereco.EndEstadoID;
+            cidadeID = endereco.CidID;
+            cidadeNome = endereco.CidNome;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("custom: " + ex);
+            Console.WriteLine($"Ocorreu um erro: {ex.Message}");
+        }
+        finally
+        {
+            isSearchingCep = false;
+            StateHasChanged();
+        }
+    }
+
+    private class EnderecoResponse
+    {
+        public string CidNome { get; set; }
+        public int CidID { get; set; }
+        public string EndEstadoID { get; set; }
+    }
+
+    private async Task InitializeInpustMask()
+    {
+        await JSRuntime.InvokeVoidAsync("applyVMaskerMask", "cep", "99999-999");
+        await JSRuntime.InvokeVoidAsync("applyVMaskerMask", "celular", "(99) 99999-9999");
+        await JSRuntime.InvokeVoidAsync("applyVMaskerMask", "telefone", "(99) 9999-9999");
+    }
+}
+
+<Modal T="object"
+       IsOpen="isFinished"
+       OnCancel="@OnFinishedClose"
+       ActionType="alerting/solicitacao"
+       SelectedDTO="object">
+</Modal>
+
+<div class="container">
+    @if (isLoading)
+    {
+        <div class="container">
+            <SpinnerLoader PrimaryColor="#272A2D" SecondaryColor="#ffffff" Size="90" />
+        </div>
+    }
+    else
+    {
+        <form>
+            <div class="descript">
+                <h3>Criar conta</h3>
+                <p>Preencha os dados para requisitar demonstração</p>
+            </div>
+            <div class="separator"></div>
+
+            <div class="content">
+                <div class="input-container">
+                    <div class="wrap-inputs">
+                        <div class="container-field">
+                            <div class="field">
+                                <i class="fa-solid fa-user icon"></i>
+                                <input type="text" @bind="nome" @bind:event="oninput" @onfocus="() => MarkFieldTouched(nameof(nome))" @onblur="() => ValidateField(nameof(NovoUsuarioSistemaDTO.Nome), nome)" required
+                                       aria-required="true" aria-label="Digite seu nome" />
+                                <label for="nome" class="label">Nome</label>
+                                <div class="underline"></div>
+                            </div>
+                            <span class="error-message">
+                                <span class="error-message">@validationErrors.GetValueOrDefault("Nome")</span>
+                            </span>
+                        </div>
+
+                        <div class="container-field">
+                            <div class="field">
+                                <i class="fa-solid fa-building icon"></i>
+                                <input type="text" @bind="empresaNome" @bind:event="oninput" @onfocus="() => MarkFieldTouched(nameof(empresaNome))" @onblur="() => ValidateField(nameof(NovoUsuarioSistemaDTO.EmpresaNome), empresaNome)" 
+                                       required aria-required="true" aria-label="Digite o nome da empresa" />
+                                <label for="empresa" class="label">Empresa</label>
+                                <div class="underline"></div>
+                            </div>
+                            <span class="error-message">
+                                @validationErrors.GetValueOrDefault("EmpresaNome")?.Replace("O EmpresaNome", "A Empresa")
+                            </span>
+                        </div>
+
+                        <div class="container-field">
+                            <div class="field">
+                                <i class="fa-solid fa-envelope icon"></i>
+                                <input type="email" @bind="email" @bind:event="oninput" @onfocus="() => MarkFieldTouched(nameof(email))" @onblur="() => ValidateField(nameof(NovoUsuarioSistemaDTO.Email), email)" 
+                                required aria-required="true" aria-label="Digite seu e-mail" aria-autocomplete="none" autocomplete="off" />
+                                <label for="email" class="label">E-mail</label>
+                                <div class="underline"></div>
+                            </div>
+                            <p class="error-message">
+                                @validationErrors.GetValueOrDefault("Email")
+                            </p>
+                        </div>
+
+                        <div class="container-field">
+                            <div class="field">
+                                <i class="fas fa-lock icon"></i>
+                                <input type="password" @bind="senha" @bind:event="oninput" @onfocus="() => MarkFieldTouched(nameof(senha))" @onblur="() => ValidateField(nameof(NovoUsuarioSistemaDTO.Senha), senha)"
+                                       required aria-required="true" aria-label="Digite sua senha" aria-autocomplete="none" autocomplete="off" />
+                                <label for="password" class="label">Senha</label>
+                                <div class="underline"></div>
+                            </div>
+                            <span class="error-message">
+                                @validationErrors.GetValueOrDefault("Senha")?.Replace("O", "A")
+                            </span>
+                        </div>
+
+                        <div class="container-field">
+                            <div class="field">
+                                <i class="fas fa-lock icon"></i>
+                                <input type="password" @bind="confirmarSenha" @bind:event="oninput" required autocomplete="off" @onblur="() => ValidateField(nameof(NovoUsuarioSistemaDTO.ConfirmarSenha), confirmarSenha)"
+                                       aria-required="true" aria-label="Confirme a senha" aria-autocomplete="none" />
+                                <label for="confirmarSenha" class="label">Confirmar Senha</label>
+                                <div class="underline"></div>
+                            </div>
+                            <span class="error-message">
+                                @validationErrors.GetValueOrDefault("ConfirmarSenha")
+                            </span>
+                        </div>
+                    </div>
+                    <div class="wrap-inputs">
+                        <div class="container-field">
+                            <div class="field">
+                                <i class="fa-solid fa-magnifying-glass icon"></i>
+                                <input id="cep" maxlength="9" class="number" type="text" @onfocus="() => MarkFieldTouched(nameof(cep))" @onblur="() => ValidateField(nameof(NovoUsuarioSistemaDTO.Cep), cep)" @bind="cep" @bind:event="oninput" @ref="cepInput"
+                                       required aria-required="true" aria-label="Digite o CEP" />
+                                <label for="cep" class="label">Cep</label>
+                                <div class="underline"></div>
+                            </div>
+                            <span class="error-message">@validationErrors.GetValueOrDefault("Cep")</span>
+                        </div>
+
+                        <div class="field">
+                            <button class="search-cep" @onclick="GetEnderecoPorCep" type="button" disabled="@isSearchingCep">
+                                @if (isSearchingCep)
+                                {
+                                    <SpinnerLoader PrimaryColor="#272A2D" SecondaryColor="#FFFFFF" Size="20" />
+                                }
+                                else
+                                {
+                                    <span>Buscar Cep</span>
+                                }
+                            </button>
+                            <span class="error-message">@validationErrors.GetValueOrDefault("Cep")</span>
+                        </div>
+
+                        <div class="container-field">
+                            <div class="field">
+                                <i class="fa-solid fa-check-double icon"></i>
+                                <input class="@((estadoID != null) ? "readonly-focused" : "")" type="text" readonly @bind="estadoID" @bind:event="oninput" @onfocus="() => MarkFieldTouched(nameof(estadoID))" @onblur="() => ValidateField(nameof(NovoUsuarioSistemaDTO.EstadoID), estadoID)"
+                                       required aria-required="true" aria-label="Informe o CEP" />
+                                <label for="estado" class="label">Estado</label>
+                                <div class="underline"></div>
+                            </div>
+                            <span class="error-message">@validationErrors.GetValueOrDefault("EstadoID")?.Replace("EstadoID", "Estado")</span>
+                        </div>
+
+                        <div class="container-field">
+                            <div class="field">
+                                <i class="fa-solid fa-check-double icon"></i>
+                                <input class="@((estadoID != null) ? "readonly-focused" : "")" type="text" readonly @bind="cidadeNome" @bind:event="oninput" @onfocus="() => MarkFieldTouched(nameof(cidadeNome))" @onblur="() => ValidateField(nameof(NovoUsuarioSistemaDTO.CidadeID), cidadeNome)"
+                                       required aria-required="true" aria-label="Informe o CEP" />
+                                <label for="cidade" class="label">Cidade</label>
+                                <div class="underline"></div>
+                            </div>
+                            <span class="error-message">@validationErrors.GetValueOrDefault("CidadeID")?.Replace("CidadeID", "Cidade")</span>
+                        </div>
+
+                        <div class="container-field">
+                            <div class="field">
+                                <i class="fa-solid fa-mobile icon"></i>
+                                <input id="celular" maxlength="15" class="number" type="text" @bind="celular" @bind:event="oninput" @ref="celularInput" @onfocus="() => MarkFieldTouched(nameof(celular))" @onblur="() => ValidateField(nameof(NovoUsuarioSistemaDTO.Celular), celular)"
+                                       required aria-required="true" aria-label="Digite o celular" />
+                                <label for="celular" class="label">Celular</label>
+                                <div class="underline"></div>
+                            </div>
+                            <span class="error-message">@validationErrors.GetValueOrDefault("Celular")</span>
+                        </div>
+
+                        <div class="container-field">
+                            <div class="field">
+                                <i class="fa-solid fa-phone icon"></i>
+                                <input id="telefone" maxlength="14" class="number" type="text" @bind="telefone" @bind:event="oninput" @ref="telefoneInput" @onfocus="() => MarkFieldTouched(nameof(telefone))" @onblur="() => ValidateField(nameof(NovoUsuarioSistemaDTO.Telefone), telefone)"
+                                       required aria-required="true" aria-label="Digite o telefone" />
+                                <label for="telefone" class="label">Telefone</label>
+                                <div class="underline"></div>
+                            </div>
+                            <span class="error-message">@validationErrors.GetValueOrDefault("Telefone")</span>
+                        </div>
+                    </div>
+                </div>
+                <p class="alert">Você receberá um link de confirmação por email</p>
+            </div>
+
+            <span class="error-message">@validationErrors.GetValueOrDefault("General")</span>
+
+            <button type="button" disabled="@isLoggingIn" @onclick="HandleSignup">
+                @if (isLoggingIn)
+                {
+                    <SpinnerLoader PrimaryColor="#272A2D" SecondaryColor="#FFFFFF" Size="20" />
+                }
+                else
+                {
+                    <span>Criar conta</span>
+                }
+            </button>
+            <p class="second">Já possui uma conta? <a class="link" href="./login">Fazer login</a></p>
+        </form>
+    }
+</div>
+
+<script type="application/ld+json">
+    {
+        "@@context": "https://schema.org",
+        "@@type": "WebPage",
+        "name": "Login - Escolha AI",
+        "description": "Página de login da plataforma Escolha AI.",
+        "url": "https://191.6.5.106:44303/signup"
+    }
+</script>

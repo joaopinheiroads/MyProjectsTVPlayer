@@ -1,0 +1,20 @@
+
+            1dia
+            
+
+http://127.0.0.1:5500/index1d.html?cidade=Londrina/UF&yCode=32&dt=01/01/2017&max=35&min=20&minV=2&maxV=10&minU=10&maxU=50&clima=tempo%20bom&modelo=2&corBg1=908080&corBg2=000000&corFonte=ffffff&direcao=&unidadeTemp=c&custombg=custombg.jpg&idioma=ptbr
+
+
+
+             4dias
+
+
+
+http://127.0.0.1:5500/4dias/index4d.html?cidade=New%20York&yCode=0,4,9,28&max=27,26,28,26&min=20,19,16,15&dt=11/27/2017,11/28/2017,11/29/2017,11/30/2017&clima=Trovoadas,Trovoadas,Tempo%20Bom,%20Muitas%20Nuvens&unidadeTemp=&modelo=1&corFonte=ffffff&corBg1=5B008B&corBg2=000000&direcao=v&idioma=eng&minU=2&maxU=5&minV=8&maxV=12&custombg=custombg.jpg
+
+
+
+
+
+
+

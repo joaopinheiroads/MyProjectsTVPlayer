@@ -1,0 +1,253 @@
+﻿.header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding-bottom: 1.25rem;
+}
+
+.content-header {
+	display: flex;
+	align-items: center;
+	gap: .75rem;
+}
+
+.icon {
+	background-color: #E5F2FF;
+	padding: 8px;
+	width: 36px;
+	height: 36px;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	border-radius: 0.5rem;
+}
+
+.icon i {
+	font-size: 1.125rem;
+	color: #118AB2 !important;
+	line-height: 0;
+}
+
+.close {
+	color: #6B7280;
+	font-size: 1rem;
+	line-height: 0;
+	cursor: pointer;
+	margin-bottom: 1rem;
+	padding: .4rem;
+}
+
+.title {
+	font-size: 1.125rem;
+	letter-spacing: 0;
+	font-weight: 700;
+}
+
+.form-body {
+	display: flex;
+	justify-content: space-between;
+	gap: .5rem;
+	width: 650px;
+}
+
+.preview {
+	height: 100%;
+}
+
+.frame {
+	min-width: 350px;
+	max-width: 350px;
+	width: 100%;
+	min-height: 500px;
+	max-height: 500px;
+	height: 100%;
+	display: flex;
+	flex-direction: column;
+	justify-content: space-between;
+	text-align: center;
+	align-items: center;
+	padding: .8rem;
+	box-shadow: 4px 4px 3px rgba(0, 0, 0, 0.04);
+}
+
+.header-qrcode {
+	display: flex;
+	flex-direction: column;
+	padding-top: 1rem;
+	max-width: 322px;
+	word-wrap: break-word;
+	overflow-wrap: break-word;
+}
+
+.header-qrcode .title {
+	font-size: 1.5rem;
+	line-height: 1.25rem;
+	font-weight: 500;
+}
+
+.header-qrcode .description {
+	margin-top: .5rem;
+	font-size: 0.875rem;
+	line-height: 1.25rem;
+	font-weight: 500;
+}
+
+.inputs-container {
+	display: flex;
+	flex-direction: column;
+	gap: .5rem;
+}
+
+.color-pick {
+	display: flex;
+	flex-direction: column;
+}
+
+.color-pick label {
+	font-size: 14px;
+	color: #272A2D;
+	font-weight: 600;
+	margin-bottom: 8px;
+}
+
+.qrCode {
+	width: 250px;
+	height: 250px;
+	background-size: cover;
+	background-position: center;
+	margin: 0 auto;
+	border: 10px solid white; /* Adiciona uma borda branca de 10px */
+	border-radius: 10px; /* Opcional: arredonda os cantos */
+}
+
+.inputs {
+	display: flex;
+	flex-direction: column;
+	gap: .5rem;
+}
+
+.inputs label {
+	font-size: 14px;
+	font-weight: 600;
+}
+
+.inputs input {
+	font-size: 0.875rem;
+	line-height: 1.25rem;
+	color: #272A2D;
+	font-weight: 500;
+	border: 1px solid #D0D5DD;
+	border-radius: 0.375rem;
+	letter-spacing: normal;
+	transition: border 0.2s ease;
+	outline: none;
+	box-shadow: 4px 4px 3px rgba(0, 0, 0, 0.02);
+	padding: 9px 12px;
+}
+
+.range {
+	display: flex;
+	align-items: center;
+	gap: .5rem;
+}
+
+.range input {
+	padding: 0;
+}
+
+.form-footer {
+	padding-top: 16px;
+	display: flex;
+	flex-direction: row;
+	justify-content: end;
+	gap: .5rem;
+}
+
+.cancel {
+	background-color: white;
+	border: 1px solid #D1D5DB;
+	border-radius: 0.375rem;
+	padding: 0.56rem 1rem;
+	cursor: pointer;
+	box-shadow: 4px 4px 3px rgba(0, 0, 0, 0.02);
+}
+
+.cancel span {
+	color: #272A2D;
+	font-weight: 600;
+	font-size: 0.87rem;
+	line-height: 1.25rem;
+	letter-spacing: 0;
+}
+
+.confirm {
+	background-color: #06D6A0;
+	border: 1px solid #06D6A0;
+	border-radius: 0.375rem;
+	padding: 0.56rem 1rem;
+	cursor: pointer;
+	box-shadow: 4px 4px 3px rgba(0, 0, 0, 0.02);
+}
+
+.confirm span {
+	color: white;
+	font-weight: 600;
+	font-size: 0.87rem;
+	line-height: 1.25rem;
+	letter-spacing: 0;
+}
+
+.error {
+	font-size: .8rem;
+	color: #EF476F;
+	font-weight: 600;
+	padding-left: .2rem;
+	padding-top: .2rem;
+	text-wrap: nowrap;
+}
+
+input[type="range"] {
+	-webkit-appearance: none;
+	appearance: none;
+	width: 100%;
+	height: 6px;
+	border-radius: 3px;
+	background: #D0D5DD;
+	outline: none;
+	transition: background 0.15s ease-in-out;
+}
+
+input[type="range"]::-webkit-slider-runnable-track {
+	height: 6px;
+	border-radius: 3px;
+	background: #D0D5DD;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #118AB2;
+    cursor: pointer;
+    margin-top: -5px;
+    position: relative;
+    z-index: 3;
+}
+
+input[type="range"]::-webkit-slider-runnable-track {
+    background: linear-gradient(to right, #118AB2 var(--progress), #ddd var(--progress));
+}
+
+input[type="range"]::-moz-range-track {
+	background: #D0D5DD;
+	height: 6px;
+	border-radius: 3px;
+}
+
+input[type="range"]::-moz-range-progress {
+    background: #118AB2;
+    height: 6px;
+    border-radius: 3px;
+}

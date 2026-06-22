@@ -1,0 +1,820 @@
+﻿@using Microsoft.JSInterop
+@using Microsoft.AspNetCore.Components.Forms
+@using System.Net.Http.Json
+@using System.Collections.ObjectModel
+
+@typeparam T
+@typeparam SelectedDTOParam
+@inject IJSRuntime JSRuntime
+@inject HttpClient HttpClient
+
+@code {
+    [Parameter] public string ActionType { get; set; } = "";
+    [Parameter] public EventCallback<T> OnSubmit { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+    [Parameter] public SelectedDTOParam? SelectedDTO { get; set; }
+    [Parameter] public bool IsLoading { get; set; }
+    [Parameter] public EventCallback? ComponentIsLoaded { get; set; }
+
+    private ElementReference InputFocus;
+
+    private UsuarioGetDTO usuario = new UsuarioGetDTO();
+    private bool firstCall { get; set; } = false;
+    private string token = "";
+
+    private string Title => ActionType == "creating/empresa" ? "Registrar Empresa" : "Editar Empresa";
+
+    private string nomeEmpresa { get; set; } = string.Empty;
+    private string qrCode { get; set; } = string.Empty;
+    private string razaoSocial { get; set; } = string.Empty;
+    private int typeCompany { get; set; } = 1;
+    private string cnpj { get; set; } = string.Empty;
+    private string celular { get; set; } = string.Empty;
+    private string telefone { get; set; } = string.Empty;
+    private string cep { get; set; } = string.Empty;
+    private string estado { get; set; } = "Informe o CEP";
+    private string cidade { get; set; } = "Informe o CEP";
+    private int cidadeID { get; set; } = 0;
+    private bool isAtivo { get; set; } = true;
+    private bool isChamarWhatsapp { get; set; } = false;
+    private string imageLogoUrlLoadedApi { get; set; } = string.Empty;
+    private string imageBannerUrlLoadedApi { get; set; } = string.Empty;
+    private FilesDto filesDto = new FilesDto();
+
+    private string logoImageDataUrl = "";
+    private string bannerImageDataUrl = "";
+
+    private bool imageLogoLoading = false;
+    private bool imageBannerLoading = false;
+    
+    // Flags para controlar quando imagens foram explicitamente removidas
+    private bool logoImageRemoved = false;
+    private bool bannerImageRemoved = false;
+
+    private Dictionary<string, string> validationErrors = new();
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JSRuntime.InvokeVoidAsync("handleEscKey", DotNetObjectReference.Create(this));
+            await JSRuntime.InvokeVoidAsync("handleModalEnterKey", DotNetObjectReference.Create(this));
+            await InitializeInpustMask();
+
+            // token = await Provider.GetTokenAsync();
+            // usuario = Provider.UsuarioOwner;
+
+            //await GetUser();
+
+            if (ComponentIsLoaded is EventCallback isLoaded)
+            {
+                await isLoaded.InvokeAsync();
+            }
+
+            await FocusInputRecursively();
+        }
+    }
+
+    private async Task FocusInputRecursively()
+    {
+        while (true)
+        {
+            bool isFocused = await JSRuntime.InvokeAsync<bool>("tryFocusElementDirect", InputFocus);
+
+            if (isFocused)
+            {
+                break;
+            }
+        }
+    }
+
+    protected async override void OnParametersSet()
+    {
+        if (!firstCall && ActionType == "editing/empresa" && SelectedDTO is EmpresaGetDTO empresa)
+        {
+            if (empresa != null)
+            {
+                nomeEmpresa = empresa.Nome;
+                // Remove .png se já existir para evitar duplicidade
+                qrCode = string.IsNullOrWhiteSpace(empresa.QRCode) ? string.Empty : empresa.QRCode.Replace(".png", "", StringComparison.OrdinalIgnoreCase);
+                razaoSocial = empresa.RazaoSocial;
+                cnpj = empresa.CNPJ;
+                celular = empresa.Celular;
+                telefone = empresa.Telefone;
+                cep = empresa.CEP;
+                typeCompany = empresa.EmpresaTipoID;
+                isAtivo = empresa.Ativo;
+                isChamarWhatsapp = empresa.AtenderWhatsapp;
+
+                if (usuario.UsuarioTipoID != 4)
+                {
+                    imageBannerUrlLoadedApi = string.IsNullOrWhiteSpace(empresa.ImageBanner) ? "banner_default.png" : empresa.ImageBanner.Replace(".png", "", StringComparison.OrdinalIgnoreCase);
+                    imageLogoUrlLoadedApi = string.IsNullOrWhiteSpace(empresa.ImageLogo) ? "logo_default.png" : empresa.ImageLogo.Replace(".png", "", StringComparison.OrdinalIgnoreCase);
+                    
+            
+                    
+                    // Reset das flags de remoção ao carregar empresa existente
+                    bannerImageRemoved = false;
+                    logoImageRemoved = false;
+                }
+            }
+
+            await GetEnderecoPorCep();
+
+            firstCall = true;
+        }
+    }
+
+    private async Task GetUser()
+    {
+        HttpClient.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+        UsuarioGetDTO? result = await HttpClient.GetFromJsonAsync<UsuarioGetDTO>("/api/authentication/getCompanyID");
+        usuario = result ?? new UsuarioGetDTO();
+
+        if (ComponentIsLoaded is EventCallback isLoaded)
+        {
+            await isLoaded.InvokeAsync();
+        }
+    }
+
+    private async Task GetEnderecoPorCep()
+    {
+        if (cep == null || cep.Length < 1)
+        {
+            return;
+        }
+
+        string cleanedCep = new string(cep.Where(char.IsDigit).ToArray());
+
+        if (string.IsNullOrWhiteSpace(cleanedCep) || cleanedCep.Length != 8)
+        {
+            estado = "Cep inválido";
+            cidade = "Cep inválido";
+            StateHasChanged();
+
+            return;
+        }
+
+        try
+        {
+            HttpClient.DefaultRequestHeaders.Authorization =
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+            HttpResponseMessage result = await HttpClient.PostAsJsonAsync($"/api/enterprise/SearchCep?cep={cleanedCep}", new { });
+
+            List<EnderecoResponse> enderecoList = await result.Content.ReadFromJsonAsync<List<EnderecoResponse>>();
+
+            if (enderecoList == null || enderecoList.Count == 0)
+            {
+                Console.WriteLine("Nenhum endereço encontrado para o CEP fornecido.");
+                estado = "Cep inválido";
+                cidade = "Cep inválido";
+                StateHasChanged();
+
+                return;
+            }
+
+            EnderecoResponse endereco = enderecoList[0];
+            estado = endereco.EndEstadoID;
+            cidade = endereco.CidNome;
+            cidadeID = endereco.CidID;
+
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Ocorreu um erro: {ex.Message}");
+        }
+    }
+
+    private async Task SubmitAsync()
+    {
+        try
+        {
+            if (ActionType == "creating/empresa" && !IsLoading)
+            {
+                await SendCreate();
+            }
+
+            if (ActionType == "editing/empresa" && !IsLoading)
+            {
+                await SendEdit();
+            }
+        } 
+        catch (Exception err)
+        {
+            if (err.Message.Contains("Empresa"))
+            {
+                validationErrors["Nome"] = "Empresa já registrada";
+            }
+
+            if (err.Message.Contains("social"))
+            {
+                validationErrors["RazaoSocial"] = "Razão Social já registrada";
+            }
+
+            if (err.Message.Contains("CNPJ"))
+            {
+                validationErrors["CNPJ"] = "CNPJ já registrado";
+            }
+
+            Console.WriteLine("error modal " + err.Message);
+        } finally
+        {
+            if (ComponentIsLoaded is EventCallback isLoaded)
+            {
+                await isLoaded.InvokeAsync();
+            }
+        }
+    }
+
+    [JSInvokable("HandleModalEnterKey")]
+    public async Task HandleModalEnterKey()
+    {
+        if (IsLoading)
+        {
+            return;
+        }
+
+        StateHasChanged();
+        await SubmitAsync();
+    }
+
+    [JSInvokable("HandleEscapeKey")]
+    public async Task HandleEscapeKey()
+    {
+        await CancelAsync();
+    }
+
+    private async Task CancelAsync()
+    {
+        await OnCancel.InvokeAsync();
+        ResetFields();
+    }
+
+    private async Task SendCreate() 
+    {
+        if (usuario.UsuarioTipoID != 4)
+        {
+            typeCompany = 1;
+        }
+        else
+        {
+            typeCompany = typeCompany;
+        }
+
+        EmpresaAddDTO data = new EmpresaAddDTO
+            {
+                Nome = nomeEmpresa,
+                QRCode = "null",
+                RazaoSocial = razaoSocial,
+                CNPJ = cnpj?.Replace(".", "")
+                                .Replace("-", "")
+                                .Replace("/", "")
+                                .Trim(),
+                Celular = celular?.Replace("(", "")
+                                      .Replace(")", "")
+                                      .Replace(" ", "")
+                                      .Replace("-", ""),
+                Telefone = telefone?.Replace("(", "")
+                                        .Replace(")", "")
+                                        .Replace(" ", "")
+                                        .Replace("-", ""),
+                CEP = cep.Replace("-", ""),
+                EstadoID = estado,
+                CidadeID = cidadeID,
+                EmpresaTipoID = typeCompany,
+                Files = filesDto,
+                AtenderWhatsapp = isChamarWhatsapp,
+            };
+
+        if (!IsValidCNPJ(data.CNPJ))
+        {
+            validationErrors["CNPJ"] = "CNPJ inválido";
+            return;
+        }
+
+        if (!await ValidateEntityAsync(data, nameof(data.Nome), nameof(data.RazaoSocial), nameof(data.CNPJ), 
+            nameof(data.Celular), nameof(data.Telefone), nameof(data.CEP), nameof(data.CidadeID), nameof(data.EstadoID)))
+        {
+            return;
+        }
+
+        await OnSubmit.InvokeAsync((T)(object)data);
+        ResetFields();
+    }
+
+    private async Task SendEdit()
+    {
+        EmpresaAddDTO data = new EmpresaAddDTO
+            {
+                Nome = nomeEmpresa,
+                QRCode = "null",
+                RazaoSocial = razaoSocial,
+                CNPJ = cnpj?.Replace(".", "")
+                            .Replace("-", "")
+                            .Replace("/", "")
+                            .Trim(),
+                Celular = celular?.Replace("(", "")
+                                  .Replace(")", "")
+                                  .Replace(" ", "")
+                                  .Replace("-", ""),
+                Telefone = telefone?.Replace("(", "")
+                                    .Replace(")", "")
+                                    .Replace(" ", "")
+                                    .Replace("-", ""),
+                CEP = cep?.Replace("-", ""),
+                EstadoID = estado,
+                CidadeID = cidadeID,
+                EmpresaTipoID = typeCompany,
+                Ativo = isAtivo,
+                Files = filesDto,
+                AtenderWhatsapp = isChamarWhatsapp,
+                imageBannerUrlLoadedApi = imageBannerUrlLoadedApi,
+                imageLogoUrlLoadedApi = imageLogoUrlLoadedApi
+            };
+
+        if (!IsValidCNPJ(data.CNPJ))
+        {
+            validationErrors["CNPJ"] = "CNPJ inválido";
+        }
+
+        if (!await ValidateEntityAsync(data, nameof(data.Nome), nameof(data.RazaoSocial), nameof(data.CNPJ),
+            nameof(data.Celular), nameof(data.Telefone), nameof(data.CEP)))
+        {
+            return;
+        }
+
+        await OnSubmit.InvokeAsync((T)(object)data);
+
+        ResetFields();
+    }
+
+    private bool IsValidCNPJ(string cnpj)
+    {
+        if (string.IsNullOrEmpty(cnpj))
+            return false;
+
+        var b = new int[] { 6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2 };
+
+        cnpj = new string(cnpj.Where(char.IsDigit).ToArray());
+
+        if (cnpj.Length != 14)
+            return false;
+
+        if (cnpj.All(c => c == '0'))
+            return false;
+
+        int n1 = 0;
+        for (int i = 0; i < 12; i++)
+            n1 += (cnpj[i] - '0') * b[i + 1];
+
+        n1 = n1 % 11;
+        if (n1 < 2)
+            n1 = 0;
+        else
+            n1 = 11 - n1;
+
+        if (cnpj[12] - '0' != n1)
+            return false;
+
+        int n2 = 0;
+        for (int i = 0; i < 13; i++)
+            n2 += (cnpj[i] - '0') * b[i];
+
+        n2 = n2 % 11;
+        if (n2 < 2)
+            n2 = 0;
+        else
+            n2 = 11 - n2;
+
+        if (cnpj[13] - '0' != n2)
+            return false;
+
+        return true;
+    }
+
+    private void ResetFields()
+    {
+        nomeEmpresa = string.Empty;
+        qrCode = string.Empty;
+        razaoSocial = string.Empty;
+        cnpj = string.Empty;
+        celular = string.Empty;
+        telefone = string.Empty;
+        cep = string.Empty;
+        typeCompany = 1;
+        estado = "Informe o CEP";
+        cidade = "Informe o CEP";
+        isAtivo = true;
+
+        firstCall = false;
+
+        filesDto.selectedBanner?.Dispose();
+        filesDto.selectedBanner = null;
+        filesDto.selectedLogo?.Dispose();
+        filesDto.selectedLogo = null;
+    }
+
+    private class EnderecoResponse
+    {
+        public string CidNome { get; set; }
+        public int CidID { get; set; }
+        public string EndEstadoID { get; set; }
+    }
+
+    private async Task<bool> ValidateEntityAsync<GenericValidate>(GenericValidate entity, params string[] requiredFields)
+    {
+        var validator = new ValidationService<GenericValidate>();
+        var validationResult = validator.Validate(entity, requiredFields);
+
+        if (!validationResult.IsValid)
+        {
+            validationErrors = validationResult.Errors;
+            StateHasChanged();
+            return false;
+        }
+
+        validationErrors.Clear();
+        return true;
+    }
+
+    private async Task ValidateApiResponseError(Exception err)
+    {
+        ValidationErrorResponseApi errorResponse = ValidationErrorResponseApi.ConvertJsonToData(err.Message);
+        if (errorResponse.Errors != null)
+        {
+            foreach (var apiError in errorResponse.Errors)
+            {
+                foreach (var message in apiError.Value)
+                {
+                    validationErrors[apiError.Key] = message;
+                }
+            }
+        }
+
+        validationErrors["API"] = "Erro ao processar a solicitação.";
+    }
+
+    private async Task SelectedLogoFile(InputFileChangeEventArgs e)
+    {
+        try
+        {
+            imageLogoLoading = true;
+            IBrowserFile file = e.File;
+
+            if (file == null)
+            {
+                Console.WriteLine("Nenhum arquivo selecionado.");
+                return;
+            }
+
+            filesDto.selectedLogo = new MemoryStream();
+            await file.OpenReadStream(maxAllowedSize: 50 * 1024 * 1024).CopyToAsync(filesDto.selectedLogo);
+            filesDto.selectedLogo.Position = 0;
+            StateHasChanged();
+
+            int logoWidth = 90;
+            int logoHeight = 90;
+            var resizedFile = await file.RequestImageFileAsync(file.ContentType, logoWidth, logoHeight);
+
+            var resizedBuffer = new byte[resizedFile.Size];
+            using (var resizedStream = resizedFile.OpenReadStream())
+            {
+                await resizedStream.ReadAsync(resizedBuffer, 0, (int)resizedFile.Size);
+            }
+
+            logoImageDataUrl = $"data:{file.ContentType};base64,{Convert.ToBase64String(resizedBuffer)}";
+            logoImageRemoved = false; // Reset flag quando nova imagem é carregada
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Erro ao processar o arquivo: {ex.Message}");
+        }
+        finally
+        {
+            imageLogoLoading = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task SelectedBannerFile(InputFileChangeEventArgs e)
+    {
+        try
+        {
+            imageBannerLoading = true;
+            await InvokeAsync(StateHasChanged);
+            
+            IBrowserFile file = e.File;
+
+            if (file == null)
+            {
+                Console.WriteLine("Nenhum arquivo selecionado.");
+                return;
+            }
+
+            filesDto.selectedBanner = new MemoryStream();
+            await file.OpenReadStream(maxAllowedSize: 50 * 1024 * 1024).CopyToAsync(filesDto.selectedBanner);
+            filesDto.selectedBanner.Position = 0;
+
+            int bannerWidth = 945;
+            int bannerHeight = 324;
+            
+            var resizedFile = await file.RequestImageFileAsync(file.ContentType, bannerWidth, bannerHeight);
+
+            var resizedBuffer = new byte[resizedFile.Size];
+            using (var resizedStream = resizedFile.OpenReadStream())
+            {
+                await resizedStream.ReadAsync(resizedBuffer, 0, (int)resizedFile.Size);
+            }
+
+            bannerImageDataUrl = $"data:{file.ContentType};base64,{Convert.ToBase64String(resizedBuffer)}";
+            bannerImageRemoved = false;
+            
+            imageBannerLoading = false;
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Erro ao processar o arquivo: {ex.Message}");
+            imageBannerLoading = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private void OnRadioChanged(bool value)
+    {
+        isAtivo = value;
+    }
+
+    private void RemoveLogoImage()
+    {
+        logoImageDataUrl = null;
+        filesDto.selectedLogo = null;
+        imageLogoUrlLoadedApi = "";
+        logoImageRemoved = true;
+        StateHasChanged();
+    }
+
+    private async void RemoveBannerImage()
+    {
+        bannerImageDataUrl = null;
+        filesDto.selectedBanner = null;
+        imageBannerUrlLoadedApi = "";
+        bannerImageRemoved = true;
+        
+        await InvokeAsync(StateHasChanged);
+    }
+}
+
+@code {
+    private ElementReference cepInput;
+    private ElementReference cnpjInput;
+    private ElementReference celularInput;
+    private ElementReference telefoneInput;
+
+    private async Task InitializeInpustMask()
+    {
+        await JSRuntime.InvokeVoidAsync("applyVMaskerMask", "cep", "99999-999");
+        await JSRuntime.InvokeVoidAsync("applyVMaskerMask", "cnpj", "99.999.999/9999-99");
+        await JSRuntime.InvokeVoidAsync("applyVMaskerMask", "celular", "(99) 99999-9999");
+        await JSRuntime.InvokeVoidAsync("applyVMaskerMask", "telefone", "(99) 9999-9999");
+    }
+}
+
+<div class="form" style="@(usuario.UsuarioTipoID == 4 ? "width: 500px !important;" : "")">
+    <div class="form-header">
+        <div class="header">
+            <div class="content-header">
+                <div class="icon"><i class="fa-solid fa-building"></i></div>
+                <div class="title-container">
+                    <h4 class="title">@Title</h4>
+                </div>
+            </div>
+            <div class="close" @onclick="CancelAsync"><i class="fa-solid fa-x"></i></div>
+        </div>
+    </div>
+    <form class="form-body">
+        <div class="content-inputs">
+            <div class="inputs">
+                <label>Nome</label>
+                <input @ref="InputFocus" @bind="nomeEmpresa" @bind:event="oninput" />
+                <span class="error">@validationErrors.GetValueOrDefault("Nome")</span>
+            </div>
+            <div class="inputs">
+                <label>Razão Social</label>
+                <input @bind="razaoSocial" @bind:event="oninput" />
+                <span class="error">@validationErrors.GetValueOrDefault("RazaoSocial")?.Replace("O RazaoSocial", "A Razão Social")</span>
+            </div>
+            <div class="inputs">
+                <label for="cnpj">CNPJ</label>
+                <input maxlength="18" id="cnpj" @ref="cnpjInput" class="number" @bind="cnpj" @bind:event="oninput" />
+                <span class="error">@validationErrors.GetValueOrDefault("CNPJ")</span>
+            </div>
+            @if (usuario.UsuarioTipoID == 4)
+            {
+                <div class="inputs select">
+                    <label>Tipo</label>
+                    <select @bind="typeCompany">
+                        <option value="1">Demonstração</option>
+                        <option value="2">Cliente</option>
+                    </select>
+                </div>
+            }
+            <div class="wrap-inputs">
+                <div class="inputs select">
+                    <label for="celular">Celular</label>
+                    <input maxlength="15" id="celular" @ref="celularInput" class="number" @bind="celular" @bind:event="oninput" />
+                    <span class="error" style="max-width: 250px;">@validationErrors.GetValueOrDefault("Celular")</span>
+                </div>
+                <div class="inputs select">
+                    <label for="telefone">Telefone</label>
+                    <input maxlength="14" id="telefone" @ref="telefoneInput" class="number" @bind="telefone" @bind:event="oninput" />
+                    <span class="error" style="max-width: 250px;">@validationErrors.GetValueOrDefault("Telefone")</span>
+                </div>
+            </div>
+            <div class="wrap-inputs">
+                <div class="inputs" style="width: 100%;">
+                    <label for="cep">CEP</label>
+                    <div class="cep-container">
+                        <input style="width: 50% !important;" maxlength="9" id="cep" @ref="cepInput" class="number" type="text" @bind="cep" @oninput="(ChangeEventArgs e) => cep = e.Value.ToString()" />
+                        <div class="button" style="width: 50% !important;">
+                            <button class="button-search-cep button-blue" type="button" onclick="@GetEnderecoPorCep">Buscar cep</button>
+                        </div>
+                    </div>
+                    <span class="error">@validationErrors.GetValueOrDefault("CEP")</span>
+                </div>
+            </div>
+            <div class="wrap-inputs">
+                <div class="inputs select">
+                    <label>Estado</label>
+                    <input @bind="estado" disabled />
+                    <span class="error">@validationErrors.GetValueOrDefault("EstadoID")</span>
+                </div>
+                <div class="inputs select">
+                    <label>Cidade</label>
+                    <input @bind="cidade" disabled />
+                    <span class="error">@validationErrors.GetValueOrDefault("CidadeID")?.Replace("CidadeID", "Cidade")</span>
+                </div>
+            </div>
+            @* Comentado para evitar duplicação do botão WhatsApp no carrinho
+            <div class="wts-container">
+                <label class="checkbox-container checkbox">
+                    <input class="custom-checkbox" @bind="isChamarWhatsapp" type="checkbox">
+                    <span class="checkmark"></span>
+                    <label class="check">Aceitar encomendas no Whatsapp</label>
+                </label>
+                <Cardápio.Client.Components.Tooltip.Tooltip TooltipText="Habilitará um botão para o usuário continuar no whatsapp" />
+            </div>
+            *@
+            @if (usuario.UsuarioTipoID == 4 && ActionType.Contains("editing"))
+            {
+                <div class="inputs">
+                    <label>Status</label>
+                    <div class="radios">
+                        <div class="input-radio">
+                            <input type="radio" id="ativo" name="status" value="true" checked="@isAtivo" @onchange="() => OnRadioChanged(true)" />
+                            <label class="active" for="ativo">Ativo</label>
+                        </div>
+
+                        <div class="input-radio">
+                            <input type="radio" id="desativado" name="status" value="false" checked="@(isAtivo == false)" @onchange="() => OnRadioChanged(false)" />
+                            <label class="disabled" for="desativado">Desativado</label>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+        @if (usuario != null && usuario.UsuarioTipoID != 4)
+        {
+            <div class="content-images">
+                <div class="inputs">
+                    <label>Banner:</label>
+                    <div class="thumb-selected-banner">
+                        @if (!bannerImageRemoved)
+                        {
+                            var bannerUrl = "";
+                            
+                            if (!string.IsNullOrEmpty(bannerImageDataUrl))
+                            {
+                                bannerUrl = bannerImageDataUrl;
+                            }
+                            else if (!string.IsNullOrEmpty(imageBannerUrlLoadedApi))
+                            {
+                                var timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+                                bannerUrl = $"/imagens/Banner/{imageBannerUrlLoadedApi}.png?t={timestamp}";
+                            }
+                            else
+                            {
+                                bannerUrl = "/imagens/Banner/banner_default.png";
+                            }
+                            
+                            <div class="banner" style="background-image: url('@bannerUrl');">
+                                <i class="fa-solid fa-xmark remove-icon" title="Clique para remover" @onclick="RemoveBannerImage"></i>
+                            </div>
+                            <button class="confirm rz-ripple image-button button-green" @onclick="RemoveBannerImage" type="button">Remover Imagem</button>
+                        }
+                    </div>
+
+                    @if (imageBannerLoading)
+                    {
+                        <div class="thumb-selected-logo-loader">
+                            <div class="spinner-logo">
+                                <SpinnerLoader Size="30" PrimaryColor="#118AB2" SecondaryColor="#FFFFFF" />
+                            </div>
+                        </div>
+                    }
+
+                    <div class="thumb" style="@(!imageBannerLoading && string.IsNullOrEmpty(bannerImageDataUrl) && string.IsNullOrEmpty(imageBannerUrlLoadedApi) ? "display: flex;" : "display: none;")">
+                        <div class="icon-thumb">
+                            <label for="bannerImageUpload" class="upload-label">
+                                <i class="fa-solid fa-cloud-arrow-up"></i>
+                                <span>Arraste e solte ou clique para selecionar o banner</span>
+                            </label>
+                            <InputFile style="display: none;" type="file" id="bannerImageUpload" accept="image/*" OnChange="SelectedBannerFile" />
+                        </div>
+                    </div>
+
+                    @if (!imageBannerLoading && bannerImageDataUrl == null && string.IsNullOrEmpty(imageBannerUrlLoadedApi))
+                    {
+                        <span class="recomend">Tamanho recomendável: <span class="number">1300px</span> (pixels) x <span class="number">250px</span> (pixels)</span>
+                    }
+                </div>
+
+                <div class="inputs">
+                    <label>Logo:</label>
+                    <div class="thumb-selected-logo">
+                        @if (!logoImageRemoved)
+                        {
+                            <div class="logo" style="background-image: url('@(
+                                !string.IsNullOrEmpty(logoImageDataUrl) && !imageLogoLoading
+                                    ? logoImageDataUrl
+                                    : !string.IsNullOrEmpty(imageLogoUrlLoadedApi)
+                                        ? $"/imagens/logo/{imageLogoUrlLoadedApi}.png"
+                                        : "/imagens/logo/logo_default.png"
+                            )');">
+                                <i class="fa-solid fa-xmark remove-icon" title="Clique para remover" @onclick="RemoveLogoImage"></i>
+                            </div>
+                            <button class="confirm rz-ripple image-button button-green" @onclick="RemoveLogoImage" type="button">Remover Imagem</button>
+                        }
+                    </div>
+
+                    @if (imageLogoLoading)
+                    {
+                        <div class="thumb-selected-logo-loader">
+                            <div class="spinner-logo">
+                                <SpinnerLoader Size="30" PrimaryColor="#118AB2" SecondaryColor="#FFFFFF" />
+                            </div>
+                        </div>
+                    }
+
+                    <div class="thumb" style="@(!imageLogoLoading && string.IsNullOrEmpty(logoImageDataUrl) && string.IsNullOrEmpty(imageLogoUrlLoadedApi) ? "display: flex;" : "display: none;")">
+                        <div class="icon-thumb">
+                            <label for="logoImageUpload" class="upload-label">
+                                <i class="fa-solid fa-cloud-arrow-up"></i>
+                                <span>Arraste e solte ou clique para selecionar a logo</span>
+                            </label>
+                            <InputFile style="display: none;" id="logoImageUpload" accept="image/*" OnChange="SelectedLogoFile" />
+                        </div>
+                    </div>
+
+                    @if (!imageLogoLoading && logoImageDataUrl == null && string.IsNullOrEmpty(imageLogoUrlLoadedApi))
+                    {
+                        <span class="recomend">Tamanho recomendável: <span class="number">90px</span> (pixels) x <span class="number">90px</span> (pixels)</span>
+                    }
+                </div>
+                
+            </div>
+        }
+    </form>
+    <div class="form-footer">
+        <button type="button" @onclick="CancelAsync" class="cancel rz-ripple" disabled="@IsLoading"><span>Cancelar</span></button>
+        <button type="button" @onclick="SubmitAsync" class="confirm rz-ripple button-green" disabled="@IsLoading">
+            @if (IsLoading)
+            {
+                <SpinnerLoader PrimaryColor="#FFFFFF" SecondaryColor="#118AB2" Size="20" />
+            }
+            else
+            {
+                <span>Salvar</span>
+            }
+        </button>
+    </div>
+</div>
+
+<script type="text/javascript">
+    document.querySelector('form').addEventListener('submit', function (event) {
+        event.preventDefault();
+    });
+
+    window.tryFocusElementDirect = async function (element) {
+        if (element && document.activeElement !== element) {
+            element.focus();
+            return document.activeElement === element;
+        }
+
+        return document.activeElement === element;
+    };
+</script>

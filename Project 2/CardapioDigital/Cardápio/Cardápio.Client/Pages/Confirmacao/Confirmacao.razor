@@ -1,0 +1,70 @@
+﻿@page "/confirmacao/{confirmationId:guid}"
+@inject HttpClient HttpClient;
+@inject IJSRuntime JSRuntime;
+
+@using Cardápio.Client.Components.Modal;
+
+<Modal T="object"
+       IsOpen="isActived"
+       OnCancel="@OnActiveClose"
+       ActionType="alerting/actived"
+       SelectedDTO="object">
+</Modal>
+
+@if (isLoading)
+{
+    <div class="container">
+        <SpinnerLoader PrimaryColor="#272A2D" SecondaryColor="#ffffff" Size="90" />
+    </div>
+}
+
+@code {
+    [Parameter]
+    public Guid confirmationID { get; set; }
+
+    private bool isLoading = true;
+    private bool isActived = false;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            isLoading = true;
+            _ = ConfirmAccount();
+        }
+    }
+
+    private async Task ConfirmAccount()
+    {
+        try
+        {
+            var response = await HttpClient.GetAsync($"/api/authentication/confirmAccount/{confirmationID}");
+
+            if (response.IsSuccessStatusCode)
+            {
+                isActived = true;
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Erro na requisição: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private Task OnActiveClose()
+    {
+        isActived = false;
+        return Task.CompletedTask;
+    }
+}
+
+<script>
+    function copyToClipboard(text) {
+        navigator.clipboard.writeText(text);
+    }
+</script>

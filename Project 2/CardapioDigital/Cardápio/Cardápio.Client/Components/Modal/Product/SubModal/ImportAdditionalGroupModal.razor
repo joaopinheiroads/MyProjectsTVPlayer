@@ -1,0 +1,243 @@
+﻿@typeparam T
+@typeparam SelectedDTOParam
+@inject IJSRuntime JSRuntime
+@inject HttpClient HttpClient
+@inject Cardápio.Client.Infra.Provider.CustomAuthenticationStateProvider Provider;
+@inject SelectCompanyService EmpresaService;
+@inject ModalService ModalServiceAdditional;
+
+@using System.Collections.ObjectModel
+
+@code {
+    [Parameter] public string ActionType { get; set; }
+    [Parameter] public EventCallback<T> OnSubmit { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+    [Parameter] public SelectedDTOParam? SelectedDTO { get; set; }
+    [Parameter] public bool IsLoading { get; set; }
+    [Parameter] public EventCallback? ComponentIsLoaded { get; set; }
+
+    private List<GrupoAdicionalGetDTO> groups = new();
+    private List<int> selectedGroupIds = new();
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JSRuntime.InvokeVoidAsync("handleEscKey", DotNetObjectReference.Create(this));
+            await JSRuntime.InvokeVoidAsync("handleModalEnterKey", DotNetObjectReference.Create(this));
+
+            groups.Clear();
+            selectedGroupIds.Clear();
+
+            groups = ModalServiceAdditional.ObjectList.Cast<GrupoAdicionalGetDTO>().ToList();
+            if (ComponentIsLoaded is EventCallback isLoaded)
+            {
+                await isLoaded.InvokeAsync();
+            }
+        }
+    }
+
+    private string Title = "Selecionar e importar grupos";
+
+    private async Task SubmitAsync()
+    {
+        try
+        {
+            await OnSubmit.InvokeAsync((T)(object)selectedGroupIds);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Erro durante o salvamento: {ex.Message}");
+        }
+        finally
+        {
+            if (ComponentIsLoaded is EventCallback isLoaded)
+            {
+                await isLoaded.InvokeAsync();
+            }
+        }
+    }
+
+    [JSInvokable("HandleModalEnterKey")]
+    public async Task HandleModalEnterKey()
+    {
+        if (IsLoading)
+        {
+            return;
+        }
+
+        StateHasChanged();
+        await SubmitAsync();
+    }
+
+    [JSInvokable("HandleEscapeKey")]
+    public async Task HandleEscapeKey()
+    {
+        await CancelAsync();
+    }
+
+    private async Task CancelAsync()
+    {
+        await OnCancel.InvokeAsync();
+        ResetFields();
+    }
+
+    private void ResetFields()
+    {
+    }
+
+    private void ToggleCollapse(GrupoAdicionalGetDTO selectedGroup)
+    {
+        if (!selectedGroup.IsCollapsed)
+        {
+            selectedGroup.IsCollapsed = true;
+            return;
+        }
+
+        foreach (var group in groups)
+        {
+            group.IsCollapsed = true;
+        }
+
+        selectedGroup.IsCollapsed = false;
+    }
+
+    private string FormatarPreco(decimal? preco) => preco.HasValue ? $"R$ {preco.Value:F2}" : "Preço indisponível";
+
+    private void ToggleGroupSelection(int groupId, bool isSelected)
+    {
+        if (isSelected)
+        {
+            if (!selectedGroupIds.Contains(groupId))
+            {
+                selectedGroupIds.Add(groupId);
+            }
+        }
+        else
+        {
+            selectedGroupIds.Remove(groupId);
+        }
+    }
+}
+
+<div class="form">
+    <div class="form-header">
+        <div class="header">
+            <div class="content-header">
+                <div class="icon"><i class="fa-solid fa-building"></i></div>
+                <div class="title-container">
+                    <h4 class="title">@Title</h4>
+                </div>
+            </div>
+            <div class="close" @onclick="CancelAsync"><i class="fa-solid fa-x"></i></div>
+        </div>
+    </div>
+    <form class="form-body">
+        <div class="groups">
+            @if (groups.Any())
+            {
+                @foreach (var group in groups)
+                {
+
+                    <div class="group">
+                        <div class="select-group @(selectedGroupIds.Contains(group.ID) ? "selected-group" : "")">
+                            <div class="checkbox-container">
+                                <RadzenCheckBox TValue="bool"
+                                                Value="@(selectedGroupIds.Contains(group.ID))"
+                                                Name="CheckBox@group.Id"
+                                                Change="@((args) => ToggleGroupSelection(group.ID, args))" />
+                            </div>
+                            <div class="group-header">
+                                <div type="button" @onclick="() => ToggleCollapse(group)" class="collapsible toggle">
+                                    @if (!group.IsCollapsed)
+                                    {
+                                        <i class="fa-solid fa-caret-up fa-rotate-180"></i>
+                                    }
+                                    else
+                                    {
+                                        <i class="fa-solid fa-caret-up fa-rotate-90"></i>
+                                    }
+                                </div>
+                                <div class="group-container">
+                                    <div class="group-content">
+                                        <div class="title">
+                                            <div class="information">
+                                                <span class="position"></span>
+                                                <span class="name">Grupo - @group.Nome</span>
+                                            </div>
+                                        </div>
+                                        <div class="configuration">
+                                            <div class="min">
+                                                <label>Min</label>
+                                                <div class="quantity-control">
+                                                    <div class="count number">@group.Minimo</div>
+                                                </div>
+                                            </div>
+                                            <div class="max">
+                                                <label>Máx</label>
+                                                <div class="quantity-control">
+                                                    <div class="count number">@group.Maximo</div>
+                                                </div>
+                                            </div>
+                                            <div class="type">
+                                                <label>Tipo</label>
+                                                <div class="quantity-control">
+                                                    <div class="count-type number">@group.TipoNome</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        @if (group.IsCollapsed == false)
+                        {
+                            <div class="group-body">
+                                @foreach (var product in group.ColGrupoAdicionalItem)
+                                {
+                                    <div class="product-item">
+                                        <div class="info">
+                                            <div class="product-image" style="background-image: url('/imagens/ImageAdditional/@product.ColGrupoAdicionalItemImagem.Arquivo')" alt="Produto" />
+
+                                            <p>@product.Nome</p>
+                                        </div>
+                                        <div class="price">
+                                            <span class="number">@FormatarPreco(product.Preco)</span>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
+                }
+            } else
+            {
+                <div class="empty">
+                    <i class="fa-solid fa-boxes-stacked"></i>
+                    <p>Nenhum grupo registrado</p>
+                </div>
+            }
+        </div>
+    </form>
+    <div class="form-footer">
+        <button type="button" @onclick="CancelAsync" class="cancel rz-ripple" disabled="@IsLoading"><span>Cancelar</span></button>
+        <button type="button" @onclick="SubmitAsync" class="confirm rz-ripple button-green" disabled="@IsLoading">
+            @if (IsLoading)
+            {
+                <SpinnerLoader PrimaryColor="#FFFFFF" SecondaryColor="#118AB2" Size="20" />
+            }
+            else
+            {
+                <span>Salvar</span>
+            }
+        </button>
+    </div>
+</div>
+
+<style>
+    .rz-chkbox-box.rz-state-active {
+        background-color: #118AB2 !important;
+        border: #118AB2 !important;
+    }
+</style>

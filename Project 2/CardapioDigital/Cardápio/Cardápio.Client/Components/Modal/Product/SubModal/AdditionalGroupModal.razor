@@ -1,0 +1,773 @@
+﻿@typeparam T
+@typeparam SelectedDTOParam
+@inject IJSRuntime JSRuntime
+@inject HttpClient HttpClient
+@inject Cardápio.Client.Infra.Provider.CustomAuthenticationStateProvider Provider;
+@inject SelectCompanyService EmpresaService;
+@inject ImageUploadService ImageUploadService;
+@inject NavigationManager NavigationManager
+
+@using System.ComponentModel.DataAnnotations.Schema;
+@using System.ComponentModel.DataAnnotations;
+@using System.Collections.ObjectModel
+@using Cardápio.Client.Components.Modal;
+@using Cardápio.Client.Components.SelectCompany;
+@using Cardápio.Client.Pages.Cardapio;
+@using Cardápio.Client.Components.Modal
+@using Cardápio.Client.Services
+
+@code {
+    private string BaseUrl => NavigationManager.BaseUri;
+
+    [Inject] private ModalService ModalService { get; set; }
+
+    [Parameter] public string ActionType { get; set; }
+    [Parameter] public EventCallback<T> OnSubmit { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+    [Parameter] public SelectedDTOParam? SelectedDTO { get; set; }
+    [Parameter] public bool IsLoading { get; set; }
+    [Parameter] public EventCallback? ComponentIsLoaded { get; set; }
+
+    private string Title => ActionType == "creating/additional" ? "Novo grupo de adicional" : "Editar grupo de adicional";
+
+    private ElementReference InputFocus;
+
+    private Dictionary<int, Dictionary<string, string>> validationErrors = new();
+    private Dictionary<string, string> validationErrorsPrimary = new();
+    private Dictionary<string, int> grupoTipoMapping = new Dictionary<string, int>
+    {
+        { "Somatório", 1 },
+        { "Média de Valor", 2 },
+        { "Maior Preço", 3 },
+    };
+    private List<Item> items = new List<Item>();
+
+    private int groupID = 0;
+    private int selectedGroupId = 1;
+    private int max = 1;
+    private int min = 0;
+    private string token;
+    private string NomeGrupo;
+    private int selected;
+
+    private UsuarioGetDTO usuario;
+    private bool IsLoadingIntern = false;
+    private bool firstCall = false;
+    private List<ProdutoGetDTO> produtos = new();
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JSRuntime.InvokeVoidAsync("handleEscKey", DotNetObjectReference.Create(this));
+            await JSRuntime.InvokeVoidAsync("handleModalEnterKey", DotNetObjectReference.Create(this));
+            StateHasChanged();
+
+            token = await Provider.GetTokenAsync();
+            //await GetUser();
+            usuario = Provider.UsuarioOwner;
+            await InitializeInputsMask();
+            await FocusInputRecursively();
+
+            if (ActionType.Contains("creating"))
+            {
+                AddNewItem();
+            }
+
+            if (ComponentIsLoaded is EventCallback isLoaded)
+            {
+                await isLoaded.InvokeAsync();
+            }
+        }
+    }
+
+    protected async override void OnParametersSet()
+    {
+        if (!firstCall && SelectedDTO is object groupAdditional)
+        {
+            GrupoAdicionalGetDTO castGroupAdditional = (GrupoAdicionalGetDTO)groupAdditional;
+
+            NomeGrupo = castGroupAdditional.Nome;
+            max = castGroupAdditional.Maximo;
+            min = castGroupAdditional.Minimo;
+            selectedGroupId = castGroupAdditional.TipoID;
+            groupID = castGroupAdditional.ID;
+
+            foreach (var additional in castGroupAdditional.ColGrupoAdicionalItem)
+            {
+                string imageUrl = additional.ColGrupoAdicionalItemImagem.Arquivo;
+                if (!string.IsNullOrEmpty(imageUrl) && (imageUrl.StartsWith("http://") || imageUrl.StartsWith("https://")))
+                {
+                    var uri = new Uri(imageUrl);
+                    imageUrl = uri.PathAndQuery;
+                }
+                Item item = new Item()
+                    {
+                        Id = additional.ID,
+                        Nome = additional.Nome,
+                        Preco = additional.Preco.ToString(),
+                        ImageName = "/imagens/ImageAdditional/" + imageUrl,
+                        IsImageLoading = false,
+                        ImageDataUrl = "/imagens/ImageAdditional/" + imageUrl,
+                        IsNovo = false,
+                    };
+
+                items.Add(item);
+            }
+
+            firstCall = true;
+        }
+    }
+
+    private async Task FocusInputRecursively()
+    {
+        while (true)
+        {
+            bool isFocused = await JSRuntime.InvokeAsync<bool>("tryFocusElementDirect", InputFocus);
+
+            if (isFocused)
+            {
+                break;
+            }
+        }
+    }
+
+    async Task GetUser()
+    {
+        HttpClient.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+        var result = await HttpClient.GetFromJsonAsync<UsuarioGetDTO>("/api/authentication/getCompanyID");
+        usuario = result;
+    }
+
+    private async Task SubmitAsync()
+    {
+        try
+        {
+            IsLoadingIntern = true;
+            await Task.Yield();
+
+            if (ActionType.Contains("creating"))
+            {
+                await SendCreate();
+                IsLoadingIntern = false;
+            }
+
+            if (ActionType.Contains("editing"))
+            {
+                await SendEdit();
+                IsLoadingIntern = false;
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Erro durante o salvamento: {ex.Message}");
+            IsLoadingIntern = false;
+        }
+        finally
+        {
+            if (ComponentIsLoaded is EventCallback isLoaded)
+            {
+                await isLoaded.InvokeAsync();
+            }
+        }
+    }
+
+    private async Task SendCreate() {
+        GrupoAdicionalAddDTO data = new GrupoAdicionalAddDTO
+            {
+                Nome = NomeGrupo,
+                EmpresaID = ValidateSelectedCompanyID(),
+                Minimo = min,
+                Maximo = max,
+                TipoId = selectedGroupId,
+                ColGrupoAdicionalItem = items.Select(item => {
+                    Console.WriteLine($"[AdditionalGroupModal] CREATE - Item {item.Id} - ImageName: '{item.ImageName}'");
+                    return new GrupoAdicionalItemAddDTO
+                    {
+                        ID = item.Id,
+                        Nome = item.Nome,
+                        Preco = decimal.TryParse(item.Preco.Replace("R$ ", ""), out var preco) ? preco : null,
+                        Ativo = true,
+                        ImageID = item.ImageName
+                    };
+                }).ToList()
+            };
+
+        foreach (Item item in items)
+        {
+            await ValidateEntitysItens(item, item.Id, nameof(item.Nome), nameof(item.Preco));
+        }
+
+        if (!await ValidateEntityAsync(data, nameof(data.Nome)) || items == null || !items.Any())
+        {
+            validationErrorsPrimary["Itens"] = "É necessário registrar pelo menos um item.";
+            StateHasChanged();
+            return;
+        }
+
+        HttpClient.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+        var response = await HttpClient.PostAsJsonAsync("/api/additional-group/data", data);
+
+        if (response.IsSuccessStatusCode)
+        {
+            var result = await response.Content.ReadFromJsonAsync<int>();
+            await OnSubmit.InvokeAsync((T)(object)result);
+        }
+        else
+        {
+            Console.WriteLine($"Erro ao salvar: {response.ReasonPhrase}");
+        }
+    }
+
+    private async Task SendEdit()
+    {
+        await GetProducts();
+        if (produtos.Any())
+        {
+            ModalService.OpenModal(
+                "ConfirmEditAdditional",
+                onConfirm: async () => await OnEditAdditionalConfirm(),
+                onCancel: async () => await OnEditAdditionalCancel(),
+                editObject: produtos
+            );
+        } else
+        {
+            await OnEditAdditionalConfirm();
+        }
+    }
+
+    private async Task GetProducts()
+    {
+        try
+        {
+            HttpClient.DefaultRequestHeaders.Authorization =
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+            var response = await HttpClient.GetFromJsonAsync<List<ProdutoGetDTO>>("/api/additional-group/verify-products/" + groupID);
+
+            produtos = response;
+        }
+        catch (Exception err)
+        {
+            throw err;
+        }
+    }
+
+    private async Task OnEditAdditionalConfirm()
+    {
+        ModalService.CloseModal("ConfirmEditAdditional");
+
+        GrupoAdicionalUpdateDTO data = new GrupoAdicionalUpdateDTO
+            {
+                ID = groupID,
+                Nome = NomeGrupo,
+                EmpresaID = ValidateSelectedCompanyID(),
+                Minimo = min,
+                Maximo = max,
+                TipoId = selectedGroupId,
+                ColGrupoAdicionalItem = items.Select(item => {
+                    var imageID = item.ImageName?.Replace("/imagens/ImageAdditional/", "") ?? string.Empty;
+                    Console.WriteLine($"[AdditionalGroupModal] Item {item.Id} - ImageName: '{item.ImageName}' → ImageID: '{imageID}'");
+                    return new GrupoAdicionalItemAddDTO
+                    {
+                        ID = item.Id,
+                        Nome = item.Nome,
+                        Preco = decimal.TryParse(item.Preco.Replace("R$ ", ""), out var preco) ? preco : null,
+                        Ativo = true,
+                        ImageID = imageID,
+                        IsNovo = item.IsNovo,
+                    };
+                }).ToList()
+            };
+
+        await Task.Yield();
+
+        foreach (Item item in items)
+        {
+            await ValidateEntitysItens(item, item.Id, nameof(item.Nome), nameof(item.Preco));
+        }
+
+        if (!await ValidateEntityAsync(data, nameof(data.Nome)) || items == null || !items.Any())
+        {
+            validationErrorsPrimary["Itens"] = "É necessário registrar pelo menos um item.";
+            StateHasChanged();
+            return;
+        }
+
+        HttpClient.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+        var response = await HttpClient.PutAsJsonAsync("/api/additional-group/data", data);
+
+        if (response.IsSuccessStatusCode)
+        {
+            await OnSubmit.InvokeAsync();
+            IsLoadingIntern = false;
+        }
+        else
+        {
+            Console.WriteLine($"Erro ao salvar: {response.ReasonPhrase}");
+        }        
+    }
+
+    private Task OnEditAdditionalCancel()
+    {
+        IsLoadingIntern = false;
+        ModalService.CloseModal("ConfirmEditAdditional");
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    [JSInvokable("HandleModalEnterKey")]
+    public async Task HandleModalEnterKey()
+    {
+        if (ModalService.GetModalState("ConfirmEditAdditional")?.IsOpen == true || IsLoading)
+        {
+            return;
+        }
+
+        await Task.Yield();
+        await SubmitAsync();
+    }
+
+    [JSInvokable("HandleEscapeKey")]
+    public async Task HandleEscapeKey()
+    {
+        if (ModalService.GetModalState("ConfirmEditAdditional")?.IsOpen == true)
+        {
+            return;
+        }
+
+        await CancelAsync();
+    }
+
+    private async Task CancelAsync()
+    {
+        ModalService.CloseModal("EditAdditional");
+        ModalService.CloseModal("ConfirmEditAdditional");
+        ResetFields();
+
+        await OnCancel.InvokeAsync();
+    }
+
+    private int ValidateSelectedCompanyID()
+    {
+        if (usuario != null && EmpresaService.EmpresaSelecionada == 0)
+        {
+            return usuario.EmpresaID ?? 0;
+        }
+
+        return EmpresaService.EmpresaSelecionada;
+    }
+
+    private void ResetFields()
+    {
+    }
+
+    private void IncrementMin(int count)
+    {
+        if (min < max)
+        {
+            min++;
+        }
+    }
+
+    private void DecrementMin(int count)
+    {
+        if (min > 0)
+        {
+            min--;
+        }
+    }
+
+    private void IncrementMax(int count)
+    {
+        max++;
+    }
+
+    private void DecrementMax(int count)
+    {
+        if (max > min && max > 1)
+        {
+            max--;
+        }
+    }
+
+    private async Task RemoveImage(int id)
+    {
+        var item = items.FirstOrDefault(i => i.Id == id);
+        if (item != null)
+        {
+            if (!string.IsNullOrEmpty(item.ImageName))
+            {
+                try
+                {
+                    await ImageUploadService.DeleteTempImageAsync(item.ImageName);
+                    Console.WriteLine($"[AdditionalGroupModal] Tentativa de remoção da imagem: {item.ImageName}");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[AdditionalGroupModal] Erro ao tentar remover a imagem: {ex.Message}");
+                }
+            }
+            
+            // 🔧 CORREÇÃO: Limpar tanto ImageDataUrl quanto ImageName para garantir que ImageID seja vazio
+            item.ImageDataUrl = null;
+            item.ImageName = string.Empty;
+        }
+    }
+
+    private async void AddNewItem()
+    {
+        var newItem = new Item
+            {
+                Nome = "",
+                Preco = "0",
+                ImageName = "",
+                ImageDataUrl = null,
+                IsImageLoading = false
+            };
+
+        items.Add(newItem);
+        await Task.Yield();
+        await InitializeInputsMask();
+        StateHasChanged();
+    }
+
+    private async Task RemoveItem(int id)
+    {
+        var item = items.FirstOrDefault(i => i.Id == id);
+        if (item != null)
+        {
+            if (!string.IsNullOrEmpty(item.ImageName))
+            {
+                try
+                {
+                    await ImageUploadService.DeleteTempImageAsync(item.ImageName);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Erro ao tentar remover a imagem: {ex.Message}");
+                }
+            }
+
+            items.Remove(item);
+            StateHasChanged();
+        }
+    }
+
+    private async Task SelectedFile(InputFileChangeEventArgs e)
+    {
+        var item = items.FirstOrDefault(i => i.Id == selected);
+        if (item == null) return;
+
+        item.IsImageLoading = true;
+
+        try
+        {
+            IBrowserFile file = e.File;
+
+            if (file == null)
+            {
+               Console.WriteLine("Nenhum arquivo selecionado.");
+                return;
+            }
+
+            // Gerar preview base64 antes do upload
+            using var previewStream = new MemoryStream();
+            await file.OpenReadStream(maxAllowedSize: 50 * 1024 * 1024).CopyToAsync(previewStream);
+            var previewBytes = previewStream.ToArray();
+            item.ImageDataUrl = $"data:{file.ContentType};base64,{Convert.ToBase64String(previewBytes)}";
+
+            // Upload
+            previewStream.Position = 0;
+            string fileName = $"{Guid.NewGuid()}{Path.GetExtension(file.Name)}";
+            var uploadResponse = await ImageUploadService.UploadAdditionalImageAsync(previewStream, fileName);
+
+            if (uploadResponse != null && !string.IsNullOrEmpty(uploadResponse.ImageId))
+            {
+                item.ImageName = uploadResponse.ImageId;
+                StateHasChanged();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Erro ao processar o arquivo: {ex.Message}");
+        }
+        finally
+        {
+            item.IsImageLoading = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task InitializeInputsMask()
+    {
+        foreach (var item in items)
+        {
+            string inputId = $"priceInput-{item.Id}";
+            await JSRuntime.InvokeVoidAsync("applyVMaskerMoney", inputId);
+        }
+    }
+
+    private async Task<bool> ValidateEntityAsync<GenericValidate>(GenericValidate entity, params string[] requiredFields)
+    {
+        var validator = new ValidationService<GenericValidate>();
+        var validationResult = validator.Validate(entity, requiredFields);
+
+        if (!validationResult.IsValid)
+        {
+            validationErrorsPrimary = validationResult.Errors;
+            StateHasChanged();
+            return false;
+        }
+
+        validationErrorsPrimary.Clear();
+        return true;
+    }
+
+    private async Task ValidateEntitysItens<GenericValidate>(GenericValidate entity, int itemID, params string[] requiredFields)
+    {
+        if (validationErrors == null)
+        {
+            validationErrors = new Dictionary<int, Dictionary<string, string>>();
+        }
+
+        var itemErrors = new Dictionary<string, string>();
+
+        var validator = new ValidationService<GenericValidate>();
+        var validationResult = validator.Validate(entity, requiredFields);
+
+        if (!validationResult.IsValid)
+        {
+            itemErrors = validationResult.Errors;
+
+            if (!validationErrors.ContainsKey(itemID))
+            {
+                validationErrors[itemID] = new Dictionary<string, string>();
+            }
+
+            foreach (var error in itemErrors)
+            {
+                validationErrors[itemID][error.Key] = error.Value;
+            }
+
+            StateHasChanged();
+        }
+    }
+
+    private void SelectItem(int id)
+    {
+        selected = id;
+    }
+
+    private class Item
+    {
+        private static int _idCounter = 0;
+
+        public int Id { get; set; }
+        [Required]
+        [MaxLength(100)]
+        public string Nome { get; set; }
+        public string ImageName { get; set; }
+        [Required]
+        [Column(TypeName = "decimal(19,2)")]
+        public string Preco { get; set; }
+        public string ImageDataUrl { get; set; } = null;
+        public bool IsImageLoading { get; set; } = false;
+        public bool IsNovo { get; set; }
+
+        public Item()
+        {
+            Id = System.Threading.Interlocked.Increment(ref _idCounter);
+            IsNovo = true;
+        }
+    }
+}
+
+<div class="form">
+    <div class="form-header">
+        <div class="header">
+            <div class="content-header">
+                <div class="icon"><i class="fa-solid fa-plus"></i></div>
+                <div class="title-container">
+                    <h4 class="title">@Title</h4>
+                </div>
+            </div>
+            <div class="close" @onclick="CancelAsync"><i class="fa-solid fa-x"></i></div>
+        </div>
+    </div>
+    <form class="form-body">
+        <div class="container-body">
+            <div class="additional">
+                <div class="header-section">
+                    <h4>Grupo</h4>
+                </div>
+            </div>
+            <div class="group-info">
+                <div class="wrap-inputs">
+                    <div class="inputs">
+                        <label>Nome</label>
+                        <input @ref="InputFocus" @bind-value="NomeGrupo" />
+                        <span class="error">@validationErrorsPrimary.GetValueOrDefault("Nome")</span>
+                    </div>
+                    <div class="inputs">
+                        <label>Tipo</label>
+                        <RadzenDropDown @bind-Value=@selectedGroupId
+                                        Data=@grupoTipoMapping
+                                        Name="DropDownTypePrice"
+                                        TextProperty="Key"
+                                        ValueProperty="Value"
+                                        class="select-group"
+                                        style="font-size: .8rem !important;" />
+                    </div>
+                </div>
+                <div class="configuration">
+                    <div class="min">
+                        <label>Min</label>
+                        <div class="quantity-control">
+                            <div class="minus rz-ripple" @onclick="() => DecrementMin(min)"><i class="fa-solid fa-minus"></i></div>
+                            <output class="count number">@(min)</output>
+                            <div class="add rz-ripple" @onclick="() => IncrementMin(min)"><i class="fa-solid fa-plus"></i></div>
+                        </div>
+                    </div>
+                    <div class="max">
+                        <label>Máx</label>
+                        <div class="quantity-control">
+                            <div class="minus rz-ripple" @onclick="() => DecrementMax(max)"><i class="fa-solid fa-minus"></i></div>
+                            <output class="count number">@(max)</output>
+                            <div class="add rz-ripple" @onclick="() => IncrementMax(max)"><i class="fa-solid fa-plus"></i></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="additional">
+                <div class="header-section">
+                    <h4>Itens</h4>
+                </div>
+                <div class="new-item">
+                    <button type="button" class="new button-green" @onclick="AddNewItem">
+                        <i class="fa-solid fa-plus"></i> Registrar item
+                    </button>
+                </div>
+                <div class="itens-info">
+                    <div class="itens">
+                        @if (items.Any())
+                        {
+                            @foreach (var item in items)
+                            {
+                                
+                                <div class="item" id="@item.Id">
+                                    <div class="image-container">
+                                        <div class="thumb" style="@(!item.IsImageLoading && item.ImageDataUrl == null ? "display: flex;" : "display: none;")">
+                                            <div class="icon-thumb">
+                                                <label for="productImageUploadAdditionalEdit" class="upload-label" @onclick="() => SelectItem(item.Id)">
+                                                    <i class="fa-solid fa-cloud-arrow-up"></i>
+                                                    <span>Clique para selecionar uma foto</span>
+                                                </label>
+                                                <InputFile type="file" id="productImageUploadAdditionalEdit" style="display: none;" accept="image/*"
+                                                           OnChange="SelectedFile" />
+                                            </div>
+                                        </div>
+                                        @if (item.IsImageLoading)
+                                        {
+                                            <div class="thumb-selected-image-loader">
+                                                <div class="spinner-logo">
+                                                    <SpinnerLoader Size="30" PrimaryColor="#118AB2" SecondaryColor="#FFFFFF" />
+                                                </div>
+                                            </div>
+                                        }
+                                        @if ((item.ImageDataUrl != null && !item.IsImageLoading) || !string.IsNullOrEmpty(item.ImageDataUrl))
+                                        {
+                                            <div class="thumb-selected">
+                                                <div class="thumb-image" style="background-image: url('@item.ImageDataUrl');">
+                                                    <i class="fa-solid fa-xmark remove-icon" title="Clique para remover" @onclick="() => RemoveImage(item.Id)"></i>
+                                                </div>
+                                            </div>
+                                        }
+                                    </div>
+                                    <div class="item-details">
+                                        <div class="input-group">
+                                            <div class="inputs">
+                                                <label>Nome</label>
+                                                <input class="input-name" @bind-value="item.Nome" />
+                                                <span class="error">@validationErrors.GetValueOrDefault(item.Id)?.GetValueOrDefault("Nome")</span>
+                                            </div>
+                                            <div class="inputs">
+                                                <label>Preço</label>
+                                                <div class="price-container">
+                                                    <input class="number price" id="priceInput-@item.Id" @bind="item.Preco" />
+                                                    <div class="mobile-button-trash">
+                                                        <button class="trash-button rz-ripple button-pink" type="button" @onclick="() => RemoveItem(item.Id)"><i class="fa-regular fa-trash-can"></i></button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="desktop-button-trash">
+                                            <button class="trash-button rz-ripple button-pink" type="button" @onclick="() => RemoveItem(item.Id)"><i class="fa-regular fa-trash-can"></i></button>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        } else
+                        {
+                            <div class="empty">
+                                <i class="fa-solid fa-boxes-stacked"></i>
+                                <p>Nenhum item registrado</p>
+                            </div>
+                            <div class="error-empty">
+                                <span class="error">@validationErrorsPrimary.GetValueOrDefault("Itens")</span>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+    <div class="form-footer">
+        <button type="button" @onclick="CancelAsync" class="cancel rz-ripple" disabled="@IsLoading"><span>Cancelar</span></button>
+        <button type="button" @onclick="SubmitAsync" class="confirm rz-ripple button-green" disabled="@(IsLoading || IsLoadingIntern)">
+            @if (IsLoading || IsLoadingIntern)
+            {
+                <SpinnerLoader PrimaryColor="#FFFFFF" SecondaryColor="#118AB2" Size="20" />
+            }
+            else
+            {
+                <span>Salvar</span>
+            }
+        </button>
+    </div>
+</div>
+
+<script type="text/javascript">
+    document.querySelector('form').addEventListener('submit', function (event) {
+        event.preventDefault();
+    });
+
+    window.tryFocusElementDirect = async function (element) {
+        if (element && document.activeElement !== element) {
+            element.focus();
+            return document.activeElement === element;
+        }
+
+        return document.activeElement === element;
+    };
+</script>
+
+<style>
+    .select-group {
+        font-size: 12px !important;
+        display: flex;
+        justify-content: center;
+        min-width: initial !important;
+        max-width: initial !important;
+    }
+
+    .select-group:focus {
+        border: 1px solid #118AB2 !important;
+    }
+</style>

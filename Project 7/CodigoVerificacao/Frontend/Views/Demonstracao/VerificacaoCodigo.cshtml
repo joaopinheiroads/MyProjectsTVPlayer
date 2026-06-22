@@ -1,0 +1,281 @@
+@inject CustomLocalizer<ResourceCommon> localizerCommon
+@inject CustomLocalizer<ResourceDemonstracao> localizer
+@model TVPlayerSite.Models.CRM.TabCliente
+
+@section SectionContentHeader {
+    <link href="~/css/demonstracao.css" rel="stylesheet" asp-append-version=true />
+}
+
+@section SectionContentFooter {
+    <script>
+        // Função de proteção declarada globalmente para poder ser removida
+        function protecaoSaida(e) {
+            // Para navegadores modernos que ainda suportam mensagem customizada
+            const mensagem = 'Você tem certeza que deseja sair? O código de verificação será perdido.';
+            e.preventDefault();
+            e.returnValue = mensagem;
+            return mensagem;
+        }
+        
+        // Calcular tempo restante baseado no timestamp do servidor
+        @{
+            var timestampStr = TempData.Peek("TimestampVerificacaoTemp")?.ToString();
+            var tempoDecorrido = 0;
+            DateTime timestampServidor = DateTime.Now;
+            if (!string.IsNullOrEmpty(timestampStr) && DateTime.TryParse(timestampStr, out DateTime timestamp))
+            {
+                timestampServidor = timestamp;
+                tempoDecorrido = (int)DateTime.Now.Subtract(timestamp).TotalSeconds;
+            }
+        }
+        
+        // Usar o tempo já calculado no servidor como base
+        let tempoRestante = Math.max(0, 300 - @tempoDecorrido);
+        let intervaloCronometro;
+        
+        function atualizarCronometro() {
+            const minutos = Math.floor(tempoRestante / 60);
+            const segundos = tempoRestante % 60;
+            
+            const cronometroEl = document.getElementById('cronometro');
+            cronometroEl.textContent = 
+                String(minutos).padStart(2, '0') + ':' + String(segundos).padStart(2, '0');
+            
+            if (tempoRestante <= 0) {
+                cronometroEl.classList.add('danger');
+                cronometroEl.textContent = 'EXPIRADO';
+                document.getElementById('btnVerificar').disabled = true;
+                document.getElementById('codigoInput').disabled = true;
+                
+                // Parar cronômetro
+                if (intervaloCronometro) {
+                    clearInterval(intervaloCronometro);
+                }
+                
+                // Remover proteção de saída para evitar mensagem de confirmação
+                window.removeEventListener('beforeunload', protecaoSaida);
+                
+                // Redirecionamento automático após 2 segundos
+                setTimeout(function() {
+                    window.location.href = '@Url.Action("Index")';
+                }, 2000);
+                return;
+            }
+            
+            // Alterar cor quando restam menos de 60 segundos
+            if (tempoRestante < 60) {
+                cronometroEl.classList.add('danger');
+            } else if (tempoRestante < 120) {
+                cronometroEl.classList.add('warning');
+            }
+            
+            tempoRestante--;
+        }
+        
+        // Função para sincronizar com servidor quando volta ao foco
+        function sincronizarComServidor() {
+            fetch('@Url.Action("Index", "Demonstracao")', {
+                method: 'HEAD'
+            }).then(() => {
+                // Recarregar página para sincronizar tempo
+                const agora = new Date();
+                const timestampInicial = new Date('@timestampServidor.ToString("yyyy-MM-ddTHH:mm:ss")');
+                const tempoDecorridoReal = Math.floor((agora.getTime() - timestampInicial.getTime()) / 1000);
+                tempoRestante = Math.max(0, 300 - tempoDecorridoReal);
+                atualizarCronometro();
+            }).catch(() => {
+                // Se falhar, continua com timer local
+            });
+        }
+        
+        // Iniciar cronômetro
+        document.addEventListener('DOMContentLoaded', function() {
+            atualizarCronometro();
+            intervaloCronometro = setInterval(atualizarCronometro, 1000);
+            
+            // Sincronizar quando a página volta ao foco (resolve problema mobile)
+            window.addEventListener('focus', sincronizarComServidor);
+            window.addEventListener('visibilitychange', function() {
+                if (!document.hidden) {
+                    sincronizarComServidor();
+                }
+            });
+            
+            // Focar no input do código
+            document.getElementById('codigoInput').focus();
+            
+            // Permitir apenas números no input
+            document.getElementById('codigoInput').addEventListener('input', function(e) {
+                this.value = this.value.replace(/\D/g, '').substring(0, 4);
+                
+                // Auto-submit quando digitar 4 dígitos
+                if (this.value.length === 4) {
+                    setTimeout(() => {
+                        document.getElementById('btnVerificar').click();
+                    }, 500); // Pequeno delay para melhor UX
+                }
+            });
+            
+            // Adicionar efeito visual quando digitar
+            document.getElementById('codigoInput').addEventListener('keydown', function(e) {
+                if (e.key >= '0' && e.key <= '9') {
+                    this.style.transform = 'scale(1.05)';
+                    setTimeout(() => {
+                        this.style.transform = 'scale(1.02)';
+                    }, 100);
+                }
+            });
+        });
+        
+        function mostrarModalConfirmacao(titulo, mensagem, callback) {
+            // Criar modal de confirmação
+            const modalConfirmacao = document.createElement('div');
+            modalConfirmacao.className = 'modal-confirmacao';
+            modalConfirmacao.style.display = 'flex';
+            modalConfirmacao.innerHTML = `
+                <div class="modal-content-confirmacao">
+                    <div class="icon-confirmacao">⚠️</div>
+                    <h3>${titulo}</h3>
+                    <p>${mensagem}</p>
+                    <div>
+                        <button onclick="confirmarAcao()" class="btn-confirmar">Sim, Voltar</button>
+                        <button onclick="cancelarAcao()" class="btn-cancelar-modal">Cancelar</button>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modalConfirmacao);
+            
+            // Definir ações globalmente
+            window.confirmarAcao = function() {
+                document.body.removeChild(modalConfirmacao);
+                callback(true);
+            };
+            
+            window.cancelarAcao = function() {
+                document.body.removeChild(modalConfirmacao);
+                callback(false);
+            };
+        }
+        
+        function voltarCadastro() {
+            mostrarModalConfirmacao(
+                'Tem certeza que deseja voltar?',
+                'Você precisará preencher o formulário novamente e um novo código será enviado.',
+                function(confirmado) {
+                    if (confirmado) {
+                        window.location.href = '@Url.Action("Index")';
+                    }
+                }
+            );
+        }
+        
+        function enviarCodigoPorEmail() {
+            const btnEnviar = document.getElementById('btnEnviarPorEmail');
+            const statusDiv = document.getElementById('statusEnvioEmail');
+            
+            // Desabilitar botão e mostrar loading
+            btnEnviar.disabled = true;
+            btnEnviar.innerHTML = '⏳ Enviando...';
+            statusDiv.innerHTML = '';
+            
+            fetch('@Url.Action("ReenviarCodigoPorEmail", "Demonstracao")', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val()
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.sucesso) {
+                    statusDiv.innerHTML = '<span style="color: #27ae60;">✓ ' + data.mensagem + '</span>';
+                    btnEnviar.innerHTML = '✓ Enviado';
+                    // Reabilitar após 30 segundos
+                    setTimeout(() => {
+                        btnEnviar.disabled = false;
+                        btnEnviar.innerHTML = '📧 Enviar por Email';
+                    }, 30000);
+                } else {
+                    statusDiv.innerHTML = '<span style="color: #e74c3c;">⚠ ' + data.mensagem + '</span>';
+                    btnEnviar.disabled = false;
+                    btnEnviar.innerHTML = '📧 Enviar por Email';
+                }
+            })
+            .catch(error => {
+                statusDiv.innerHTML = '<span style="color: #e74c3c;">⚠ Erro de conexão. Tente novamente.</span>';
+                btnEnviar.disabled = false;
+                btnEnviar.innerHTML = '📧 Enviar por Email';
+            });
+        }
+        
+        // Prevenir fechar acidentalmente apenas se não houver erro
+        @if (ViewData["ErroVerificacao"] == null)
+        {
+            <text>
+            window.addEventListener('beforeunload', protecaoSaida);
+            </text>
+        }
+    </script>
+}
+
+<div class="modal-verificacao">
+    <div class="modal-content-verificacao">
+        <div class="icon-verificacao">
+            <img src="@Url.Content("~/img/tvplayer-h.png")" alt="TVPlayer Logo" />
+        </div>
+        <h2>VERIFICAR CÓDIGO</h2>
+        
+        <div class="info-verificacao1">
+            <p><strong>Olá @(Model?.CliNome ?? "")!</strong></p>
+            <p>Enviamos um código de 4 dígitos para o WhatsApp:</p>
+            <p><strong>@(Model?.CliTelefoneCelular ?? "")</strong></p>
+            <p>Digite o código abaixo para finalizar seu cadastro:</p>
+        </div>
+        
+        <div id="cronometro" class="cronometro">05:00</div>
+        
+        @if (ViewData["ErroVerificacao"] != null)
+        {
+            <div class="erro-verificacao">
+                ⚠️ @ViewData["ErroVerificacao"]
+            </div>
+        }
+        
+        <form asp-action="VerificarCodigo" method="post">
+            <input type="text" 
+                   id="codigoInput" 
+                   name="codigoInformado" 
+                   class="codigo-input" 
+                   placeholder="0000" 
+                   maxlength="4" 
+                   required 
+                   autocomplete="off" />
+            
+            <div>
+                <button type="submit" id="btnVerificar" class="btn-verificar">
+                     Verificar Código
+                </button>
+                <button type="button" class="btn-cancelar" onclick="voltarCadastro()">
+                     Voltar ao Cadastro
+                </button>
+            </div>
+        </form>
+        
+        <div class="info-verificacao2" style=" font-size: 14px; border-top: 1px solid #eee;">
+            <h1>Não recebeu o código?</h1>
+            <p> Verifique se o número está correto</p>
+            <p> Aguarde alguns minutos</p>
+            <p> Caso não receba, volte e refaça o cadastro</p>
+            
+        
+        </div>
+        <div style="margin-top: 20px; text-align: center; font-size:2vh;">
+            <p style="margin-bottom: 15px;"><strong>Caso queira receber o código via e-mail:</strong></p>
+            <button type="button" id="btnEnviarPorEmail" class="btn-email" onclick="enviarCodigoPorEmail()">
+                Enviar por Email
+            </button>
+            <div id="statusEnvioEmail" style="margin-top: 10px; font-weight: bold;"></div>
+        </div>
+    </div>
+</div>

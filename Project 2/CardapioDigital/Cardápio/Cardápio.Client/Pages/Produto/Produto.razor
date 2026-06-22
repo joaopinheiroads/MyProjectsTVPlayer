@@ -1,0 +1,687 @@
+﻿@using Microsoft.AspNetCore.Components.Web
+@using Cardápio.Client.Components.Modal
+@using Cardápio.Client.Components.SelectCompany
+@using Cardápio.Client.Components.SpinnerLoader
+@using Cardápio.Client.Components.Tooltip
+@using Cardápio.Client.Components.CopyButton
+@using Radzen
+@using Radzen.Blazor
+@page "/produtos";
+@layout Cardápio.Client.Components.Layout.SystemLayout;
+@inject HttpClient HttpClient;
+@inject IJSRuntime jsRuntime
+@inject SelectCompanyService EmpresaService;
+@inject Cardápio.Client.Infra.Provider.CustomAuthenticationStateProvider Provider;
+@inject ProdutoService ProdutoService;
+@inject Cardápio.Client.Pages.Categoria.CategoriaService CategoryService;
+
+
+
+@using System.Text.Json.Serialization
+@using System.Collections.ObjectModel
+@using Cardápio.Client.Dto
+
+<head>
+    <HeadOutlet />
+    <PageTitle>Gerenciar Produtos | Escolha AI</PageTitle>
+</head>
+
+@code {
+    [Inject] private ModalService? ModalService { get; set; }
+
+    private bool isLoading = true;
+    private string errorMessage = "";
+    private string searchTerm = string.Empty;
+    private ObservableCollection<ProdutoGetDTO> produtos = new ObservableCollection<ProdutoGetDTO>();
+    private ObservableCollection<ProdutoGetDTO> sendProdutos = new ObservableCollection<ProdutoGetDTO>();
+    private ObservableCollection<ProdutoGetDTO> filteredProdutos = new ObservableCollection<ProdutoGetDTO>();
+    private RadzenDataGrid<ProdutoGetDTO>? dataGrid;
+    private ProdutoGetDTO? selectedProduct;
+    private UsuarioGetDTO? usuario;
+    string? token;
+
+    private List<CategoriaGetDTO>? categorias;
+    private bool isExportProductsModalOpen;
+    private bool isCreateCategoryModalOpen;
+    private bool isCreatingProductModalOpen;
+    private bool isDeletingProductModalOpen;
+    private bool isEditingProductModalOpen;
+    private bool isViewProductModalOpen;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            token = await Provider.GetTokenAsync();
+            //await GetUser();
+            usuario = Provider.UsuarioOwner;
+            await GetData();
+            await Task.Yield();
+        }
+    }
+
+    async Task GetData()
+    {
+        try
+        {
+            produtos = await ProdutoService.GetData(ValidateSelectedCompanyID());
+
+            List<CategoriaGetDTO> result = await CategoryService.GetData(ValidateSelectedCompanyID());
+            categorias = new List<CategoriaGetDTO>(result);
+
+            ApplyFilter();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.Message);
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    async Task GetUser()
+    {
+        HttpClient.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+        usuario = await HttpClient.GetFromJsonAsync<UsuarioGetDTO>("/api/authentication/getCompanyID");
+    }
+
+    private void FilterChanged(ChangeEventArgs e)
+    {
+        searchTerm = e.Value?.ToString() ?? string.Empty;
+        ApplyFilter();
+    }
+
+    private void ApplyFilter()
+    {
+        filteredProdutos = new ObservableCollection<ProdutoGetDTO>(produtos
+            .Where(c => string.IsNullOrEmpty(searchTerm) || c.Nome.Contains(searchTerm, StringComparison.OrdinalIgnoreCase))
+            .ToList());
+    }
+
+    private void OnViewProductClose()
+    {
+        isViewProductModalOpen = false;
+    }
+
+    private void OpenCreateProductModal()
+    {
+        isCreatingProductModalOpen = true;
+    }
+
+    private void OpenViewProductModal(ProdutoGetDTO product)
+    {
+        selectedProduct = product;
+        isViewProductModalOpen = true;
+    }
+
+    private async Task OpenEditingProductModal(ProdutoGetDTO product)
+    {
+        try
+        {
+            // Buscar dados completos do produto, incluindo horários
+            var produtoCompleto = await ProdutoService.GetProductByID(product.ID);
+
+            if (produtoCompleto?.Horarios != null)
+            {
+                foreach (var h in produtoCompleto.Horarios)
+                {
+                    Console.WriteLine($"[DEBUG] Horário no produto: {h.DiaSemana} {h.HoraInicio}-{h.HoraFim}");
+                }
+            }
+
+            selectedProduct = produtoCompleto;
+            isEditingProductModalOpen = true;
+        }
+        catch (Exception ex)
+        {
+            // Em caso de erro, usar o produto básico
+            selectedProduct = product;
+            isEditingProductModalOpen = true;
+        }
+    }
+
+    private void OpenDeletingProductModal(ProdutoGetDTO product)
+    {
+        selectedProduct = product;
+        isDeletingProductModalOpen = true;
+    }
+
+    private void OpenExportProducts()
+    {
+        isExportProductsModalOpen = true;
+    }
+
+    private async Task OnExportProductsConfirm(ExportarProdutosDTO products)
+    {
+        try
+        {
+            await ProdutoService.OnExportProductsConfirm(products);
+
+            await GetData();
+
+            isExportProductsModalOpen = false;
+        }
+        catch (Exception err)
+        {
+            throw err;
+        }
+    }
+
+    private Task OnCancelExportProducts()
+    {
+        isExportProductsModalOpen = false;
+        return Task.CompletedTask;
+    }
+
+    private async Task OnCreateCategoryConfirm(CategoriaAddDTO category)
+    {
+        try
+        {
+            await CategoryService.OnCreateCategoryConfirm(category, ValidateSelectedCompanyID());
+
+            List<CategoriaGetDTO> result = await CategoryService.GetData(ValidateSelectedCompanyID());
+            categorias = new List<CategoriaGetDTO>(result);
+
+            isCreateCategoryModalOpen = false;
+        }
+        catch (Exception err)
+        {
+            throw err;
+        }
+    }
+
+    private Task OnCreateCategoryCancelT()
+    {
+        isCreateCategoryModalOpen = false;
+        return Task.CompletedTask;
+    }
+
+    private Task OpenCreateCategoryModalAsync()
+    {
+        isCreateCategoryModalOpen = true;
+        return Task.CompletedTask;
+    }
+
+    private async Task OnCreateProductConfirm(ProductTransferDTO productTransferDataDTO)
+    {
+        try
+        {
+            // Preencher ColProdutoImagem usando os dados do upload
+            var colProdutoImagem = new List<ProdutoImagemAddDTO>();
+            if (productTransferDataDTO.ProductTransferDataDTO.ImagesID != null && productTransferDataDTO.ProductTransferDataDTO.ImagesID.Count > 0)
+            {
+                foreach (var imgId in productTransferDataDTO.ProductTransferDataDTO.ImagesID)
+                {
+                    if (imgId != null)
+                    {
+                       
+                        colProdutoImagem.Add(new ProdutoImagemAddDTO
+                        {
+                            Nome = imgId, // Pode ser ajustado para o nome correto se disponível
+                            Arquivo = imgId // Pode ser ajustado para o caminho correto se disponível
+                        });
+
+                    }
+                   
+                }
+            }
+
+            ProdutoAddDTO produto = new ProdutoAddDTO
+            {
+                Nome = productTransferDataDTO.ProductTransferDataDTO.Nome ?? string.Empty,
+                Preco = productTransferDataDTO.ProductTransferDataDTO.Preco ?? 0,
+                QTDPessoa = productTransferDataDTO.ProductTransferDataDTO.QTDPessoa,
+                ImagesID = productTransferDataDTO.ProductTransferDataDTO.ImagesID?.Cast<string?>().ToList() ?? new List<string?>(),
+                Destaque = productTransferDataDTO.ProductTransferDataDTO.Destaque ?? false,
+                Descricao = productTransferDataDTO.ProductTransferDataDTO.Descricao ?? string.Empty,
+                CategoriaID = productTransferDataDTO.ProductTransferDataDTO.CategoriaID ?? 0,
+                imageUrlLoadedApi = productTransferDataDTO.ProductTransferDataDTO.imageUrlLoadedApi,
+                Ativo = productTransferDataDTO.ProductTransferDataDTO.Ativo,
+                GroupsID = productTransferDataDTO.GroupsAdditionalGetDTO?.Select(e => e.ID).ToList() ?? new List<int>(),
+                GruposOrdenados = productTransferDataDTO.GroupsAdditionalGetDTO?.Select((e) => new GrupoOrdenadoDTO
+                                    {
+                                        GrupoAdicionalID = e.ID,
+                                        Posicao = e.Posicao ?? 0
+                                    })
+                                    .ToList() ?? new List<GrupoOrdenadoDTO>(),
+                Horarios = productTransferDataDTO.ProductTransferDataDTO.Horarios ?? new List<ProdutoHorarioAddDTO>(),
+                ColProdutoImagem = colProdutoImagem,
+                Promocao = productTransferDataDTO.ProductTransferDataDTO.Promocao ?? false,
+                PrecoPromocional = productTransferDataDTO.ProductTransferDataDTO.PrecoPromocional,
+                FimPromocao = productTransferDataDTO.ProductTransferDataDTO.FimPromocao,
+                // 🔥 CORREÇÃO: Adicionar as promoções por horário que estavam sendo ignoradas!
+                PromocoesPorHorario = productTransferDataDTO.ProductTransferDataDTO.PromocoesPorHorario ?? new List<ProdutoPromocaoHorarioAddDTO>(),
+                EmpresaID = ValidateSelectedCompanyID() // Adicionando EmpresaID ao criar o produto
+            };
+
+            await ProdutoService.OnCreateProductConfirm(produto, ValidateSelectedCompanyID());
+
+            await GetData();
+
+            isCreatingProductModalOpen = false;
+        }
+        catch (Exception err)
+        {
+            Console.WriteLine(err.Message);
+            throw err;
+        }
+    }
+
+    private Task OnCreateCategoryCancel()
+    {
+        isCreatingProductModalOpen = false;
+        return Task.CompletedTask;
+    }
+
+    private async Task OnEditingProductConfirm(ProductTransferDTO productTransferDTO)
+    {
+        try
+        {
+            // 🔥 CORREÇÃO: Usar ProdutoAddDTO em vez de ProdutoUpdateDTO para garantir compatibilidade
+            var produtoUpdate = new ProdutoAddDTO
+            {
+                Nome = productTransferDTO.ProductTransferDataDTO.Nome ?? string.Empty,
+                Preco = productTransferDTO.ProductTransferDataDTO.Preco ?? 0,
+                Descricao = productTransferDTO.ProductTransferDataDTO.Descricao ?? string.Empty,
+                CategoriaID = productTransferDTO.ProductTransferDataDTO.CategoriaID ?? 0,
+                Promocao = productTransferDTO.ProductTransferDataDTO.Promocao ?? false,
+                PrecoPromocional = productTransferDTO.ProductTransferDataDTO.PrecoPromocional,
+                FimPromocao = productTransferDTO.ProductTransferDataDTO.FimPromocao,
+                Destaque = productTransferDTO.ProductTransferDataDTO.Destaque ?? false,
+                Ativo = productTransferDTO.ProductTransferDataDTO.Ativo,
+                QTDPessoa = productTransferDTO.ProductTransferDataDTO.QTDPessoa,
+                Horarios = productTransferDTO.ProductTransferDataDTO.Horarios ?? new List<ProdutoHorarioAddDTO>(),
+                // 🔥 CORREÇÃO CRÍTICA: Adicionar as promoções por horário na edição!
+                PromocoesPorHorario = productTransferDTO.ProductTransferDataDTO.PromocoesPorHorario ?? new List<ProdutoPromocaoHorarioAddDTO>(),
+                // 🔧 CORREÇÃO CRÍTICA: Incluir imagens do ProductForm na edição
+                ImagesID = productTransferDTO.ProductTransferDataDTO.ImagesID ?? new List<string?>(),
+                GroupsID = new List<int>(),
+                // 🔥 CORREÇÃO CRÍTICA: Converter grupos do frontend para o formato esperado pelo backend
+                GruposOrdenados = productTransferDTO.GroupsAdditionalGetDTO?.Select((grupo, index) => new GrupoOrdenadoDTO 
+                { 
+                    GrupoAdicionalID = grupo.ID, 
+                    Posicao = grupo.Posicao ?? (index + 1) 
+                }).ToList() ?? new List<GrupoOrdenadoDTO>(),
+                ColProdutoImagem = new List<ProdutoImagemAddDTO>()
+            };
+
+       
+            
+            if (produtoUpdate.GruposOrdenados.Any())
+            {
+                var gruposLista = produtoUpdate.GruposOrdenados.ToList();
+                for (int i = 0; i < gruposLista.Count; i++)
+                {
+                    var grupo = gruposLista[i];
+                    Console.WriteLine($"[OnEditingProductConfirm] - Grupo [{i}] -> ID: {grupo.GrupoAdicionalID}, Posicao: {grupo.Posicao}");
+                }
+            }
+            else
+            {
+                Console.WriteLine($"[OnEditingProductConfirm] ❌ NENHUM GRUPO CONVERTIDO PARA O BACKEND!");
+            }
+
+            await ProdutoService.OnEditingProductConfirm(produtoUpdate, selectedProduct?.ID ?? 0);
+            await GetData();
+
+            isEditingProductModalOpen = false;
+        }
+        catch (Exception err)
+        {
+            throw err;
+        }
+    }
+
+    private Task OnEditingProductCancel()
+    {
+        selectedProduct = null;
+        isEditingProductModalOpen = false;
+        return Task.CompletedTask;
+    }
+
+    private async Task OnDeleteProductConfirm()
+    {
+        try
+        {
+            if (selectedProduct != null && EmpresaService != null)
+            {
+                await ProdutoService.OnDeleteProductConfirm(selectedProduct.ID, EmpresaService.EmpresaSelecionada);
+            }
+            await GetData();
+
+            isDeletingProductModalOpen = false;
+        }
+        catch (Exception err)
+        {
+            Console.WriteLine(err.Message);
+        }
+    }
+
+    private Task OnDeleteProductCancel()
+    {
+        isDeletingProductModalOpen = false;
+        return Task.CompletedTask;
+    }
+
+    protected async override void OnInitialized()
+    {
+        EmpresaService.EmpresaChanged += UpdateEmpresa;
+        if (ModalService != null)
+            ModalService.OnStateChange += StateHasChanged;
+        base.OnInitialized();
+        await Task.Yield();
+    }
+
+    private async void UpdateEmpresa()
+    {
+        isLoading = true;
+        await InvokeAsync(StateHasChanged);
+        await GetData();
+        await Task.Yield();
+    }
+
+    public async void Dispose()
+    {
+        if (ModalService != null)
+            ModalService.OnStateChange -= StateHasChanged;
+        EmpresaService.EmpresaChanged -= UpdateEmpresa;
+        await Task.Yield();
+    }
+
+    private int ValidateSelectedCompanyID()
+    {
+        if (EmpresaService.EmpresaSelecionada == 0)
+        {
+            return usuario?.EmpresaID ?? 0;
+        }
+
+        return EmpresaService.EmpresaSelecionada;
+    }
+
+    private VerifyProductDTO GenerateVerifyModel(string produtoNome, int categoriaID, int? id)
+    {
+        return new VerifyProductDTO()
+            {
+                ProdutoNome = produtoNome,
+                CategoriaID = categoriaID,
+                ID = id
+            };
+    }
+
+    private VerifyCategoryDTO GenerateVerifyCategoryModel(string nome, int? id)
+    {
+        return new VerifyCategoryDTO()
+            {
+                Nome = nome,
+                ID = id
+            };
+    }
+}
+
+<Modal T="ProductTransferDTO"
+       SelectedDTO="object"
+       IsOpen="isCreatingProductModalOpen"
+       OnConfirm="@OnCreateProductConfirm"
+       OnCancel="@OnCreateCategoryCancel"
+       OnSecondaryModalOpen="@OpenCreateCategoryModalAsync"
+       Categories="@categorias"
+       ActionType="creating/produto">
+</Modal>
+
+<Modal T="ProductTransferDTO"
+       IsOpen="isEditingProductModalOpen"
+       OnConfirm="@OnEditingProductConfirm"
+       OnCancel="@OnEditingProductCancel"
+       ActionType="editing/produto"
+       SelectedDTO="ProdutoGetDTO"
+       OnSecondaryModalOpen="@OpenCreateCategoryModalAsync"
+       Categories="@categorias"
+       Selected="selectedProduct">
+</Modal>
+
+<Modal T="object"
+       SelectedDTO="object"
+       IsOpen="isDeletingProductModalOpen"
+       OnConfirm="@OnDeleteProductConfirm"
+       OnCancel="@OnDeleteProductCancel"
+       ActionType="deleting/produto">
+</Modal>
+
+<Modal T="object"
+       SelectedDTO="ProdutoGetDTO"
+       Selected="selectedProduct"
+       IsOpen="isViewProductModalOpen"
+       OnConfirm="() => {}"
+       OnCancel="@OnViewProductClose"
+       ActionType="view-menu/produto">
+</Modal>
+
+<Modal T="CategoriaAddDTO"
+       IsOpen="isCreateCategoryModalOpen"
+       OnConfirm="@OnCreateCategoryConfirm"
+       OnCancel="@OnCreateCategoryCancelT"
+       ActionType="creating/categoria"
+       SelectedDTO="object">
+</Modal>
+
+<Modal T="ExportarProdutosDTO"
+       IsOpen="isExportProductsModalOpen"
+       OnConfirm="@OnExportProductsConfirm"
+       OnCancel="@OnCancelExportProducts"
+       ActionType="exporting/product"
+       SelectedDTO="object">
+</Modal>
+
+<Modal T="int"
+       IsOpen="@(ModalService?.GetModalState("CreateAdditional")?.IsOpen == true)"
+       OnConfirm="@((selected) => ModalService?.GetModalState("CreateAdditional")?.OnConfirmWithParameter?.Invoke(selected) ?? Task.CompletedTask)"
+       OnCancel="@(() => ModalService?.GetModalState("CreateAdditional")?.OnCancel?.Invoke() ?? Task.CompletedTask)"
+       ActionType="creating/additional"
+       SelectedDTO="object">
+</Modal>
+
+<Modal T="GrupoAdicionalAddDTO"
+       IsOpen="@(ModalService?.GetModalState("EditAdditional")?.IsOpen == true)"
+       OnConfirm="@(() => ModalService?.GetModalState("EditAdditional")?.OnConfirm?.Invoke() ?? Task.CompletedTask)"
+       OnCancel="@(() => ModalService?.GetModalState("EditAdditional")?.OnCancel?.Invoke() ?? Task.CompletedTask)"
+       ActionType="editing/additional"
+       Selected="@(ModalService?.GetModalState("EditAdditional")?.EditObject as GrupoAdicionalGetDTO)"
+       SelectedDTO="GrupoAdicionalGetDTO">
+</Modal>
+
+<Modal T="List<ProdutoGetDTO>"
+       IsOpen="@(ModalService?.GetModalState("ConfirmEditAdditional")?.IsOpen == true)"
+       OnConfirm="@(() => ModalService?.GetModalState("ConfirmEditAdditional")?.OnConfirm?.Invoke() ?? Task.CompletedTask)"
+       OnCancel="@(() => ModalService?.GetModalState("ConfirmEditAdditional")?.OnCancel?.Invoke() ?? Task.CompletedTask)"
+       ActionType="confirm/additional"
+       Selected="@(ModalService?.GetModalState("ConfirmEditAdditional")?.EditObject as List<ProdutoGetDTO>)"
+       SelectedDTO="List<ProdutoGetDTO>">
+</Modal>
+
+<Modal T="List<int>"
+       IsOpen="@(ModalService?.GetModalState("ImportGroup")?.IsOpen == true)"
+       OnConfirm="@((selectedsGroups) => ModalService?.GetModalState("ImportGroup")?.OnConfirmWithParameter?.Invoke(selectedsGroups) ?? Task.CompletedTask)"
+       OnCancel="@(() => ModalService?.GetModalState("ImportGroup")?.OnCancel?.Invoke() ?? Task.CompletedTask)"
+       ActionType="importing/additional"
+       SelectedDTO="object">
+</Modal>
+
+<div class="header">
+    <div class="container-title">
+        <i class="fa-solid fa-boxes-stacked"></i>
+        <h3 class="title-page-section">Produtos</h3>
+    </div>
+    <div class="container-select">
+        <div class="menu-container-responsive">
+            @if (produtos != null && produtos.Any())
+            {
+                <button class="export-data rz-ripple button-blue" title="Exportar produtos">
+                    <i class="fa-solid fa-file-export" @onclick="OpenExportProducts"></i>
+                </button>
+            } 
+        </div>
+        <Cardápio.Client.Components.SelectCompany.Select />
+    </div>
+</div>
+
+<div class="container-section">
+    @if (isLoading || EmpresaService.IsLoading)
+    {
+        <div class="container">
+            <SpinnerLoader PrimaryColor="#272A2D" SecondaryColor="#ffffff" Size="90" />
+        </div>
+    }
+
+    @if (!isLoading && !EmpresaService.IsLoading)
+    {
+        <div class="container-header">
+            <div class="menu-container">
+                @if (produtos != null && produtos.Any())
+                {
+                    <button class="export-data rz-ripple button-blue" title="Exportar produtos" @onclick="OpenExportProducts">
+                        <i class="fa-solid fa-file-export"></i>
+                    </button>
+                    <p class="export-message">Exportar produtos</p>
+                }
+            </div>
+            <div class="container-group">
+                <div>
+                    <input @oninput="FilterChanged" placeholder="Filtrar produtos..." class="input" style="width: 300px;" />
+                </div>
+                <div class="button-container">
+                    <button class="rz-ripple button-green" @onclick="OpenCreateProductModal"><i class="fa-solid fa-plus"></i> Registrar produto</button>
+                </div>
+            </div>
+        </div>
+        <RadzenDataGrid @ref="dataGrid" AllowFiltering="true" AllowColumnResize="true" AllowAlternatingRows="true" AllowSorting="true" PageSize="12" AllowPaging="true"
+                        PagerHorizontalAlign="HorizontalAlign.Left" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive" ShowPagingSummary="true" Data="@filteredProdutos"
+                        SelectionMode="DataGridSelectionMode.Single" class="rz-border-radius-1 rz-shadow-1 produto-table" Responsive="true" Page="@(() => {})" 
+                        style="min-height: 600px; max-height: 600px; height: 100%;">
+            <EmptyTemplate>
+                <p style="color: lightgrey; font-size: 24px; text-align: center; margin: 2rem;">Nenhum produto foi encontrada.</p>
+            </EmptyTemplate>
+            <Columns>
+                <RadzenDataGridColumn TItem="ProdutoGetDTO" Property="Ativo" Title="Status" Filterable="false" Sortable="true" Resizable="false" Frozen="false" MinWidth="105px" HeaderCssClass="teste">
+                    <HeaderTemplate>
+                        <div class="header-content">
+                            <span class="content-header-table">Status</span>
+                            <Cardápio.Client.Components.Tooltip.Tooltip TooltipText="Define se o produto irá aparecer no cardápio ou não" />
+                        </div>
+                    </HeaderTemplate>
+                    <Template>
+                        <span title="@(context.Ativo ? "Ativo" : "Inativo")" class="status @(context.Ativo ? "active" : "deactive")"></span>
+                    </Template>
+                </RadzenDataGridColumn>
+                <RadzenDataGridColumn TItem="ProdutoGetDTO" Property="Nome" Title="Nome" Filterable="false" Sortable="true" Resizable="true" MinWidth="150px">
+                    <Template>
+                        <Cardápio.Client.Components.CopyButton.CopyButton Content="@((context as ProdutoGetDTO).Nome)" Title="Copiar Nome" />
+                    </Template>
+                </RadzenDataGridColumn>
+                <RadzenDataGridColumn TItem="ProdutoGetDTO" Property="Preco" Title="Preço" Filterable="false" Sortable="true" Resizable="true" CssClass="number" MinWidth="80px">
+                    <Template>
+                        <div class="number" style="overflow-x: auto; max-height: 100px; white-space: nowrap; box-sizing: border-box; padding-right: 16px; width: 100%;">
+                            @((context as ProdutoGetDTO).Preco)
+                        </div>
+                    </Template>
+                </RadzenDataGridColumn>
+                <RadzenDataGridColumn TItem="ProdutoGetDTO" Property="Categoria" Title="Categoria" Filterable="false" Sortable="true" Resizable="true" MinWidth="50px">
+                    <Template>
+                        <div style="overflow-x: auto; max-height: 100px; white-space: nowrap; box-sizing: border-box; padding-right: 16px; width: 100%;">
+                            <Cardápio.Client.Components.CopyButton.CopyButton Content="@((context as ProdutoGetDTO).Categoria)" Title="Copiar Categoria" />
+                        </div>
+                    </Template>
+                </RadzenDataGridColumn>
+                <RadzenDataGridColumn TItem="ProdutoGetDTO" Property="Destaque" Title="Destaque" Filterable="false" Sortable="true" Resizable="true" MinWidth="50px">
+                    <Template>
+                        <div style="overflow-x: auto; max-height: 100px; white-space: nowrap; box-sizing: border-box; padding-right: 16px; width: 100%;">
+                            @((context as ProdutoGetDTO).Destaque == true ? "Sim" : "Não")
+                        </div>
+                    </Template>
+                </RadzenDataGridColumn>
+                <RadzenDataGridColumn TItem="ProdutoGetDTO" Property="DataCadastro" Title="Data de Criação" Filterable="false" Sortable="true" Resizable="true" CssClass="number" MinWidth="50px">
+                    <Template>
+                        <div class="number" style="overflow-x: auto; max-height: 100px; white-space: nowrap; box-sizing: border-box; padding-right: 16px; width: 100%;">
+                            @((context as ProdutoGetDTO).DataCadastro.ToString("dd/MM/yyyy"))
+                        </div>
+                    </Template>
+                </RadzenDataGridColumn>
+                <RadzenDataGridColumn TItem="ProdutoGetDTO" Property="Buttons:" Filterable="false" Sortable="false" Width="200px" Resizable="false" Frozen="true" FrozenPosition="FrozenColumnPosition.Right">
+                    <Template>
+                        <div class="wrap">
+                            <button class="view-button rz-ripple button-cyan" @onclick="() => OpenViewProductModal(context)"><i class="fa-regular fa-eye"></i></button>
+                            <button class="edit-button rz-ripple button-blue" @onclick="async () => await OpenEditingProductModal(context)"><i class="fa-regular fa-pen-to-square"></i></button>
+                            <button class="trash-button rz-ripple button-pink" @onclick="() => OpenDeletingProductModal(context)"><i class="fa-regular fa-trash-can"></i></button>
+                        </div>
+                    </Template>
+                </RadzenDataGridColumn>
+            </Columns>
+        </RadzenDataGrid>
+    }
+</div>
+
+<style type="text/css">
+    .rz-colorpicker-popup {
+        z-index: 100000 !important;
+    }
+
+    @@media screen and (max-width:770px) {
+        .copy {
+            display: none !important
+        }
+    } 
+
+    .rz-column-title-content {
+        font-weight: bold !important;
+    }
+
+    .rz-column-title {
+        font-weight: bold !important;
+    }
+
+    .rz-dropdown {
+        font-size: 14px !important;
+        display: flex;
+        justify-content: center;
+    }
+
+    @@media screen and (max-width:768px) {
+        .hidden {
+            display: none !important;
+        }
+
+        .produto-table tbody {
+            display: grid !important;
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+
+    @@media screen and (max-width:600px) {
+        .hidden {
+            display: none !important;
+        }
+
+        .produto-table tbody {
+            display: grid !important;
+            grid-template-columns: repeat(1, 1fr);
+        }
+    }
+
+    .global-select {
+        align-items: end !important;
+    }
+
+    @@media screen and (max-width: 600px) {
+        .produto-table .global-select {
+            width: 100%;
+        }
+    }
+
+    .wrap {
+        gap: .5rem !important;
+    }
+</style>

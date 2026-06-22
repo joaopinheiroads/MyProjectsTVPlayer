@@ -1,0 +1,147 @@
+﻿@page "/recuperarSenha"
+@rendermode InteractiveServer
+@inject HttpClient HttpClient
+@inject IJSRuntime JSRuntime
+@inject NavigationManager NavigationManager
+@inject Cardápio.Client.Infra.Provider.CustomAuthenticationStateProvider Provider
+@inject Cardápio.Client.Pages.Usuarios.UsuarioService UsuarioService
+
+@code {
+    // Etapas: 1 = digitar email, 2 = digitar código, 3 = digitar nova senha
+    private int etapa = 1;
+
+    private string email = "";
+    private string codigo = "";
+    private string novaSenha = "";
+    private string mensagem = "";
+    private bool sucesso;
+
+    private async Task EnviarCodigo()
+    {
+        try
+        {
+            await UsuarioService.EnviarCodigoRecuperacao(email);
+            mensagem = "Código enviado para seu e-mail!";
+            sucesso = true;
+            etapa = 2;
+        }
+        catch(Exception ex)
+        {
+          //  mostra o erro real na tela para facilitar o debug
+            mensagem = "Erro ao enviar código. Verifique o e-mail digitado.";
+
+            sucesso = false;
+        }
+        StateHasChanged();
+    }
+
+    private void ConfirmarCodigo()
+    {
+        if (!string.IsNullOrEmpty(codigo))
+        {
+            etapa = 3;
+            mensagem = "";
+        }
+        else
+        {
+            mensagem = "Digite o código enviado.";
+            sucesso = false;
+        }
+        StateHasChanged();
+    }
+
+    private async Task TrocarSenha()
+    {
+        try
+        {
+            await UsuarioService.TrocarSenha(email, novaSenha, codigo);
+            mensagem = "Senha alterada com sucesso!";
+            sucesso = true;
+            etapa = 1; // reset
+        }
+        catch
+        {
+            mensagem = "Código inválido ou expirado.";
+            sucesso = false;
+        }
+        StateHasChanged();
+    }
+}
+
+
+<div class="container">
+    <div class="recuperar-card">
+        <img src="imagens/Logo/logoescolhaai.png" alt="Logo Escolha AI" class="login-logo" />
+        <h2>Recuperar senha</h2>
+
+     
+
+        @* ETAPA 1 - Email *@
+        @if (etapa == 1)
+        {
+            <div class="subtitle">Insira seu e-mail para receber o código:</div>
+            <div class="input-group">
+                <div class="teste"><div>
+                    <i class="fas fa-envelope icon"></i>
+                    <input type="email" @bind="email" placeholder="Digite seu e-mail" />
+                </div></div>
+            </div>
+            @if (!string.IsNullOrEmpty(mensagem))
+            {
+                <div class="alert @(sucesso ? "alert-success" : "alert-danger")">@mensagem</div>
+            }
+            <button type="button" @onclick="EnviarCodigo">Enviar código</button>
+          
+        }
+
+        @* ETAPA 2 - Código *@
+        @if (etapa == 2)
+        {
+            <div class="subtitle">Digite o código enviado para seu e-mail:</div>
+            <div class="input-group">
+                <div class="teste"><div>
+                    <i class="fas fa-key icon"></i>
+                    <input type="text" @bind="codigo" placeholder="Digite o código" />
+                </div></div>
+            </div>
+            @if (!string.IsNullOrEmpty(mensagem))
+            {
+                <div class="alert @(sucesso ? "alert-success" : "alert-danger")">@mensagem</div>
+            }
+            <button type="button" @onclick="ConfirmarCodigo">Confirmar código</button>
+            
+        }
+
+        @* ETAPA 3 - Nova senha *@
+        @if (etapa == 3)
+        {
+            <div class="subtitle">Digite sua nova senha:</div>
+            <div class="input-group">
+                <div class="teste"><div>
+                    <i class="fas fa-lock icon"></i>
+                    <input type="password" @bind="novaSenha" placeholder="Digite a nova senha" />
+                </div></div>
+            </div>
+            @if (!string.IsNullOrEmpty(mensagem))
+            {
+                <div class="alert @(sucesso ? "alert-success" : "alert-danger")">@mensagem</div>
+            }
+            <button type="button" @onclick="TrocarSenha">Trocar senha</button>
+          
+        }
+
+          <p class="second">Reiniciar processo? 
+            
+            <a class="link" style="color:#118AB2;" href="javascript:location.reload()">Reiniciar</a>
+          </p>
+
+        <p class="second">Deseja voltar ao login? 
+            <a class="link" style="color:#118AB2;" href="./login">Voltar ao login</a>
+        </p>
+        <p class="second">Deseja criar uma conta?
+            <a class="link" style="color:#118AB2;" href="./signup">Criar conta</a>
+        </p>
+    </div>
+</div>
+
+

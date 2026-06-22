@@ -1,0 +1,333 @@
+﻿@page "/usuarios"
+@layout Cardápio.Client.Components.Layout.SystemLayout
+@inject HttpClient HttpClient;
+@inject IJSRuntime jsRuntime;
+@inject Cardápio.Client.Infra.Provider.CustomAuthenticationStateProvider Provider;
+@inject UsuarioService UsuarioService;
+
+@using Cardápio.Client.Components.Modal;
+@using Cardápio.Client.Dto;
+@using System.Text.Json.Serialization;
+@using System.Collections.ObjectModel;
+
+<head>
+    <HeadOutlet />
+    <PageTitle>Gerenciar usuarios | Escolha AI</PageTitle>
+</head>
+
+<style type="text/css">
+    @@media screen and (max-width:770px) {
+        .copy {
+            display: none !important
+        }
+    } 
+
+    .rz-data-grid {
+        overflow-x: auto !important;
+    }
+
+    .rz-column-title-content {
+        font-weight: bold !important;
+    }
+
+    .rz-column-title {
+        font-weight: bold !important;
+    }
+
+    @@media screen and (max-width:768px) {
+        .hidden {
+            display: none !important;
+        }
+
+        tbody {
+            display: grid !important;
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+
+    @@media screen and (max-width:600px) {
+        .hidden {
+            display: none !important;
+        }
+
+        tbody {
+            display: grid !important;
+            grid-template-columns: repeat(1, 1fr);
+        }
+    }
+
+    .wrap {
+        gap: .5rem !important;
+    }
+</style>
+
+@code {
+    private bool isLoading = true;
+    private string searchTerm = string.Empty;
+    private ObservableCollection<UsuarioGetDTO> filteredUsuarios = new ObservableCollection<UsuarioGetDTO>();
+    private ObservableCollection<UsuarioGetDTO> usuarios = new ObservableCollection<UsuarioGetDTO>();
+    private RadzenDataGrid<UsuarioGetDTO> dataGrid;
+    private UsuarioGetDTO usuario;
+    string token;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            token = await Provider.GetTokenAsync();
+            //await GetUser();
+            usuario = Provider.UsuarioOwner;
+            await GetData();
+        }
+    }
+
+    async Task GetUser()
+    {
+        HttpClient.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+        var result = await HttpClient.GetFromJsonAsync<UsuarioGetDTO>("/api/authentication/getCompanyID");
+        usuario = result;
+    }
+
+    async Task GetData()
+    {
+        try
+        {
+            usuarios = await UsuarioService.GetData();
+
+            ApplyFilter();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.Message);
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void FilterChanged(ChangeEventArgs e)
+    {
+        searchTerm = e.Value.ToString();
+        ApplyFilter();
+    }
+
+    private void ApplyFilter()
+    {
+        filteredUsuarios = new ObservableCollection<UsuarioGetDTO>(usuarios
+            .Where(c => string.IsNullOrEmpty(searchTerm) || c.Nome.Contains(searchTerm, StringComparison.OrdinalIgnoreCase))
+            .ToList());
+
+        StateHasChanged();
+    }
+}
+
+@code {
+    private bool isCreatingUserModalOpen;
+    private bool isEditingUserModalOpen;
+    private bool isDeletingUserModalOpen;
+    private UsuarioGetDTO selectedUser;
+
+    private void OpenCreatingUserModel()
+    {
+        isCreatingUserModalOpen = true;
+    }
+
+    private void OpenEditingUserModel(UsuarioGetDTO selectedUserDTO)
+    {
+        selectedUser = selectedUserDTO;
+        isEditingUserModalOpen = true;
+    }
+
+    private void OpenDeletingUserModal(UsuarioGetDTO selectedUserDTO)
+    {
+        selectedUser = selectedUserDTO;
+        isDeletingUserModalOpen = true;
+    }
+
+    private async Task OnCreateProductConfirm(UsuarioAddDTO userDTO)
+    {
+        try
+        {
+            Console.WriteLine($"[OnCreateProductConfirm] EmpresaID: {userDTO.EmpresaID}, TipoID: {userDTO.UsuarioTipoID}");
+            await UsuarioService.OnCreateProductConfirm(userDTO);
+            await GetData();
+            isCreatingUserModalOpen = false;
+        }
+        catch (Exception err)
+        {
+            Console.WriteLine($"[OnCreateProductConfirm] ERRO: {err.Message}");
+            throw err;
+        }
+    }
+
+    private Task OnCreateProductCancel()
+    {
+        StateHasChanged();
+        isCreatingUserModalOpen = false;
+        return Task.CompletedTask;
+    }
+
+    private async Task OnDeleteUserConfirm()
+    {
+        try
+        {
+            await UsuarioService.OnDeleteUserConfirm(selectedUser.ID);
+            await GetData();
+
+            isDeletingUserModalOpen = false;
+        }
+        catch (Exception err)
+        {
+            Console.WriteLine(err.Message);
+        }
+    }
+
+    private Task OnDeleteUserCancel()
+    {
+        isDeletingUserModalOpen = false;
+        return Task.CompletedTask;
+    }
+
+    private async Task OnEditProductConfirm(UsuarioUpdateDTO userDTO)
+    {
+        try
+        {
+            await UsuarioService.OnEditProductConfirm(userDTO, selectedUser.ID);
+
+            await GetData();
+
+            isEditingUserModalOpen = false;
+        }
+        catch (Exception err)
+        {
+            throw err;
+        }
+    }
+
+    private Task OnEditProductCancel()
+    {
+        selectedUser = null;
+        isEditingUserModalOpen = false;
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+}
+
+
+
+<Modal T="UsuarioAddDTO"
+       IsOpen="isCreatingUserModalOpen"
+       OnConfirm="@OnCreateProductConfirm"
+       OnCancel="@OnCreateProductCancel"
+       ActionType="creating/usuario"
+       SelectedDTO="object"
+       EmpresaID="@(usuario?.EmpresaID)">
+</Modal>
+
+<Modal T="UsuarioUpdateDTO"
+       IsOpen="isEditingUserModalOpen"
+       OnConfirm="@OnEditProductConfirm"
+       OnCancel="@OnEditProductCancel"
+       ActionType="editing/usuario"
+       SelectedDTO="UsuarioGetDTO"
+       Selected="selectedUser">
+</Modal>
+
+<Modal T="object"
+       IsOpen="isDeletingUserModalOpen"
+       OnConfirm="@OnDeleteUserConfirm"
+       OnCancel="@OnDeleteUserCancel"
+       ActionType="deleting/usuario"
+       SelectedDTO="object">
+</Modal>
+
+<div class="container-title">
+    <i class="fa-solid fa-user-group"></i>
+    <h3 class="title-page-section">Usuarios</h3>
+</div>
+
+<div class="container-section">
+    @if (isLoading)
+    {
+        <div class="container">
+            <SpinnerLoader PrimaryColor="#272A2D" SecondaryColor="#ffffff" Size="90" />
+        </div>
+    }
+
+    @if (!isLoading)
+    {
+        <div class="container-group">
+            <div>
+                <input @oninput="FilterChanged" placeholder="Filtrar usuários..." class="input" style="width: 300px;" />
+            </div>
+            <div class="button-container">
+                <button class="rz-ripple button-green" @onclick="OpenCreatingUserModel"><i class="fa-solid fa-plus"></i> Registrar usuário</button>
+            </div>
+        </div>
+        <RadzenDataGrid @ref="dataGrid" AllowFiltering="true" AllowColumnResize="true" AllowAlternatingRows="true" AllowSorting="true" PageSize="12" AllowPaging="true"
+                        PagerHorizontalAlign="HorizontalAlign.Left" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive" ShowPagingSummary="true" Data="@filteredUsuarios"
+                        SelectionMode="DataGridSelectionMode.Single" class="rz-border-radius-1 rz-shadow-1" Page="@(() => {})"
+                        style="min-height: 600px; max-height: 600px; height: 100%;" Responsive="true">
+            <EmptyTemplate>
+                <p style="color: lightgrey; font-size: 24px; text-align: center; margin: 2rem;">Nenhum usuário foi encontrado.</p>
+            </EmptyTemplate>
+            <Columns>
+                <RadzenDataGridColumn TItem="UsuarioGetDTO" Property="Nome" Title="Nome" Filterable="false" Sortable="true" Resizable="true" MinWidth="125px">
+                    <Template>
+                        <div style="overflow-x: auto; max-height: 100px; white-space: nowrap; box-sizing: border-box; padding-right: 16px; width: 100%;">
+                            @((context as UsuarioGetDTO).Nome)
+                        </div>
+                    </Template>
+                </RadzenDataGridColumn>
+
+                <RadzenDataGridColumn TItem="UsuarioGetDTO" Property="Email" Title="Email" Filterable="false" Sortable="true" Resizable="true" MinWidth="150px">
+                    <Template>
+                        <div style="overflow-x: auto; max-height: 100px; white-space: nowrap; box-sizing: border-box; padding-right: 16px; width: 100%;">
+                            <Cardápio.Client.Components.CopyButton.CopyButton Content="@((context as UsuarioGetDTO).Email)" Title="Copiar Email" />
+                        </div>
+                    </Template>
+                </RadzenDataGridColumn>
+
+                <RadzenDataGridColumn TItem="UsuarioGetDTO" Property="Password" Title="Senha" Filterable="false" Sortable="true" Resizable="true" MinWidth="120px">
+                    <Template>
+                        <div style="overflow-x: auto; max-height: 100px; white-space: nowrap; box-sizing: border-box; padding-right: 16px; width: 100%;">
+                            <Cardápio.Client.Components.CopyButton.CopyButton Content="@((context as UsuarioGetDTO).Password)" Title="Copiar Senha" />
+                        </div>
+                    </Template>
+                </RadzenDataGridColumn>
+
+                <RadzenDataGridColumn TItem="UsuarioGetDTO" Property="EmpresaNome" Title="Empresa" Filterable="false" Sortable="true" Resizable="true" MinWidth="200px">
+                    <Template>
+                        <div style="overflow-x: auto; max-height: 100px; white-space: nowrap; box-sizing: border-box; padding-right: 16px; width: 100%;">
+                            @((context as UsuarioGetDTO).EmpresaNome)
+                        </div>
+                    </Template>
+                </RadzenDataGridColumn>
+
+                <RadzenDataGridColumn TItem="UsuarioGetDTO" Property="GrupoNome" Title="Grupo" Filterable="false" Sortable="true" Resizable="true" MinWidth="120px">
+                    <Template>
+                        <div style="overflow-x: auto; max-height: 100px; white-space: nowrap; box-sizing: border-box; padding-right: 16px; width: 100%;">
+                            @((context as UsuarioGetDTO).GrupoNome)
+                        </div>
+                    </Template>
+                </RadzenDataGridColumn>
+
+                <RadzenDataGridColumn TItem="UsuarioGetDTO" Property="Buttons:" Filterable="false" Sortable="false" Width="200px" Resizable="false" Frozen="true" FrozenPosition="FrozenColumnPosition.Right">
+                    <Template>
+                        <div class="wrap">
+                            <button class="edit-button button-blue rz-ripple" @onclick="() => OpenEditingUserModel(context)"><i class="fa-regular fa-pen-to-square"></i></button>
+                            @if (usuario.ID != context.ID && context.UsuarioTipoID != 1)
+                            {
+                                <button class="trash-button button-pink rz-ripple" @onclick="() => OpenDeletingUserModal(context)"><i class="fa-regular fa-trash-can"></i></button>
+                            }
+                        </div>
+                    </Template>
+                </RadzenDataGridColumn>
+            </Columns>
+        </RadzenDataGrid>
+    }
+</div>

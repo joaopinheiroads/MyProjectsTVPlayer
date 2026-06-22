@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Teste — Agente de IA</title>
+  <!-- FontAwesome só para o ícone do item de menu aparecer no teste (no painel real já existe) -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; color: #333; display: flex; }
+    .sidebar-menu { width: 240px; background: #2C3647; color: #fff; min-height: 100vh; padding: 16px 0; }
+    .sidebar-menu .sidebar-dropdown > a { display: block; padding: 10px 18px; color: #cdd3dd; font-weight: bold; }
+    .sidebar-submenu { list-style: none; margin: 0; padding: 0; }
+    .sidebar-submenu li a { display: block; padding: 8px 28px; color: #aeb6c4; text-decoration: none; cursor: pointer; }
+    .sidebar-submenu li a:hover { background: #3a475c; color: #fff; }
+    main { padding: 40px; flex: 1; }
+    .hint { background: #eef; border: 1px solid #ccd; padding: 12px 16px; border-radius: 8px; max-width: 620px; }
+  </style>
+</head>
+<body>
+  <!-- Mini menu lateral que IMITA o painel real, para testar a injeção de "Falar com IA" no Suporte -->
+  <nav class="sidebar-menu">
+    <div class="sidebar-dropdown">
+      <a href="#"><i class="fas fa-headset"></i> <span>Suporte</span></a>
+      <ul class="sidebar-submenu">
+        <li><a>Abrir Chamado</a></li>
+        <li><a>Suporte WhatsApp</a></li>
+        <!-- "Falar com IA" será injetado aqui pelo widget.js -->
+      </ul>
+    </div>
+  </nav>
+
+  <main>
+    <h1>Página de teste do widget</h1>
+    <div class="hint">
+      <p>Teste aqui:</p>
+      <ul>
+        <li>O botão flutuante 💬 (canto inferior direito) — <strong>arraste-o</strong> para mover; a posição é lembrada.</li>
+        <li>Em <strong>Suporte</strong> (menu à esquerda) deve aparecer <strong>"Falar com IA"</strong> — clique e o mesmo painel abre.</li>
+        <li>Converse, dê <strong>F5</strong> e reabra: a conversa <strong>continua</strong> (sessionStorage).</li>
+      </ul>
+      <p>O nome abaixo simula o <code>spnUserName</code> do painel real (usado na saudação).</p>
+    </div>
+    <p>Usuário logado (simulado): <strong><span id="spnUserName">Maria Souza</span></strong></p>
+  </main>
+
+  <script src="widget.js" defer></script>
+</body>
+</html>

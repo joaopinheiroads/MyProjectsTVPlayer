@@ -1,0 +1,205 @@
+﻿.title-page-section {
+	font-weight: 500;
+	color: #3D3D3D;
+	letter-spacing: .6px;
+	max-width: 1600px;
+}
+
+.container-title {
+	padding-top: 1.4rem;
+	display: flex;
+	align-items: center;
+	gap: .5rem;
+	padding-bottom: 2rem;
+	max-width: 1600px;
+	margin: 0 auto;
+}
+
+.container-title i {
+	line-height: 0;
+	color: #272A2D;
+}
+
+@media screen and (max-width: 800px) {
+	.container-section {
+		padding-right: 1rem !important;
+	}
+}
+
+.container-section {
+	max-width: 1600px;
+	margin: 0 auto;
+	min-height: 80vh;
+	display: flex;
+	justify-content: center;
+	flex-direction: column;
+}
+
+.container-group {
+	width: 100%;
+	display: flex;
+	justify-content: end;
+	gap: .5rem;
+}
+
+@media screen and (max-width:860px) {
+	input {
+		max-width: 200px;
+		margin-left: 0 !important;
+	}
+}
+
+@media screen and (max-width:500px) {
+	.container-group {
+		width: 100%;
+		display: flex;
+		flex-direction: column;
+		justify-content: end;
+		gap: .5rem;
+	}
+
+	input {
+		max-width: none;
+		width: 100% !important;
+	}
+
+	.button-container button {
+		width: 100%;
+		justify-content: center;
+	}
+}
+
+input {
+	font-size: 0.875rem;
+	line-height: 1.25rem;
+	color: #272A2D;
+	font-weight: 500;
+	border: 1px solid #D0D5DD;
+	border-radius: 0.375rem;
+	letter-spacing: normal;
+	transition: border 0.2s ease;
+	outline: none;
+	box-shadow: 4px 4px 3px rgba(0, 0, 0, 0.02);
+	padding: 9px 12px;
+	width: 100%;
+}
+
+input:focus {
+	border: 1px solid #118AB2;
+}
+
+.draggable-icon {
+	cursor: grab;
+	font-size: 18px;
+	color: #272A2D;
+}
+
+.container {
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	width: 100%;
+	min-height: 80vh;
+}
+
+.button-container {
+	display: flex;
+	justify-content: end;
+	padding-bottom: .6rem;
+}
+
+	.button-container button {
+		display: flex;
+		align-items: center;
+		gap: .6rem;
+		cursor: pointer;
+		background-color: #06D6A0;
+		border: 1px solid #06D6A0;
+		border-radius: 0.375rem;
+		padding: 0.56rem 1rem;
+		cursor: pointer;
+		box-shadow: 4px 4px 3px rgba(0, 0, 0, 0.02);
+		color: white;
+		font-weight: 600;
+		font-size: 0.87rem;
+		line-height: 1.25rem;
+		letter-spacing: 0;
+	}
+
+.button-container button i {
+	color: white;
+	font-weight: 600;
+	font-size: 0.87rem;
+	line-height: 1.25rem;
+	letter-spacing: 0;
+}
+
+.wrap {
+	display: flex;
+	align-items: center;
+	gap: .2rem;
+}
+
+.edit-button {
+	display: flex;
+	align-items: center;
+	gap: .6rem;
+	padding: .55rem .6rem;
+	color: white;
+	background-color: #2AABE2;
+	border-radius: 100%;
+	border: none;
+	cursor: pointer;
+}
+
+.trash-button {
+	display: flex;
+	align-items: center;
+	gap: .6rem;
+	padding: .55rem .6rem;
+	color: white;
+	background-color: #EF476F;
+	border-radius: 100%;
+	border: none;
+	cursor: pointer;
+}
+
+.trash-button i,
+.edit-button i {
+	font-size: 1rem;
+	width: 16px;
+	color: white;
+}
+
+.rz-column-title-content {
+	font-weight: bold;
+}
+
+@media screen and (max-width: 770px) {
+	.button-row-desktop {
+		display: none;
+	}
+
+	.button-copy {
+		display: inline-block;
+	}
+}
+
+@media screen and (min-width: 770px) {
+	.button-row-desktop {
+		display: flex;
+		justify-content: center;
+	}
+
+	.button-copy {
+		display: none;
+	}
+}
+
+.button-row-desktop {
+	cursor: pointer;
+}
+
+.button-copy {
+	cursor: pointer;
+}

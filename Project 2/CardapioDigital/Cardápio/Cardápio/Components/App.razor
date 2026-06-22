@@ -1,0 +1,551 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"  />
+    <base href="/" />
+    <link rel="stylesheet" href="app.css" />
+    <link rel="stylesheet" href="Cardápio.styles.css" />
+    <link rel="icon" type="image/png" href="favicon.png" />
+    <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@100;200;300;400;500;600;700;800;900" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@100;200;300;400;500;600;700;800;900" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,200..1000;1,200..1000&family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Raleway:ital,wght@0,100..900;1,100..900&family=Roboto+Flex:opsz,wght@8..144,100..1000&family=Roboto:ital,wght@0,100;0,300;0,400;0,500;0,700;0,900;1,100;1,300;1,400;1,500;1,700;1,900&display=swap" rel="stylesheet">
+    <link href="@SplideCssUrl" rel="stylesheet">
+
+    <RadzenTheme Theme="material" @rendermode="InteractiveServer" />
+</head>
+
+<body style="overflow-x: hidden;" class="rz-scrollbars">
+    <Routes @rendermode="InteractiveServer" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.4.0/jspdf.umd.min.js"></script>
+
+    <script src="_framework/blazor.web.js"></script>
+    <script src="_content/Radzen.Blazor/Radzen.Blazor.js?v=@(typeof(Radzen.Colors).Assembly.GetName().Version)"></script>
+    <script src="https://unpkg.com/imask"></script>
+    <script src="@SplideScriptUrl"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vanilla-masker/1.2.0/vanilla-masker.min.js"></script>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <script src="image-renderer.js"></script>
+
+    <script>
+        function applyVMaskerMask(elementId, maskPattern) {
+            var element = document.getElementById(elementId);
+            if (element) {
+                VMasker(element).maskPattern(maskPattern);
+            }
+        }
+
+        function applyVMaskerMoney(elementId) {
+            var element = document.getElementById(elementId);
+            if (element) {
+                VMasker(element).maskMoney({
+                    precision: 2,    // Duas casas decimais
+                    separator: ",",  // Separador decimal
+                    delimiter: ".",  // Separador de milhar
+                    unit: "R$ ",     // Prefixo do Real
+                    zeroCents: false // Manter zero no final
+                });
+
+                element.addEventListener("input", function (event) {
+                    let rawValue = element.value.replace(/[^\d]/g, ''); // Remove tudo que não for número
+                    let numericValue = parseFloat(rawValue) / 100; // Divide por 100 para inserir decimais
+                    element.value = VMasker.toMoney(numericValue.toFixed(2), {
+                        precision: 2,
+                        separator: ",",
+                        delimiter: ".",
+                        unit: "R$ ",
+                        zeroCents: false
+                    });
+                });
+            }
+        }
+    </script>
+    <script src="./dragDrop.js"></script>
+    <script>
+        window.handleModalEnterKey = function (dotNetObject) {
+            function handleEnterKeyListener(event) {
+                if (event.key === 'Enter') {
+                    dotNetObject.invokeMethodAsync('HandleModalEnterKey');
+                }
+            }
+
+            document.addEventListener('keydown', handleEnterKeyListener);
+
+            window.currentListeners = window.currentListeners || {};
+            window.currentListeners.enter = handleEnterKeyListener;
+        };
+
+        window.removeEnterKeyListener = function () {
+            if (window.currentListeners && window.currentListeners.enter) {
+                document.removeEventListener('keydown', window.currentListeners.enter);
+                delete window.currentListeners.enter;
+            }
+        };
+
+        window.handleEscKey = function (dotNetObject) {
+            function handleEscKeyListener(event) {
+                if (event.key === 'Escape') {
+                    dotNetObject.invokeMethodAsync('HandleEscapeKey');
+                }
+            }
+
+            document.addEventListener('keydown', handleEscKeyListener);
+
+            window.currentListeners = window.currentListeners || {};
+            window.currentListeners.esc = handleEscKeyListener;
+        };
+
+        window.removeEscKeyListener = function () {
+            if (window.currentListeners && window.currentListeners.esc) {
+                document.removeEventListener('keydown', window.currentListeners.esc);
+                delete window.currentListeners.esc;
+            }
+        };
+
+        window.handleEnterKey = function (dotNetObject, modalId) {
+            function handleEnterKeyListener(event) {
+                if (event.key === 'Enter') {
+                    dotNetObject.invokeMethodAsync('HandleEnterKey');
+                }
+            }
+
+            document.addEventListener('keydown', handleEnterKeyListener);
+
+            if (!window.modalEventListeners) window.modalEventListeners = {};
+            window.modalEventListeners[modalId] = {
+                enter: handleEnterKeyListener
+            };
+        };
+    </script>
+    <script>
+        let isScrolling = false;
+
+        function initializeSplide() {
+            const categorySplide = new Splide('#categorySplide', {
+                lazyLoad: 'nearby',
+                focus: 'center',
+                type: 'slide',
+                gap: '1rem',
+                pagination: false,
+                arrows: false,
+                drag: true,
+                snap: true,
+                autoWidth: true,
+                autoHeight: true,
+                rewind: false,
+            });
+
+            categorySplide.on('mounted', () => {
+                const items = document.querySelectorAll('#categorySplide .splide__slide button');
+
+                if (items.length > 0) {
+                    items[0].classList.add('selected');
+                }
+
+                items.forEach((button, index) => {
+                    button.addEventListener('click', () => {
+                        if (isScrolling) return; // Ignorar cliques durante rolagem
+
+                        items.forEach(btn => btn.classList.remove('selected'));
+                        button.classList.add('selected');
+
+                        const categoryId = button.getAttribute('data-category-id');
+                        scrollToElement(`categoria-${categoryId}`);
+
+                        // Mover o carrossel para o índice correspondente
+                        categorySplide.go(index);
+                    });
+                });
+            });
+
+            categorySplide.mount();
+
+            const observer = new IntersectionObserver((entries) => {
+                if (isScrolling) return; // Ignorar atualizações durante rolagem
+
+                entries.forEach(entry => {
+                    const categoryId = entry.target.id.replace('categoria-', '');
+                    const button = document.querySelector(`#categorySplide button[data-category-id="${categoryId}"]`);
+
+                    if (entry.isIntersecting) {
+                        const buttons = document.querySelectorAll('#categorySplide .splide__slide button');
+                        buttons.forEach(btn => btn.classList.remove('selected'));
+
+                        if (button) {
+                            button.classList.add('selected');
+
+                            // Encontrar o índice do botão e mover o carrossel
+                            const index = Array.from(buttons).indexOf(button);
+                            categorySplide.go(index);
+                        }
+                    }
+                });
+            }, {
+                root: null,
+                threshold: 0.8
+            });
+
+            const categories = document.querySelectorAll('.container-categoria');
+            categories.forEach(category => {
+                observer.observe(category);
+            });
+
+            initializeSplideHighlight();
+        }
+
+        function scrollToElement(elementId) {
+            const element = document.getElementById(elementId);
+            if (element) {
+                isScrolling = true; // Bloquear atualizações do observador
+                const elementPosition = element.getBoundingClientRect().top + window.pageYOffset - 90;
+
+                window.scrollTo({
+                    top: elementPosition,
+                    behavior: 'smooth'
+                });
+
+                // Desbloquear após o término da rolagem
+                setTimeout(() => {
+                    isScrolling = false;
+                }, 500); // Ajuste o tempo para corresponder à duração da rolagem
+            }
+        }
+
+        function initializeSplideHighlight() {
+            const splideElement = document.querySelector('#highlightSplide');
+
+            if (splideElement) {
+                const highlightSplideInstance = new Splide(splideElement, {
+                    perPage: 3,
+                    lazyLoad: 'nearby',
+                    focus: 'left',
+                    gap: '.2rem',
+                    pagination: false,
+                    arrows: true
+                });
+
+                highlightSplideInstance.mount();
+            } else {
+                console.error('Elemento #highlightSplide não encontrado.');
+            }
+        }
+    </script> 
+    <script>
+        function makeModalDraggable(modalId) {
+            const modal = document.getElementById(modalId);
+            if (!modal) return;
+
+            const dragHandle = modal.querySelector('.modal-header');
+            if (!dragHandle) return;
+
+            let isDraggingEnabled = false;
+            let isDraggingModal = false;
+            let resizeTimeout;
+
+            function centerModal() {
+                if (window.modalDraggedState && window.modalDraggedState[modalId]) {
+                    return;
+                }
+
+                modal.style.left = (window.innerWidth - modal.offsetWidth) / 2 + 'px';
+                modal.style.top = (window.innerHeight - modal.offsetHeight) / 2 + 'px';
+                adjustModalIfOutOfBounds();
+            }
+
+            function resetModalState() {
+                window.modalDraggedState = null;
+
+                modal.style.left = '';
+                modal.style.top = '';
+
+                if (window.innerWidth <= 700) {
+                    centerModal();
+                    disableDragging();
+                }
+            }
+
+            function adjustModalIfOutOfBounds() {
+                const modalRect = modal.getBoundingClientRect();
+                const maxHeight = window.innerHeight;
+
+                if (modalRect.bottom > maxHeight) {
+                    const overflow = modalRect.bottom - maxHeight;
+                    modal.style.top = parseFloat(modal.style.top) - overflow + 'px';
+                }
+
+                if (modalRect.top < 0) {
+                    modal.style.top = '0px';
+                }
+            }
+
+            function keepModalInBounds() {
+                const modalRect = modal.getBoundingClientRect();
+                const minLeft = 0;
+                const maxLeft = window.innerWidth - modal.offsetWidth;
+                const minTop = 0;
+                const maxTop = window.innerHeight - modal.offsetHeight;
+
+                modal.style.left = Math.min(Math.max(modalRect.left, minLeft), maxLeft) + 'px';
+                modal.style.top = Math.min(Math.max(modalRect.top, minTop), maxTop) + 'px';
+            }
+
+            function enableDragging() {
+                if (isDraggingEnabled) return;
+                isDraggingEnabled = true;
+
+                dragHandle.onmousedown = function (event) {
+                    event.preventDefault();
+                    if (isDraggingModal) return;
+
+                    isDraggingModal = true;
+                    dragHandle.classList.add('holding');
+
+                    const shiftX = event.clientX - modal.getBoundingClientRect().left;
+                    const shiftY = event.clientY - modal.getBoundingClientRect().top;
+
+                    function moveAt(pageX, pageY) {
+                        let newLeft = pageX - shiftX;
+                        let newTop = pageY - shiftY;
+
+                        const minLeft = 0;
+                        const maxLeft = window.innerWidth - modal.offsetWidth;
+                        const minTop = 0;
+                        const maxTop = window.innerHeight - modal.offsetHeight;
+
+                        modal.style.left = Math.min(Math.max(newLeft, minLeft), maxLeft) + 'px';
+                        modal.style.top = Math.min(Math.max(newTop, minTop), maxTop) + 'px';
+                    }
+
+                    const throttledMouseMove = throttle(onMouseMove, 20);
+                    function onMouseMove(event) {
+                        moveAt(event.pageX, event.pageY);
+                    }
+
+                    document.addEventListener('mousemove', throttledMouseMove);
+
+                    document.onmouseup = () => {
+                        document.removeEventListener('mousemove', throttledMouseMove);
+                        document.onmouseup = null;
+                        isDraggingModal = false;
+
+                        if (!window.modalDraggedState) {
+                            window.modalDraggedState = {};
+                        }
+                        window.modalDraggedState[modalId] = true;
+                    };
+                };
+
+                dragHandle.ondragstart = function () {
+                    return false;
+                };
+            }
+
+            function disableDragging() {
+                if (!isDraggingEnabled) return;
+                isDraggingEnabled = false;
+                dragHandle.onmousedown = null;
+            }
+
+            window.onresize = function () {
+                clearTimeout(resizeTimeout);
+                resizeTimeout = setTimeout(() => {
+                    if (window.innerWidth <= 700) {
+                        centerModal();
+                        disableDragging();
+
+                        window.modalDraggedState = {};
+                    } else {
+                        if (!window.modalDraggedState || !window.modalDraggedState[modalId]) {
+                            centerModal();
+                        } else {
+                            keepModalInBounds();
+                        }
+                        enableDragging();
+                    }
+                }, 100);
+            };
+
+            if (window.innerWidth <= 700) {
+                centerModal();
+            } else {
+                if (window.modalDraggedState && window.modalDraggedState[modalId]) {
+                    keepModalInBounds();
+                } else {
+                    centerModal();
+                }
+                enableDragging();
+            }
+
+            function throttle(func, limit) {
+                let lastFunc;
+                let lastRan;
+                return function (...args) {
+                    const context = this;
+                    if (!lastRan) {
+                        func.apply(context, args);
+                        lastRan = Date.now();
+                    } else {
+                        clearTimeout(lastFunc);
+                        lastFunc = setTimeout(function () {
+                            if ((Date.now() - lastRan) >= limit) {
+                                func.apply(context, args);
+                                lastRan = Date.now();
+                            }
+                        }, limit - (Date.now() - lastRan));
+                    }
+                };
+            }
+
+            window.resetModalState = resetModalState;
+        }
+    </script>
+    <script>
+        function applyInputMask(elementId, maskPattern) {
+            var element = document.getElementById(elementId);
+            if (element) {
+                Inputmask(maskPattern).mask(element);
+            }
+        }
+    </script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            console.log('DOM completamente carregado e analisado');
+            const forms = document.querySelectorAll('form');
+
+            if (forms.length === 0) {
+                console.log('Nenhum formulário encontrado na página');
+            }
+
+            forms.forEach(form => {
+                form.addEventListener('submit', function (event) {
+                    event.preventDefault();
+                    console.log('O evento submit foi desabilitado');
+                });
+            });
+        });
+
+        // Funções do Splide para o cardápio
+        function initializeSplide() {
+            console.log('Inicializando Splide para categorias...');
+            
+            // Aguarda o Splide estar disponível
+            if (typeof Splide !== 'undefined') {
+                try {
+                    // Verifica se o elemento existe
+                    const categoryElement = document.getElementById('categorySplide');
+                    if (categoryElement) {
+                        // Destroi instância anterior se existir
+                        if (window.categorySplideInstance) {
+                            window.categorySplideInstance.destroy();
+                        }
+                        
+                        // Configuração simples do Splide
+                        window.categorySplideInstance = new Splide('#categorySplide', {
+                            type: 'slide', // Nunca loop para evitar duplicação
+                            perPage: 'auto',
+                            perMove: 1,
+                            autoWidth: true,
+                            pagination: false,
+                            arrows: false,
+                            gap: '10px',
+                            focus: 'center',
+                            trimSpace: false,
+                            rewind: false, // Importante: não volta ao início
+                            breakpoints: {
+                                800: {
+                                    perPage: 2,
+                                    autoWidth: false,
+                                    arrows: true
+                                }
+                            }
+                        }).mount();
+                        
+                        console.log('Splide de categorias inicializado com sucesso');
+                    } else {
+                        console.log('Elemento categorySplide não encontrado');
+                    }
+                } catch (error) {
+                    console.error('Erro ao inicializar Splide de categorias:', error);
+                }
+            } else {
+                console.log('Splide não disponível ainda, tentando novamente...');
+                setTimeout(initializeSplide, 100);
+            }
+        }
+
+        function initializeSplideHighlight() {
+            console.log('Inicializando Splide para destaques...');
+            
+            // Aguarda o Splide estar disponível
+            if (typeof Splide !== 'undefined') {
+                try {
+                    // Verifica se o elemento existe
+                    const highlightElement = document.getElementById('highlightSplide');
+                    if (highlightElement) {
+                        // Destroi instância anterior se existir
+                        if (window.highlightSplideInstance) {
+                            window.highlightSplideInstance.destroy();
+                        }
+                        
+                        // Conta quantos slides existem
+                        const slides = highlightElement.querySelectorAll('.splide__slide');
+                        const slideCount = slides.length;
+                        
+                        // Cria nova instância - só usa loop se tiver mais de 2 produtos
+                        window.highlightSplideInstance = new Splide('#highlightSplide', {
+                            type: slideCount > 2 ? 'loop' : 'slide',
+                            perPage: 'auto',
+                            perMove: 1,
+                            autoWidth: true,
+                            pagination: false,
+                            arrows: slideCount > 1,
+                            gap: '15px',
+                            rewind: slideCount <= 2,
+                            breakpoints: {
+                                768: {
+                                    perPage: 1,
+                                    autoWidth: false,
+                                }
+                            }
+                        }).mount();
+                        
+                        console.log(`Splide de destaques inicializado com ${slideCount} slides`);
+                    } else {
+                        console.log('Elemento highlightSplide não encontrado');
+                    }
+                } catch (error) {
+                    console.error('Erro ao inicializar Splide de destaques:', error);
+                }
+            } else {
+                console.log('Splide não disponível ainda, tentando novamente...');
+                setTimeout(initializeSplideHighlight, 100);
+            }
+        }
+
+        // Função para scroll suave
+        function scrollToElement(elementId) {
+            const element = document.getElementById(elementId);
+            if (element) {
+                element.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start'
+                });
+            }
+        }
+    </script>
+</body>
+</html>
+
+@code {
+    private string SplideCssUrl = "https://cdn.jsdelivr.net/npm/@splidejs/splide@4.1.4/dist/css/splide.min.css";
+    private string SplideScriptUrl = "https://cdn.jsdelivr.net/npm/@splidejs/splide@4.1.4/dist/js/splide.min.js";
+}
+
