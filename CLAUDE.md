@@ -1,77 +1,141 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Este arquivo orienta o Claude Code (claude.ai/code) ao trabalhar com o código deste repositório.
 
-## Purpose of this repo
+## Propósito do repo
 
-A **portfolio / showcase repo** collecting work the author did at TVPlayer/MapMaker, meant for recruiters and other devs to browse. Goal is to keep it **simple and objective**. **Do not commit sensitive information** (API tokens, DB connection strings, account keys) — see the security warning under Project 2. (See the `<!-- SPECKIT -->` block at the bottom for the author's original brief, in Portuguese.)
+Um **repositório de portfólio** reunindo trabalhos que o autor realizou na TVPlayer/MapMaker, para recrutadores e outros devs navegarem. A meta é manter tudo **simples e objetivo**. O `Readme.md` (em português) é a página de entrada; cada `Project N/` tem seu próprio `Readme.md` com o detalhe técnico.
 
-## Repository shape
+**O repositório é público** — `https://github.com/joaopinheiroads/MyProjectsTVPlayer`, branch `main`. Todos os Readmes afirmam que o repo não contém credenciais. **Leia a seção de segurança abaixo antes de confiar nessa afirmação.**
 
-Two **unrelated** projects live under one Git root — no shared code, language, or build. `Readme.md` (Portuguese) is the portfolio landing page.
-
-- **`Project 1/`** — static weather widgets for digital signage / indoor TV media (no backend, no build).
-- **`Project 2/`** — `Cardapio`, a digital-menu REST API backend (.NET 5, ASP.NET Core).
-
-Each project directory also contains its **own nested `.svn/` working copy** (TortoiseSVN). SVN and Git coexist here — a change inside `Project 1/` or `Project 2/` is tracked by both. Be aware when committing.
+(O bloco `<!-- SPECKIT -->` no final guarda o briefing original do autor.)
 
 ---
 
-## Project 1 — Weather widgets (`Project 1/`)
+## 🚨 Segurança — leia antes de commitar qualquer coisa
 
-Pure HTML/CSS/vanilla-JS screens designed to be loaded full-screen on TV/signage players. **No build, no package manager, no server code.** All data comes from the **URL query string** — nothing is fetched at runtime.
+### Segredo real publicado neste momento
 
-Layout: two visual designs (`MODELO 2/`, `MODELO 3/`), each with a `1dia/` (single-day) and `4dias/` (4-day forecast) variant. JS entry points: `clima_1d.js` (1-day) and `script4d.js` (4-day).
+`Project 3/CardapioDigitalSite/EscolhaAI/Services/EmailService.cs` (~linha 36) tem uma **senha SMTP real, sem redação**, da conta `escolha@escolha.ai`, hardcoded no C#, com um comentário ao lado identificando-a como a senha. **Esse arquivo está rastreado e já foi enviado para o GitHub público.** O `.gitignore` não o cobre (ele ignora `appsettings.json`, não arquivos `.cs`).
 
-How it works:
-- `parseQuery()` reads `window.location.search` into an `options` object; every field (`cidade`, `max`, `min`, `clima`, `idioma`, etc.) is a query param.
-- `yCode` is a **Yahoo weather condition code**; it drives both the weather icon (`wi wi-yahoo-<code>` from `weather-icons.min.css`) and the chosen background image in the `backgroundByClimaCode*` switch functions.
-- `modelo` (1/2/3) selects rendering mode; orientation + viewport size pick HD vs Full-HD and portrait vs landscape background assets from `assets/`.
-- `idioma` (`ptbr`/`eng`) and `unidadeTemp` (`c`/`f`) toggle on-screen text via the `ChangeText*` helpers.
+Essa credencial precisa ser **rotacionada** — ela é pública. Limpar o arquivo não basta: a senha permanece no histórico do Git e exige reescrita de histórico (`git filter-repo`) mais um force-push. A causa raiz é que o host `EscolhaAI` **não tem nenhum `appsettings.json` no servidor**, então a senha acabou embutida no código.
 
-To preview: serve the folder with any static server and open the HTML with a full query string. **`MODELO 2/QueryString.txt` holds working example URLs** for both `1dia` and `4dias` (sample uses Live Server on port 5500).
+### Segredos no disco, mas NÃO publicados (não commite)
+
+O `.gitignore` cobre `appsettings.json`, `appsettings.*.json`, `*.pfx`, `*.key`, `*.pem`, `.env`, `[Bb]in/`, `[Oo]bj/`, `dist/`, `.svn/`. Verificado: o `git ls-files` rastreia **apenas** o `Project 5/IntegracaoChatIA/chatia/appsettings.example.json`. Os arquivos abaixo existem localmente, estão corretamente ignorados e **nunca devem ser adicionados à força**:
+
+| Arquivo | Contém |
+|---|---|
+| `Project 2/CardapioDigital/Cardápio/Cardápio/appsettings.json` | Connection string real do SQL Server (senha em texto puro) + chave de assinatura JWT real |
+| `Project 5/IntegracaoChatIA/chatia/appsettings.json` | Chave real da API da Anthropic (`sk-ant-api03-…`), senha SQL real, `ADMIN_TOKEN_SECRET` real |
+| `Project 5/…/chatia/bin/`, `obj/` e uma cadeia aninhada `publish/publish/publish/` | ~8 cópias adicionais, em texto puro, dos mesmos três segredos |
+| `Project 6/Impostometro/cert.pfx` | Chave privada TLS real (PKCS#12) |
+
+**Atenção:** vários desses segredos estão commitados nos **working copies aninhados do SVN** (ex.: `Project 5/IntegracaoChatIA/.svn/pristine/`). O Git ignorá-los não os remove do histórico do SVN. Se esses repositórios SVN forem acessíveis por outras pessoas, trate a chave da Anthropic, as senhas SQL, o `ADMIN_TOKEN_SECRET` e o certificado como comprometidos e rotacione-os.
+
+### A convenção de redação
+
+A maioria dos projetos passou por uma limpeza manual que substitui segredos em **arquivos de código** por marcadores entre colchetes — `[SENHA_SMTP_REMOVIDA]`, `[TOKEN_CHATPRO_REMOVIDO]`, `[INSTANCIA_REMOVIDA]`, `[PASSPHRASE_REMOVIDA]`. **Preserve esses marcadores**; nunca restaure um valor real. A limpeza cobriu arquivos `.cs`/`.ts`, mas **passou batido pelos `appsettings.json` e pelo `EmailService.cs` do Project 3** — essa falha é exatamente o vazamento acima.
+
+Valores públicos por natureza são aceitáveis e **não** são vazamentos: a **site key** do reCAPTCHA em `Project 7/…/Index.cshtml`, o token do Google Search Console em `MyWebSite/public/googlec495f30b9114ae7f.html` e o **client ID** do Google OAuth no Project 2. Dados reais mas não secretos que mesmo assim estão publicados: o usuário/host SMTP `site@tvplayer.com.br` / `smtp.tvplayer.com.br`, o telefone comercial em `Project 8/…/DisparosChat.cs` e IPs internos (`191.6.5.106`) nos Projects 5 e 6.
 
 ---
 
-## Project 2 — Cardapio API (`Project 2/`)
+## Formato do repositório
 
-ASP.NET Core (`net5.0`) solution `Cardapio.sln` with two projects:
+A raiz do Git é `MyProjects/`. Ela contém **nove pastas de projetos não relacionados** mais o `Readme.md` de entrada. Não há código, linguagem ou build compartilhados entre eles — não procure por uma solution comum ou um build na raiz.
 
-- **`Cardapio.CRUD/`** — data/domain layer: EF Core `Models`, `CardapioContext`, `Migrations`, `Repositories`, `UnitsOfWork`, `DTOs`, AutoMapper `Profiles`, `CustomValidation`. It has its own `Program`/`Startup`, but that host is a leftover stub (`Configure` only returns "Hello World!") — **do not run `Cardapio.CRUD` as the app.**
-- **`Cardapio.API/`** — the real host: `Controllers`, JWT auth, Azure Blob image storage. References `Cardapio.CRUD`.
+**Apenas `Project 1`–`Project 8`, `Readme.md`, `CLAUDE.md` e `.gitignore` estão rastreados e publicados.** Os itens abaixo estão untracked (existem localmente, ausentes do GitHub):
 
-### Architecture (read these patterns before editing controllers/repos)
+- **`Project 9/`** — o projeto mais recente; ainda não commitado.
+- **`MyWebSite/`** — o site de portfólio em React/Vite. Ironicamente, o site publicado direciona visitantes para este repo, mas o código do próprio site nunca foi enviado para cá.
+- **`MyProjects/`** (aninhado, mesmo nome da pasta pai) — veja Spec Kit abaixo.
 
-- **Unit of Work + Repository.** Controllers depend only on `ICardapioUnitOfWork`. `CardapioUnitOfWork` lazily creates each repo (`??=`), all sharing one `CardapioContext`. Repos **never** save — the controller calls `cardapioUnitOfWork.Commit()` (which is `SaveChangesAsync`) to persist a whole operation in one transaction. Quirk: `ProdutoRepo.UpdateAsync` is a no-op that relies on EF change tracking; the actual write happens in `Commit()`.
-- **Multi-tenancy by `EmpresaID`.** Every domain entity belongs to an `Empresa`. Controllers extract `EmpresaID` and `UsuarioID` from JWT claims (`Helpers/CustomClaimTypes.cs`) and pass `empresaID` into repo queries — this is the tenant scoping, so don't drop it. Endpoints return `NotFound()` when the claim is missing/unparsable.
-- **Soft deletes + audit + conventions.** `OnModelCreating` applies model-wide conventions: any `Ativo` column defaults to `true`, any `DataCadastro` defaults to SQL `getdate()`, and **all** FK delete behavior is `Restrict`. "Delete" means setting `Ativo = false`, not removing rows. Entities carry `UsuarioIDCadastro`/`UsuarioIDEdicao` audit fields, set from the JWT user id.
-- **Auth.** JWT bearer (HS256) + DB-persisted refresh tokens (`RefreshToken` entity, `UsuarioService`). Access-token lifespan 2h; refresh token 14 days. `Startup` sets `ValidateIssuer`/`ValidateAudience = false`.
-- **Images.** `ProdutoController` + `FileManagerHelper` upload product images and generated thumbnails to **Azure Blob Storage** (Produto/Thumbnail containers), reading width/height/size from blob metadata. CRUD on `Produto` cascades to its images/thumbnail.
-- **Mapping/serialization.** AutoMapper with collection mappers (`AddCollectionMappers`) maps Entity ↔ DTO; profiles live in `Cardapio.CRUD/Profiles`. JSON uses Newtonsoft with camelCase. `CardapioContext` is registered with **`Transient`** lifetime in the API (intentional — keep it unless you understand the UoW implications).
+### A maioria dos projetos são extracts, não aplicações executáveis
 
-### Commands (run from repo root)
+**Isto é o mais importante a saber antes de editar.** Os Projects **4, 7, 8 e 9** são *extracts* de código recortados da solution bem maior `TVPlayerSite`: **não têm `.csproj` nem `.sln`** e referenciam tipos que não foram extraídos (`VideoContext`, `TabCliente`, `BaseCadastroController`, `APIClient.Factory`, `TVPlayer.CRUD.Models`). **Não compilam de forma isolada, e isso é intencional** — são material de referência para leitura. Não tente "consertar" as referências ausentes nem criar um arquivo de projeto. O target framework deles não é determinável a partir dos arquivos presentes.
+
+Somente os Projects **1, 2, 3, 5, 6** e o `MyWebSite` são autocontidos o bastante para buildar/rodar.
+
+### SVN e Git coexistem
+
+Várias pastas carregam seu **próprio working copy aninhado do SVN** (TortoiseSVN): `Project 1/.svn`, `Project 2/.svn`, `Project 3/CardapioDigitalSite/.svn` (um nível mais fundo), `Project 5/IntegracaoChatIA/.svn`, `Project 6/Impostometro/.svn`. Uma alteração dentro dessas pastas é rastreada pelos **dois** sistemas. O Git ignora `.svn/`, então um commit no SVN pode publicar algo que o Git aparentemente excluiu — foi assim que os segredos acima chegaram ao histórico do SVN.
+
+---
+
+## Os projetos
+
+| # | Pasta | O que é | Stack | Builda? |
+|---|---|---|---|---|
+| 1 | `Project 1/PluginPrevisaoDoTempo/` | Telas de previsão do tempo para sinalização digital | HTML/CSS/JS puro | Só servidor estático |
+| 2 | `Project 2/CardapioDigital/` | Plataforma de cardápio digital (back-office + cardápio QR) | Blazor Server, .NET 8, EF Core, SignalR | ✅ |
+| 3 | `Project 3/CardapioDigitalSite/` | Site institucional EscolhaAÍ | Blazor WASM + host Server, .NET 8, MailKit | ✅ (sem `.sln`) |
+| 4 | `Project 4/IntegracaoKommo/` | Sincronização do funil do Kommo CRM (webhook in, PATCH out) | ASP.NET Core Web API, EF Core | ❌ extract |
+| 5 | `Project 5/IntegracaoChatIA/chatia/` | Widget de chat de suporte com Claude e streaming SSE | .NET 8, Anthropic SDK 12.29.1, SQL Server | ✅ |
+| 6 | `Project 6/Impostometro/` | Scraper do impostômetro + API para sinalização | Node, TypeScript, Express 5, Puppeteer 24 | ⚠️ veja abaixo |
+| 7 | `Project 7/CodigoVerificacao/` | Código de verificação do cadastro de demonstração (WhatsApp + e-mail) | ASP.NET Core MVC, jQuery | ❌ extract |
+| 8 | `Project 8/VerificadorDemonstracao/` | Serviços de background que alertam sobre demonstrações a vencer | `IHostedService`, EF Core/ADO.NET | ❌ extract |
+| 9 | `Project 9/RefatoracaoDemonstracao/` | Antes/depois da refatoração do controller do Project 7 (825 → 199 linhas) | ASP.NET Core MVC, SOLID, DI | ❌ extract (proposital) |
+
+### Comandos que funcionam
 
 ```bash
-# Build the solution
-dotnet build "Project 2/Cardapio.sln"
+# Project 2 — atenção ao caminho ACENTUADO; sempre entre aspas
+dotnet build "Project 2/CardapioDigital/Cardápio.sln"
+dotnet run --project "Project 2/CardapioDigital/Cardápio/Cardápio/Cardápio.csproj"   # Swagger em /api-docs (só em Dev)
 
-# Run the API (https://localhost:5001 ; http://localhost:5000)
-dotnet run --project "Project 2/Cardapio.API"
+# Project 3 — não existe .sln; builde o host (ele referencia o client)
+dotnet run --project "Project 3/CardapioDigitalSite/EscolhaAI/EscolhaAI.csproj"
 
-# EF Core migrations: model lives in Cardapio.CRUD, host config in Cardapio.API
-dotnet ef migrations add <Name> --project "Project 2/Cardapio.CRUD" --startup-project "Project 2/Cardapio.API"
-dotnet ef database update        --project "Project 2/Cardapio.CRUD" --startup-project "Project 2/Cardapio.API"
+# Project 5 — https://localhost:51867 ; publica no IIS sob o path base /chatia
+dotnet run --project "Project 5/IntegracaoChatIA/chatia/ChatIA.csproj"
+
+# MyWebSite (untracked) — React/Vite, publicado na Vercel
+cd MyWebSite && npm install && npm run dev    # também: build / preview / lint
 ```
 
-There is **no test project** checked in (the README mentions xUnit/Moq, but none exists). The connection-string key is `MenuConnectionString`; the blob-storage key is `AzureBlobStorage`.
-
-> ⚠️ **Secret leak.** `Cardapio.API/appsettings.json` currently has **live Azure SQL credentials, a Blob Storage account key, and the JWT secret committed in plaintext.** This directly violates the repo's "no sensitive info" goal. Before this repo is pushed publicly, scrub these (use user-secrets/env vars), and treat the leaked values as compromised (rotate them). Do not add new secrets to tracked files.
+**O Project 6 não roda como documentado.** O `npm start` aponta para `dist/server.js`, mas o `tsconfig.json` está com o `outDir` comentado, então o `tsc` emite **no próprio lugar** — não existe `dist/`. O entry real é `node scraper.js`. O `npm run build` provavelmente também falha: o `tsconfig` define `"types": []` sem `@types/node`, mas o `scraper.ts` importa `https` e `fs`. E o `cert.pfx` não pode ser aberto porque a passphrase está redigida como `[PASSPHRASE_REMOVIDA]`. Os arquivos compilados `scraper.js`/`.d.ts`/`style.css` estão commitados ao lado dos fontes.
 
 ---
 
-## Spec Kit & caveman
+## Armadilhas por projeto
 
-This repo is initialized with [Spec Kit](.specify/) — the `speckit-*` skills and `.specify/` templates/workflows drive a spec → plan → tasks → implement flow. When a feature is developed through Spec Kit, the active plan under `.specify/`/`specs/` is the source of truth for that feature's tech choices and steps. The author also prefers the **caveman** skill to reduce token usage during this work.
+Leia primeiro o `Readme.md` do projeto, mas estas são as pegadinhas que os Readmes não contam:
+
+- **Project 2** — `Cardápio.Client` é uma **class library** Razor, não WASM. O `AppDbContext` é `Scoped`; o JWT valida issuer/audience com tokens de 7 dias. O `AuthService` assina com `Encoding.ASCII` enquanto o `Program.cs` valida com `UTF8` — só funciona porque a chave é ASCII. O `EnableSensitiveDataLogging()` está ligado incondicionalmente (inclusive em Produção), o CORS é `AllowAnyOrigin`, a validação TLS está desabilitada no `HttpClient` injetado e as chaves de DataProtection vão para um `C:\keys` hardcoded. Arquivos soltos na raiz de `CardapioDigital/` (`PromocaoHorarioController.cs`, scripts `.sql`, `teste_carrinho_*.html`) estão fora dos dois csproj — código morto.
+- **Project 4** — o webhook é **form-urlencoded lido por indexação de chave em string** (`contacts[add][0][custom_fields][0]…`), então **a ordem dos campos na configuração do Kommo é crítica**: reordenar troca telefone por e-mail silenciosamente. Os IDs das etapas do funil são consts hardcoded. Tanto `ReceiveWebHook` quanto `mover-lead` são `[AllowAnonymous]`, sem verificação de assinatura.
+- **Project 5** — os frames SSE são escritos **à mão** no `Response.Body`; um erro depois que os headers já foram enviados vira um evento SSE `error`, não um status HTTP. O prompt caching coloca o breakpoint no *segundo* bloco de system, então editar a Persona invalida o cache. Todos os serviços são **Singletons**. A `JsonNamingPolicy` é deliberadamente `null` (PascalCase) para preservar o contrato antigo do Node — o `admin.html` depende disso; não "conserte". O CORS é totalmente aberto num `POST /api/chat` anônimo e sem rate limiting. Se `ADMIN_USER_IDS` estiver vazio, a checagem da allowlist de admin é **ignorada**.
+- **Project 6** — o handler HTTP é **pura leitura de cache**; o scraping acontece num `setInterval` de 5 min. O servidor começa a responder `{ valor: "0" }` antes do primeiro scrape chegar. O scrape depende do seletor `#counterBrasil .counter-inside`; se o markup do site alvo mudar, os erros são engolidos e o valor velho é servido para sempre.
+- **Project 7** — o reCAPTCHA **é** validado no servidor, mas no `BaseCadastroController` (que não foi extraído aqui), via uma action `Verify` separada; o POST da demonstração em si só verifica se o token não está vazio. Por isso o `CaptchaVerification.cs` extraído parece código morto, mas não é. O fluxo também envia a **senha em texto puro** do usuário por e-mail/WhatsApp, o que implica armazenamento reversível na origem.
+- **Project 8** — o Readme diz "executa 1x por dia (às 10h)", mas os timers **fazem polling** (a cada 10–20 min) e cada tick checa `DateTime.Now.Hour == 10` protegido por um `static bool` não thread-safe. **O `#if DEBUG` define a hora de disparo como `25`** — uma hora que nunca ocorre — então os dois jobs ficam **permanentemente inertes em builds Debug**. Os callbacks do timer são `async void`. Comentários dizendo "8h" estão desatualizados; a constante é `10`.
+- **Project 9** — mantém propositalmente duas cópias do mesmo controller (`Antes/` com 825 linhas, `Depois/` com 199). Não "desduplique"; o diff **é** a entrega. O `Depois/Startup.DI.cs` é um recorte ilustrativo, escrito à mão, do `ConfigureServices` real — não é um arquivo do código-fonte.
+
+---
+
+## MyWebSite (untracked)
+
+Portfólio single-page em React 18 + Vite 5 + TypeScript 5.5 + Tailwind 3.4, publicado na **Vercel** (`https://vite-react-zeta-ashen.vercel.app/`). Entry `index.html` → `src/main.tsx` → `src/App.tsx` (a página inteira; o conteúdo fica em arrays const no nível do módulo). **Não há configuração de CI/CD** — sem `vercel.json`, sem `.github/`. O `vite.config.ts` não define `base`, então o build assume hospedagem na raiz (compatível com a Vercel, quebraria num subpath do GitHub Pages).
+
+**O site e o repo divergiram.** O `src/App.tsx` lista **4** cards de projeto contra as **9** pastas do repo: dois apontam para a raiz do repositório (não para nenhum `Project N/`) e dois para sites externos. Os Projects 3–9 não estão representados. A pasta `Certificados/` e os `.jpg` soltos na raiz de `MyWebSite/` estão **fora de `public/`** e não são servidos.
+
+## Spec Kit — instalado no lugar errado
+
+O briefing/Readme da raiz diz que o repo usa [Spec Kit](https://github.com/github/spec-kit), mas **não existe `.specify/` nem `.claude/` na raiz.** Eles vivem no `MyProjects/MyProjects/` aninhado, que não contém *mais nada* — sem código, sem `specs/`.
+
+Foi um acidente: o `.specify/init-options.json` registra `"here": false`, ou seja, o `specify init MyProjects` foi rodado sem `--here` e criou um subdiretório com o nome do projeto. Consequência: as dez skills `speckit-*` estão **escopadas nesse subdiretório vazio**, então só ativam para arquivos sob `MyProjects/MyProjects/` — onde não há código. O Spec Kit está instalado, porém efetivamente não funcional, e seu scaffolding está intocado (o `constitution.md` ainda tem placeholders `[PROJECT_NAME]`).
+
+Para funcionar, `.specify/` e `.claude/` precisariam subir um nível. Até lá, não conte com as skills `speckit-*` a partir da raiz. O autor também prefere a skill **caveman** para economizar tokens.
+
+---
+
+## Convenções ao adicionar um projeto
+
+Siga o padrão estabelecido — os quatro últimos projetos seguem todos ele:
+
+1. Crie `Project N/<NomeDoModulo>/` com o código e um `Project N/Readme.md` em **português**.
+2. O Readme abre com um resumo de um parágrafo, depois cobre o fluxo, a stack, a árvore de estrutura e uma nota de segurança. Se o módulo for um extract, **diga isso explicitamente** e cite o projeto de origem (veja os Projects 7/8/9).
+3. Adicione uma linha na tabela do `Readme.md` da raiz — as colunas são `# | Projeto | Resumo | Stack | Pasta | Status`, com `✅` para documentado.
+4. **Limpe os segredos antes de copiar**, usando a convenção de marcador `[SEGREDO_REMOVIDO]`, e passe um grep no resultado para confirmar.
 
 <!-- SPECKIT START -->
 Você vai me ajudar a fazer uma repositório no github com o propósito de armazenar alguns projetos que realizei durante meu padrão na TVPlayer/MapMaker.

@@ -44,5 +44,6 @@ Dev Full Stack com foco em qualidade, performance e código limpo, com experiên
 | 6 | **Plugin Impostômetro** | Exibe o valor do Impostômetro em tempo real para sinalização digital: scraping com Puppeteer + API própria atualizada a cada 5 min. | Node · TypeScript · Express · Puppeteer | `Project 6` | ✅ |
 | 7 | **Código de Verificação (cadastro de demonstração)** | Tela e back-end do código de verificação no formulário de demonstração (código de 4 dígitos por WhatsApp/e-mail, expira em 5 min) — front e back desenvolvidos por mim. *(Faz parte do Projeto 4.)* | ASP.NET Core MVC · jQuery/AJAX · reCAPTCHA · SMTP | `Project 7` | ✅ |
 | 8 | **Verificador de Demonstrações** | Serviços de background que detectam demonstrações a vencer/vencidas e disparam WhatsApp de alerta/contratação (e re-engajam quem não confirmou o e-mail). *(Faz parte do Projeto 4.)* | .NET · IHostedService · EF Core/ADO.NET · WhatsApp API | `Project 8` | ✅ |
+| 9 | **Refatoração do fluxo de Demonstração** | Controller de 825 linhas que fazia tudo (código, cadastro, licença, e-mail, WhatsApp e log) refatorado em 7 passos para 199 linhas + 8 serviços injetados por interface — mesmo comportamento, sem mudar contrato. *(Refatora o Projeto 7.)* | ASP.NET Core MVC · SOLID (SRP/DIP) · Injeção de Dependência · Options Pattern | `Project 9` | ✅ |
 
 **Legenda:** ✅ documentado · 🚧 em construção
