@@ -4,6 +4,8 @@
 appsettings.json
 appsettings.*.json
 !appsettings.example.json
+CLAUDE.md
+
 
 # Certificados e chaves
 *.pfx
