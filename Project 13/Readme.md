@@ -1,6 +1,6 @@
 # Projeto 13 — Plugins de notícia sem RSS (scraping em camadas, contrato congelado)
 
-Migração de **7 fontes de notícia** (G1, iG, iCarros, Gazeta do Povo, Infomoney, TVFoco e Tecmundo) que alimentavam as telas de **centenas de terminais** a partir de feeds RSS para a **leitura do próprio site**: a API que a página consome, o sitemap, o `ld+json` e as tags `og:`. Tudo em camadas SOLID e **sem mudar um byte do que o player recebe**. Resultado: **pastas paradas desde 2019, junho, julho e agosto voltaram a atualizar**, e o TVFoco passou de **0 para 15 de 15 notícias com foto**.
+Migração de **7 fontes de notícia** (G1, iG, iCarros, Gazeta do Povo, Infomoney, TVFoco e Tecmundo) que alimentavam as telas dos terminais a partir de feeds RSS para a **leitura do próprio site**: a API que a página consome, o sitemap, o `ld+json` e as tags `og:`. Tudo em camadas SOLID e **sem mudar um byte do que o player recebe**. Resultado: **pastas paradas desde 2019, junho, julho e agosto voltaram a atualizar**, e o TVFoco passou de **0 para 15 de 15 notícias com foto**.
 
 > **A coleta muda, a entrega fica congelada.** O player instalado nos terminais não pode ser atualizado, então o formato de saída é contrato: os mesmos arquivos (`contents.json`, `contents.xml`, `rss.xml`, `data.xml`), o mesmo XML intermediário `rss/channel/item`, a mesma gravação via `RSSClient.SaveOnDisk` e os mesmos IDs. Cada fonte foi validada comparando a saída nova com a de produção, campo a campo.
 >
@@ -11,7 +11,7 @@ Migração de **7 fontes de notícia** (G1, iG, iCarros, Gazeta do Povo, Infomon
 Feed RSS falha **calado**: responde `200` com conteúdo velho, e ninguém percebe que a tela parou no tempo. Na auditoria das fontes apareceu de tudo:
 
 - **iG** — vinha de um **FTP** que autenticava normalmente, mas cujos arquivos eram de **novembro de 2019**. A migração também tirou do código as credenciais desse acesso.
-- **G1** — 12 plugins em uso. Três seções (Ciência e Saúde, Concursos, Natureza) estavam paradas desde junho/agosto porque o g1 **renomeou as seções** e os feeds antigos simplesmente pararam.
+- **G1** — três seções (Ciência e Saúde, Concursos, Natureza) estavam paradas desde junho/agosto porque o g1 **renomeou as seções** e os feeds antigos simplesmente pararam.
 - **iCarros** — o XML "midiaindoor" trazia só **5 matérias novas** e completava a lista com matérias de **2019 e 2025**.
 - **Tecmundo** — o site foi incorporado ao Estadão e responde `301`; o feed antigo seguia `200` com a última notícia de 07/09.
 - **TVFoco** — parado desde 29/07: o feed passou a redirecionar com `308`, que o `HttpClient` do .NET Framework não segue. E mesmo quando lia, as notícias saíam **sem foto**, porque o XSL procurava `.jpg` e o site só serve `.webp`.

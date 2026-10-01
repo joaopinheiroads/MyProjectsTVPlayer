@@ -10,7 +10,7 @@ Este repositório reúne projetos reais que desenvolvi durante minha atuação n
 
 ## 👨‍💻 Sobre Mim
 
-Dev Full Stack com foco em qualidade, performance e código limpo, com experiência desenvolvendo sistemas em produção que atendem milhares de empresas.
+Dev Full Stack com foco em qualidade, performance e código limpo, com experiência desenvolvendo sistemas em produção.
 
 ### Principais responsabilidades
 - Ciclo completo de desenvolvimento: da análise de requisitos ao deploy em produção.

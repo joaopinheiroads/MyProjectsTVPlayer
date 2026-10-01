@@ -371,21 +371,6 @@ WHERE
 
 UNION ALL
 
---SELECT
---	'18_' + CONVERT(VARCHAR(10), PluginsTVPlayer.ID) AS ID,
---	'F_1678' AS ParentID,
---	Nome,
---	15 AS Duracao,
---	PluginsTVPlayer.ID AS Param1,
---	18 AS Tipo,
---	Icone
---FROM
---	PluginsTVPlayer
---WHERE
---	ID = 15 AND  @usuarioID = 3
-
---UNION ALL
-
 SELECT
 	'18_' + CONVERT(VARCHAR(10), PluginsTVPlayer.ID) AS ID,
 	'F_1678' AS ParentID,
@@ -418,23 +403,6 @@ WHERE
 
 UNION ALL
 
---SELECT
---	'18_' + CONVERT(VARCHAR(10), PluginCombustivel.ID) AS ID,
---	'F_1678' AS ParentID,
---	PluginsTVPlayer.Nome + ' - ' + PluginCombustivel.Nome AS Nome,
---	15 AS Duracao,
---	PluginCombustivel.ID AS Param1,
---	18 AS Tipo,
---	Icone
---FROM
---	PluginsTVPlayer CROSS JOIN
---	PluginCombustivel
---WHERE	
---	PluginsTVPlayer.ID in (19)
---	AND (@usuarioID = 670 OR @usuarioID = 671 OR @usuarioID = 3 OR @usuarioID = 4218)
---	AND PluginCombustivel.Ativo = 1
-
---UNION ALL
 
 SELECT 
 	CONVERT(VARCHAR(10),TipoMidia.ID) + '_' + CONVERT(VARCHAR(10), SocialPlugin.ID) AS ID,
@@ -458,7 +426,6 @@ FROM
 	LEFT OUTER JOIN UsuarioEmpresa ON SocialPlugin.UsuarioIDCadastro = UsuarioEmpresa.UsuarioID AND UsuarioEmpresa.EmpresaID = @empresaID	
 WHERE
 	(UsuarioGrupo.ID IS NOT NULL OR UsuarioEmpresa.ID IS NOT NULL)
-	--(@usuarioID = 670 OR @usuarioID = 3 )
 	AND Ativo = 1
 
 UNION ALL
@@ -475,7 +442,6 @@ UNION ALL
 		Video
 	WHERE 
 		ID = 211254
-		--and (@usuarioID = 671 OR @usuarioID = 3)
 
 --		UNION ALL
 
@@ -500,7 +466,6 @@ UNION ALL
 --	UsuarioGrupo.GrupoID = @grupoID 
 --	AND PluginCombustivel.Ativo = 1
 --	AND PluginTemplate.Ativo = 1
-	--AND (@usuarioID = 671 OR @usuarioID = 3)
 
 ORDER BY
 	ID, Nome

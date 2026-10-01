@@ -11,7 +11,7 @@ O XML de mídia indoor do UOL **continuava respondendo `200 OK`, mas tinha parad
 - **Notícia velha em silêncio** — as seções de notícia exibiam o mesmo conteúdo por meses, sem erro nenhum registrado.
 - **Número financeiro errado na tela** — a tela de câmbio mostrava o **dólar travado em R$ 5,44** (cotação de 30/06/2025).
 - **403 intermitente** — as seções de `noticias.uol.com.br` (Política, Cotidiano, Internacional) eram barradas pela Akamai. Trocar o `User-Agent` não mudava nada (3 variantes, resultado idêntico em 10 rodadas); a causa provada foi o **fingerprint de TLS/HTTP2** do `HttpClient`, que não se parece com um navegador.
-- **Contrato rígido do outro lado** — o player roda em centenas de terminais e não pode ser atualizado. Os nomes dos arquivos, os campos, a ordem e até a posição de cada linha de cotação são contrato.
+- **Contrato rígido do outro lado** — o player instalado nos terminais não pode ser atualizado. Os nomes dos arquivos, os campos, a ordem e até a posição de cada linha de cotação são contrato.
 
 ## A solução
 

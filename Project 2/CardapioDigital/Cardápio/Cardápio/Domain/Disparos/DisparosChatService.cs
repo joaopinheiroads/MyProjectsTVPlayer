@@ -9,7 +9,7 @@ namespace Cardápio.Domain
     public class DisparosChatService
     {
 
-        private readonly string TelefoneComercial = "1142101933";
+        private readonly string TelefoneComercial = "<REDACTED>";
 
         private readonly string _apiUrl = "https://v5.chatpro.com.br/[INSTANCIA_REMOVIDA]/api/v1/send_message";
         private readonly string _authToken = "[TOKEN_CHATPRO_REMOVIDO]"; // Mova isso para um local seguro

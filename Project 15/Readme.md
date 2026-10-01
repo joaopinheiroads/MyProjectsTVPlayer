@@ -1,6 +1,6 @@
 # Projeto 15 — Integrações confiáveis: fim das falhas silenciosas
 
-Seis correções no pipeline que alimenta os plugins de conteúdo do TV Player (notícias, futebol, loterias) — um serviço Windows em .NET Framework que coleta dados de dezenas de fontes externas e grava os arquivos que **centenas de terminais** exibem. O resultado: **uma credencial que vazava para todos os provedores foi isolada, o plugin do Tecmundo voltou a atualizar depois de três meses parado, e uma foto ruim deixou de derrubar o plugin inteiro.**
+Seis correções no pipeline que alimenta os plugins de conteúdo do TV Player (notícias, futebol, loterias) — um serviço Windows em .NET Framework que coleta dados de dezenas de fontes externas e grava os arquivos que os terminais exibem. O resultado: **uma credencial que vazava para todos os provedores foi isolada, o plugin do Tecmundo voltou a atualizar depois de três meses parado, e uma foto ruim deixou de derrubar o plugin inteiro.**
 
 > **O tema comum é a falha que não avisa.** Um feed que responde `200` com conteúdo velho, um plugin que desiste em silêncio, uma chave enviada a quem não devia. Nenhum desses defeitos gerava alerta — a tela do cliente simplesmente parava no tempo.
 >

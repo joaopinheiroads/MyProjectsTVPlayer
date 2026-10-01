@@ -160,7 +160,7 @@ namespace TVPlayerSite.API.Disparos
                         DisparosChat disparosChat = new DisparosChat();
                         string mensagem = usuarioTerminalDemonstracao.UltimoDia ? mensagemUltimoDia : mensagemPenultimo;
                         var resultadoEnvio = await disparosChat.EnviarMensagemAsync(numeroDestino, mensagem);
-                        string numeroComercial = "1142101933";
+                        string numeroComercial = "<REDACTED>";
                         string mensagemErro = $"Olá, tivemos uma Falha ao enviar mensagem de WhatsApp no *alerta de vencimento de demonstração do décimo dia* para o cliente *{usuarioTerminalDemonstracao.usuarioNome}* da empresa *{usuarioTerminalDemonstracao.empresaNome}* com o número *{numeroDestino}*. O erro retornado foi: {resultadoEnvio.Erro}. Por favor, verifique o status do número e entre em contato com o cliente para garantir que ele receba as informações sobre a demonstração. Obrigado!";
                         string mensagemErroDois = $"Olá, tivemos uma Falha ao enviar mensagem de WhatsApp no *alerta de vencimento de demonstração do penúltimo dia* para o cliente *{usuarioTerminalDemonstracao.usuarioNome}* da empresa *{usuarioTerminalDemonstracao.empresaNome}* com o número *{numeroDestino}*. O erro retornado foi: {resultadoEnvio.Erro}. Por favor, verifique o status do número e entre em contato com o cliente para garantir que ele receba as informações sobre a demonstração. Obrigado!";
 

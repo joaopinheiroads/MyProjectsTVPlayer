@@ -10,7 +10,7 @@ Duas correções no envio automático de WhatsApp do TV Player: um **incidente e
 
 ### O sintoma
 
-Três clientes receberam **"sua demonstração está acabando"** três vezes na mesma manhã: **10:13, 10:24 e 10:50**.
+Clientes receberam **"sua demonstração está acabando"** três vezes na mesma manhã: **10:13, 10:24 e 10:50**.
 
 ### A investigação: os horários eram a impressão digital
 

@@ -9,7 +9,7 @@ namespace TVPlayerSite.API.Disparos
     public class DisparosChat
     {
 
-        private readonly string TelefoneComercial = "11959653000";
+        private readonly string TelefoneComercial = "<REDACTED>";
 
         private readonly string _apiUrl = "https://v5.chatpro.com.br/[INSTANCIA_REMOVIDA]/api/v1/send_message";
         private readonly string _authToken = "[TOKEN_CHATPRO_REMOVIDO]"; // deve vir de configuração/variável de ambiente
