@@ -67,3 +67,28 @@ Principais parâmetros:
 | `corBg1` / `corBg2` / `corFonte` | Cores de fundo e fonte (modo manual) |
 | `direcao` | Direção do gradiente: `h` (horizontal) ou `v` (vertical) |
 | `custombg` | Imagem de fundo personalizada (MODELO 3) |
+
+## Atualização (set/2026) — diagnóstico de produção: o gzip velho do IIS
+
+**Sintoma:** a previsão de 1 dia abria certa na primeira vez e perdia toda a formatação no F5.
+
+**Investigação:** o CSS chegava inteiro, mas o **HTML** mudava: na primeira abertura vinha o `index1d.html` do MODELO 2; do reload em diante, o do MODELO 3 (outra marcação, em cima do CSS errado). A prova veio com `curl`, variando só o cabeçalho de compressão:
+
+```bash
+curl -sk              "$URL/index1d.html"   # sem gzip -> MODELO 2, 4353 bytes (certo)
+curl -sk --compressed "$URL/index1d.html"   # com gzip -> MODELO 3, 5061 bytes (errado)
+```
+
+**Causa:** um `index1d.html` do MODELO 3 tinha sido copiado para a pasta por engano e o IIS guardou a versão comprimida dele no cache de compressão estática. O arquivo certo voltou com a **mesma data de modificação** (a cópia do Windows preserva a data de origem), e o IIS continuou servindo o gzip antigo. A primeira abertura saía certa porque a compressão estática só entra para arquivos pedidos com frequência (`frequentHitThreshold`).
+
+**Correção:** atualizar a data do arquivo, forçando o IIS a refazer o gzip — sem tocar em código:
+
+```powershell
+(Get-Item $f).LastWriteTime = Get-Date
+```
+
+No reteste, 10 de 10 respostas com gzip e 5 de 5 sem gzip vieram com a versão certa.
+
+**Achado de quebra:** se a URL viesse sem o parâmetro `idioma`, o `MyDate` lia `this.idioma[undefined]` e lançava `TypeError`, parando o script no meio. A correção (idioma padrão normalizado com `indexOf` + ternário, aplicada nos quatro scripts) foi preparada, publicada e depois **revertida a pedido** enquanto se investigava um erro de rede nos players Android — sem relação com o JS.
+
+**Aprendizados:** isolar a variável (com/sem `Accept-Encoding`) antes de mexer em código; data de arquivo não prova versão; para reverter, copiar o backup inteiro em vez de editar de volta (um `sed -i` trocou CRLF por LF e o arquivo deixou de ser idêntico byte a byte).

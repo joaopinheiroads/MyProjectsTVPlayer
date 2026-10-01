@@ -53,10 +53,36 @@ pm2 save
 pm2 status
 ```
 
+## Atualização (set/2026) — TLS saiu do Node e foi para o IIS
+
+**Antes**, o servidor subia em HTTPS lendo um `cert.pfx` de dentro da pasta do projeto, com a *passphrase* escrita no código — e toda renovação de certificado virava alteração de código + build + restart do PM2.
+
+> O código publicado nesta pasta ainda é a versão **anterior** à migração (com `https.createServer` e a passphrase já removida).
+
+**Depois**, a criptografia termina no IIS (**TLS termination**) e o Node fala só HTTP, preso ao loopback:
+
+```
+Navegador --HTTPS 3001--> IIS (certificado no repositório do Windows)
+                            |  proxy reverso (URL Rewrite + ARR), HTTP puro
+                            v
+                          Node (scraper.js) em 127.0.0.1:3000
+                            |  Puppeteer, a cada 5 min
+                            v
+                          impostometro.com.br
+```
+
+- O `https.createServer(httpsOptions, app)` saiu do `scraper.ts`; o `app.listen(PORT, '127.0.0.1')` garante que a porta do Node **não fica exposta na rede** — só o IIS fala com ela.
+- O trecho em claro é aceitável porque IIS e Node estão na **mesma máquina** (loopback).
+- O `cert.pfx` e a senha saíram do projeto; renovar certificado agora é tarefa do IIS, sem build.
+- O endpoint consumido pela tela **não mudou** — quem atende na porta é que trocou de dono.
+- Rota `/health` mantida, devolvendo o horário da última coleta (`atualizadoEm`), usada para provar que o scraping está em dia.
+
+**O diagnóstico do deploy** ("tela parada em R$ CARREGANDO...") foi feito de fora, lendo a diferença entre as respostas TCP: porta 80 respondeu (IIS vivo); a 3001 devolveu **RST** (pacote chegou, ninguém escutando → faltava o binding no IIS, firewall descartado); 3000/443 deram **timeout** (firewall descartando, como deveria). Como o `Test-NetConnection` devolve `False` nos dois casos, foi usado um `TcpClient` lendo o `SocketException.ErrorCode` (`10061` = conexão recusada).
+
+**Validação final** com verificação de certificado ligada: handshake TLS 1.2 sem aviso, `/health` e `/impostometro` respondendo pelo proxy.
+
 ## Observações de segurança
 
-O servidor sobe em **HTTPS** lendo um certificado `cert.pfx` com uma *passphrase*. Para um repositório público:
-
-- **Não versionar o `cert.pfx`** (certificado/segredo) — deve ser provido apenas no servidor.
-- **Mover a passphrase para variável de ambiente** (hoje ela está no código).
-- Adicionar um **`.gitignore`** ignorando `node_modules/`, `dist/` e `cert.pfx`.
+- `cert.pfx` e *passphrase* **não existem mais** no projeto — o certificado vive no repositório de certificados do Windows, gerenciado pelo IIS.
+- O Node escuta apenas em `127.0.0.1`.
+- `.gitignore` ignora `node_modules/`, `dist/` e arquivos de certificado.
