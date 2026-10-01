@@ -11,11 +11,11 @@ Migração de **7 fontes de notícia** (G1, iG, iCarros, Gazeta do Povo, Infomon
 Feed RSS falha **calado**: responde `200` com conteúdo velho, e ninguém percebe que a tela parou no tempo. Na auditoria das fontes apareceu de tudo:
 
 - **iG** — vinha de um **FTP** que autenticava normalmente, mas cujos arquivos eram de **novembro de 2019**. A migração também tirou do código as credenciais desse acesso.
-- **G1** — 12 plugins em uso (133 terminais só em um deles). Três seções (Ciência e Saúde, Concursos, Natureza) estavam paradas desde junho/agosto porque o g1 **renomeou as seções** e os feeds antigos simplesmente pararam.
-- **iCarros** (340 terminais) — o XML "midiaindoor" trazia só **5 matérias novas** e completava a lista com matérias de **2019 e 2025**.
-- **Tecmundo** (82 terminais em um plugin) — o site foi incorporado ao Estadão e responde `301`; o feed antigo seguia `200` com a última notícia de 07/09.
+- **G1** — 12 plugins em uso. Três seções (Ciência e Saúde, Concursos, Natureza) estavam paradas desde junho/agosto porque o g1 **renomeou as seções** e os feeds antigos simplesmente pararam.
+- **iCarros** — o XML "midiaindoor" trazia só **5 matérias novas** e completava a lista com matérias de **2019 e 2025**.
+- **Tecmundo** — o site foi incorporado ao Estadão e responde `301`; o feed antigo seguia `200` com a última notícia de 07/09.
 - **TVFoco** — parado desde 29/07: o feed passou a redirecionar com `308`, que o `HttpClient` do .NET Framework não segue. E mesmo quando lia, as notícias saíam **sem foto**, porque o XSL procurava `.jpg` e o site só serve `.webp`.
-- **Infomoney** (29 terminais) — o feed colava *"The post ... appeared first on InfoMoney."* no fim de **14 de 15 resumos** que iam para a tela.
+- **Infomoney** — o feed colava *"The post ... appeared first on InfoMoney."* no fim de **14 de 15 resumos** que iam para a tela.
 - **Tecmundo e Gazeta do Povo** — os primeiros scrapers eram **uma classe estática que fazia tudo** (o do Tecmundo com 281 linhas): baixar, interpretar, decidir e montar o XML.
 
 ## A solução

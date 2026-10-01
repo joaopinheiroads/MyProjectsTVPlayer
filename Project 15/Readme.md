@@ -1,6 +1,6 @@
 # Projeto 15 — Integrações confiáveis: fim das falhas silenciosas
 
-Seis correções no pipeline que alimenta os plugins de conteúdo do TV Player (notícias, futebol, loterias) — um serviço Windows em .NET Framework que coleta dados de dezenas de fontes externas e grava os arquivos que **centenas de terminais** exibem. O resultado: **uma credencial que vazava para todos os provedores foi isolada, o plugin do Tecmundo (82 terminais) voltou a atualizar depois de três meses parado, e uma foto ruim deixou de derrubar o plugin inteiro.**
+Seis correções no pipeline que alimenta os plugins de conteúdo do TV Player (notícias, futebol, loterias) — um serviço Windows em .NET Framework que coleta dados de dezenas de fontes externas e grava os arquivos que **centenas de terminais** exibem. O resultado: **uma credencial que vazava para todos os provedores foi isolada, o plugin do Tecmundo voltou a atualizar depois de três meses parado, e uma foto ruim deixou de derrubar o plugin inteiro.**
 
 > **O tema comum é a falha que não avisa.** Um feed que responde `200` com conteúdo velho, um plugin que desiste em silêncio, uma chave enviada a quem não devia. Nenhum desses defeitos gerava alerta — a tela do cliente simplesmente parava no tempo.
 >
@@ -12,8 +12,8 @@ O serviço cresceu por acréscimo, integração após integração, e acumulou s
 
 - **Credencial vazando por estado global** — o cliente do football-data escrevia a chave `X-Auth-Token` no `HttpClient` **estático e compartilhado** do sistema inteiro. A partir do primeiro ciclo, a chave ia junto em toda requisição de todo provedor: UOL, Canaltech, G1, iCarros, Jovem Pan, rss.app. Além disso, clientes HTTP recriados a cada ciclo levavam ao risco de **esgotamento de sockets**.
 - **Log cego** — só o UOL tinha arquivo de log próprio. Canaltech, Jovem Pan, Football, Instagram e o merge do RSS caíam todos num `tvplayer.log` genérico, e só de `Info` para cima. O `RSSClient`, que atende 42 plugins, **não tinha logger nenhum**.
-- **Tudo ou nada nas imagens** — no `RSSClient.SaveOnDisk`, uma única foto que não baixava (403) ou não abria (veio em gzip) lançava exceção e o plugin inteiro desistia da rodada. A Gazeta do Povo – Economia (34 terminais) parava sempre que uma foto vinha comprimida; o Campo Grande News nunca gravou.
-- **Regra de imagem estreita demais** — o Tecmundo publica `<media:content url="...jpg">` sem `medium` nem `type`. A regra antiga exigia um dos dois, concluía que nenhuma notícia tinha foto e lançava `"Esse feed não possui imagens."`. **82 terminais com as mesmas notícias desde 03/06.**
+- **Tudo ou nada nas imagens** — no `RSSClient.SaveOnDisk`, uma única foto que não baixava (403) ou não abria (veio em gzip) lançava exceção e o plugin inteiro desistia da rodada. A Gazeta do Povo – Economia parava sempre que uma foto vinha comprimida; o Campo Grande News nunca gravou.
+- **Regra de imagem estreita demais** — o Tecmundo publica `<media:content url="...jpg">` sem `medium` nem `type`. A regra antiga exigia um dos dois, concluía que nenhuma notícia tinha foto e lançava `"Esse feed não possui imagens."`. **A tela mostrava as mesmas notícias desde 03/06.**
 - **Configuração dentro do código** — a chave da API e as datas de cada fase dos campeonatos (Brasileirão e Champions League) eram literais no `FootballDataClient`. Mudar uma data exigia recompilar e subir DLL.
 - **Trabalho inútil no navegador** — o Lotogol saiu de linha, mas o laço de coleta percorria **todo o enum** `ELoteria` e abria o navegador CEF (compartilhado com o UOL) de hora em hora para buscá-lo na Caixa.
 
@@ -44,8 +44,8 @@ O serviço cresceu por acréscimo, integração após integração, e acumulou s
 | Jovem Pan (6 pastas) | paradas há **3 meses** | 15 itens cada, imagem em todas |
 | Arquivos de log dedicados | 1 (UOL) | **13** + o geral |
 | Logs do `RSSClient` (42 plugins) | nenhum | resultado de cada rodada, por plugin |
-| Tecmundo (82 terminais) | parado desde 03/06 | **15/15 notícias com imagem** |
-| Gazeta do Povo – Economia (34 terminais) | `ErroAoSalvar`, rodada perdida | 14 notícias gravadas, 1 descartada |
+| Tecmundo | parado desde 03/06 | **15/15 notícias com imagem** |
+| Gazeta do Povo – Economia | `ErroAoSalvar`, rodada perdida | 14 notícias gravadas, 1 descartada |
 | Feed com 100% de fotos quebradas | gravaria tela vazia | `SemConteudo`, mantém o conteúdo anterior |
 | Pior caso de um plugin com fotos penduradas | fila parada 11 min (até 15 min por foto) | **2 min** e a fila segue |
 | Trocar uma data de campeonato | recompilar e subir DLL | editar config e reiniciar |
